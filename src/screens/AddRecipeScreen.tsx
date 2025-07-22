@@ -1,5 +1,5 @@
 ﻿// src/screens/AddRecipeScreen.tsx
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../types/navigation';
@@ -9,55 +9,86 @@ type AddRecipeScreenProps = {
 };
 
 const AddRecipeScreen: React.FC<AddRecipeScreenProps> = ({ navigation }) => {
+  const [recipeName, setRecipeName] = useState('');
+  const [description, setDescription] = useState('');
+  const [ingredients, setIngredients] = useState('');
+  const [instructions, setInstructions] = useState('');
+
+  const handleSave = () => {
+    // Now you can access all the form values from state
+    const newRecipe = {
+      name: recipeName,
+      description,
+      ingredients,
+      instructions,
+    };
+    
+    // You could save this to a database, Redux store, etc.
+    console.log('Saving recipe:', newRecipe);
+    
+    // Then navigate back or to another screen
+    navigation.goBack();
+  };
+
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.title}>Add New Recipe</Text>
+    <ScrollView style={styles.container} testID="add-recipe-screen">
+      <Text style={styles.title} testID="screen-title">Add New Recipe</Text>
       
-      <View style={styles.formGroup}>
-        <Text style={styles.label}>Recipe Name</Text>
+      <View style={styles.formGroup} testID="recipe-name-container">
+        <Text style={styles.label} testID="recipe-name-label">Recipe Name</Text>
         <TextInput 
           style={styles.input} 
           placeholder="Enter recipe name"
+          value={recipeName}
+          onChangeText={setRecipeName}
+          testID="recipe-name-input"
         />
       </View>
       
-      <View style={styles.formGroup}>
-        <Text style={styles.label}>Description</Text>
+      <View style={styles.formGroup} testID="recipe-description-container">
+        <Text style={styles.label} testID="recipe-description-label">Description</Text>
         <TextInput 
           style={[styles.input, styles.textArea]} 
           placeholder="Enter recipe description"
+          value={description}
+          onChangeText={setDescription}
           multiline
           numberOfLines={4}
+          testID="recipe-description-input"
         />
       </View>
       
-      <View style={styles.formGroup}>
-        <Text style={styles.label}>Ingredients</Text>
+      <View style={styles.formGroup} testID="recipe-ingredients-container">
+        <Text style={styles.label} testID="recipe-ingredients-label">Ingredients</Text>
         <TextInput 
           style={[styles.input, styles.textArea]} 
           placeholder="Enter ingredients, one per line"
+          value={ingredients}
+          onChangeText={setIngredients}
           multiline
           numberOfLines={6}
+          testID="recipe-ingredients-input"
         />
       </View>
       
-      <View style={styles.formGroup}>
-        <Text style={styles.label}>Instructions</Text>
+      <View style={styles.formGroup} testID="recipe-instructions-container">
+        <Text style={styles.label} testID="recipe-instructions-label">Instructions</Text>
         <TextInput 
           style={[styles.input, styles.textArea]} 
           placeholder="Enter cooking instructions"
+          value={instructions}
+          onChangeText={setInstructions}
           multiline
           numberOfLines={8}
+          testID="recipe-instructions-input"
         />
       </View>
       
-      <View style={styles.buttonContainer}>
+      <View style={styles.buttonContainer} testID="button-container">
         <TouchableOpacity 
           style={styles.saveButton}
-          onPress={() => {
-            // This is just a placeholder, it will just navigate back for now
-            navigation.goBack();
-          }}
+          onPress={handleSave}
+          testID="save-recipe-button"
         >
           <Text style={styles.saveButtonText}>Save Recipe</Text>
         </TouchableOpacity>
@@ -65,6 +96,7 @@ const AddRecipeScreen: React.FC<AddRecipeScreenProps> = ({ navigation }) => {
         <TouchableOpacity 
           style={styles.cancelButton}
           onPress={() => navigation.goBack()}
+          testID="cancel-button"
         >
           <Text style={styles.cancelButtonText}>Cancel</Text>
         </TouchableOpacity>

@@ -40,10 +40,12 @@ internal class Program
                 }
                 else
                 {
-                    policy.WithOrigins("https://yourmobileapp.com")
+                    // TODO: If no WebViews are used, don't need a specific origin
+                    // Future to implement JWT authentication and/or API keys
+                    policy.AllowAnyOrigin()
                         .AllowAnyMethod()
-                        .AllowAnyHeader()
-                        .AllowCredentials();
+                        .AllowAnyHeader();
+
                 }
             });
         });

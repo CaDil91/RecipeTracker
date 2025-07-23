@@ -2,6 +2,10 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FoodBudgetAPI", "FoodBudgetAPI\FoodBudgetAPI.csproj", "{4C957180-FD03-4DF4-9DF8-0DF763E283E7}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FoodBudgetAPITests", "FoodBudgetAPITests\FoodBudgetAPITests.csproj", "{78039D7D-64E0-4986-B8F5-59C8C9246337}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FoodBudgetAPIIntegrationTests", "FoodBudgetAPIIntegrationTests\FoodBudgetAPIIntegrationTests.csproj", "{3DE1D562-223C-401D-A2CD-8C00DCFE2DD5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -12,5 +16,13 @@ Global
 		{4C957180-FD03-4DF4-9DF8-0DF763E283E7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4C957180-FD03-4DF4-9DF8-0DF763E283E7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4C957180-FD03-4DF4-9DF8-0DF763E283E7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{78039D7D-64E0-4986-B8F5-59C8C9246337}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{78039D7D-64E0-4986-B8F5-59C8C9246337}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{78039D7D-64E0-4986-B8F5-59C8C9246337}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{78039D7D-64E0-4986-B8F5-59C8C9246337}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3DE1D562-223C-401D-A2CD-8C00DCFE2DD5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3DE1D562-223C-401D-A2CD-8C00DCFE2DD5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3DE1D562-223C-401D-A2CD-8C00DCFE2DD5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3DE1D562-223C-401D-A2CD-8C00DCFE2DD5}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

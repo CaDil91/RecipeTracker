@@ -1,5 +1,12 @@
 # Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
-
+bin/
+obj/
+/packages/
+riderModule.iml
+/_ReSharper.Caches/
+/FoodBudgetAPI/FoodBudgetAPI/appsettings.Development.json
+/FoodBudgetMobileApp/.idea/*
+/FoodBudgetAPI/.idea/*
 # dependencies
 node_modules/
 

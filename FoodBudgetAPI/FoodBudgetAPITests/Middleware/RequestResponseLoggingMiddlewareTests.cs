@@ -14,9 +14,7 @@ public class RequestResponseLoggingMiddlewareTests
     {
         // Arrange
         var loggerMock = new Mock<ILogger<RequestResponseLoggingMiddleware>>();
-
         var middleware = new RequestResponseLoggingMiddleware(Next, loggerMock.Object);
-        
         var context = new DefaultHttpContext
         {
             Request =
@@ -45,7 +43,6 @@ public class RequestResponseLoggingMiddlewareTests
         await middleware.InvokeAsync(context);
         
         // Assert
-        // Use Fluent Assertions to verify logs
         Action verifyRequestLog = () =>
             loggerMock.Verify(
                 x => x.Log(
@@ -90,9 +87,7 @@ public class RequestResponseLoggingMiddlewareTests
         // Arrange
         var loggerMock = new Mock<ILogger<RequestResponseLoggingMiddleware>>();
         var originalBodyStream = new MemoryStream();
-
         var middleware = new RequestResponseLoggingMiddleware(Next, loggerMock.Object);
-        
         var context = new DefaultHttpContext
         {
             Response =
@@ -117,9 +112,7 @@ public class RequestResponseLoggingMiddlewareTests
     {
         // Arrange
         var loggerMock = new Mock<ILogger<RequestResponseLoggingMiddleware>>();
-
         var middleware = new RequestResponseLoggingMiddleware(Next, loggerMock.Object);
-        
         var context = new DefaultHttpContext
         {
             Request =
@@ -135,9 +128,7 @@ public class RequestResponseLoggingMiddlewareTests
 
         // Act & Assert
         Func<Task> act = async () => await middleware.InvokeAsync(context);
-        
-        await act.Should().NotThrowAsync(
-            "because the middleware should handle empty request bodies gracefully");
+        await act.Should().NotThrowAsync("because the middleware should handle empty request bodies gracefully");
         return;
 
         Task Next(HttpContext _) => Task.CompletedTask;
@@ -148,7 +139,6 @@ public class RequestResponseLoggingMiddlewareTests
     {
         // Arrange
         var loggerMock = new Mock<ILogger<RequestResponseLoggingMiddleware>>();
-
         var middleware = new RequestResponseLoggingMiddleware(Next, loggerMock.Object);
     
         var context = new DefaultHttpContext();
@@ -165,7 +155,6 @@ public class RequestResponseLoggingMiddlewareTests
         await middleware.InvokeAsync(context);
     
         // Assert
-        // Verify headers are included in the log
         loggerMock.Verify(
             x => x.Log(
                 LogLevel.Information,

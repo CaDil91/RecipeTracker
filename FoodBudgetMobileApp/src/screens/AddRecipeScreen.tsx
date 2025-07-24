@@ -21,7 +21,7 @@ const AddRecipeScreen: React.FC<AddRecipeScreenProps> = ({ navigation }) => {
       ingredients,
       instructions,
     };
-    
+                                                                                                                                  
     // You could save this to a database, Redux store, etc.
     console.log('Saving recipe:', newRecipe);
     

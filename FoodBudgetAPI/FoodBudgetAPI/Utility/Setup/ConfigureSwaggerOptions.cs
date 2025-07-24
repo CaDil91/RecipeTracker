@@ -5,22 +5,15 @@ using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace FoodBudgetAPI.Utility.Setup;
 
-public class ConfigureSwaggerOptions : IConfigureOptions<SwaggerGenOptions>
+public class ConfigureSwaggerOptions(IApiVersionDescriptionProvider provider) : IConfigureOptions<SwaggerGenOptions>
 {
-    private readonly IApiVersionDescriptionProvider _provider;
-
-    public ConfigureSwaggerOptions(IApiVersionDescriptionProvider provider)
-    {
-        _provider = provider;
-    }
-
     /// <summary>
     /// Configures the Swagger generation options for the API.
     /// </summary>
     /// <param name="options">The Swagger generation options to be configured.</param>
     public void Configure(SwaggerGenOptions options)
     {
-        foreach (ApiVersionDescription description in _provider.ApiVersionDescriptions)
+        foreach (ApiVersionDescription description in provider.ApiVersionDescriptions)
         {
             options.SwaggerDoc(
                 description.GroupName,

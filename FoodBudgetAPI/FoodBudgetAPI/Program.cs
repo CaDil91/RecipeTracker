@@ -1,6 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
 using Asp.Versioning;
 using FoodBudgetAPI.Utility.Setup;
+using Microsoft.Extensions.Options;
+using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace FoodBudgetAPI;
 
@@ -78,6 +80,7 @@ public class Program
             options.IncludeXmlComments(xmlPath);
 
         });
+        builder.Services.AddTransient<IConfigureOptions<SwaggerGenOptions>, ConfigureSwaggerOptions>();
 
         WebApplication app = ApplicationConfiguration.ConfigureApplicationPipeline(builder);
 

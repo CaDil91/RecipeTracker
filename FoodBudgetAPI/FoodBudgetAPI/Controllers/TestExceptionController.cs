@@ -5,6 +5,7 @@ namespace FoodBudgetAPI.Controllers;
 
 [ExcludeFromCodeCoverage]
 [ApiController]
+[ApiExplorerSettings(IgnoreApi = true)]
 [Route("api/[controller]")]
 public class TestExceptionController : ControllerBase
 {

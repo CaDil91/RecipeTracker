@@ -45,6 +45,27 @@ public class HealthController(HealthCheckService healthCheckService, ILogger<Hea
     [HttpGet("readiness")]
     public async Task<IActionResult> GetReadiness()
     {
-        throw new NotImplementedException();
+        logger.LogInformation("Readiness check requested");
+
+        HealthReport healthReport = await healthCheckService.CheckHealthAsync(
+            check => check.Tags.Contains("ready"));
+
+        switch (healthReport.Status)
+        {
+            case HealthStatus.Healthy:
+                logger.LogInformation("Readiness check passed");
+                return Ok(new { status = "Ready" });
+            case HealthStatus.Degraded:
+                logger.LogWarning("Readiness check degraded: {Description}", healthReport.Entries.ToString());
+                return Ok(new { status = "Degraded" });
+            case HealthStatus.Unhealthy:
+            default:
+                logger.LogWarning("Readiness check failed: {Description}", healthReport.Entries.ToString());
+                return StatusCode(StatusCodes.Status503ServiceUnavailable, new
+                {
+                    status = "Not Ready",
+                    details = healthReport.Entries.Select(e => new { e.Key, e.Value.Status, e.Value.Description })
+                });
+        }
     }
 }

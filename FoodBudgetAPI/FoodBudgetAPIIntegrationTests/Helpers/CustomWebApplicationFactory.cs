@@ -17,6 +17,12 @@ public class CustomWebApplicationFactory<TProgram> : WebApplicationFactory<TProg
         {
             services.AddControllers()
                 .AddApplicationPart(typeof(TestExceptionController).Assembly);
+                
+            // Make sure logging is properly set up for health checks
+            services.AddLogging();
+            
+            // Register health checks with minimal configuration to avoid DI issues
+            services.AddHealthChecks();
         });
     }
 }

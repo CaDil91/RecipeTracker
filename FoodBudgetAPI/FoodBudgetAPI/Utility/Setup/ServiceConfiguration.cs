@@ -26,7 +26,7 @@ public static class ServiceConfiguration
         ConfigureLogging(builder);
         
         // Core services
-        builder.Services.RegisterServices();
+        builder.Services.RegisterServices(builder.Configuration);
         builder.Services.AddControllers();
         builder.Services.AddEndpointsApiExplorer();
         

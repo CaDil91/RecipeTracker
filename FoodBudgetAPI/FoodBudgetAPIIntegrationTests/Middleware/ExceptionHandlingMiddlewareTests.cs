@@ -5,8 +5,8 @@ using FoodBudgetAPIIntegrationTests.Helpers;
 
 namespace FoodBudgetAPIIntegrationTests.Middleware;
 
-public class ExceptionHandlingMiddlewareTests(CustomWebApplicationFactory<FoodBudgetAPI.Program> factory)
-    : IClassFixture<CustomWebApplicationFactory<FoodBudgetAPI.Program>>
+public class ExceptionHandlingMiddlewareTests(HttpTestFactory<FoodBudgetAPI.Program> factory)
+    : IClassFixture<HttpTestFactory<FoodBudgetAPI.Program>>
 {
     private readonly HttpClient _client = factory.CreateClient();
 

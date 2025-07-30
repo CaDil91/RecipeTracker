@@ -6,6 +6,12 @@
         <TargetFramework>net8.0</TargetFramework>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
+
+        <!-- Exclude migrations from code coverage -->
+        <CoverletOutputFormat>cobertura</CoverletOutputFormat>
+        <ExcludeByFile>**/Migrations/**</ExcludeByFile>
+        <ExcludeByFile>**/Tests/**</ExcludeByFile>
+
     </PropertyGroup>
 
     <ItemGroup>

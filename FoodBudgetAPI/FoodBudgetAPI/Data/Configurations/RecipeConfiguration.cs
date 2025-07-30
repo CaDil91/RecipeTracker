@@ -24,12 +24,12 @@ public class RecipeConfiguration : IEntityTypeConfiguration<Recipe>
         // Title is required with max length
         builder.Property(e => e.Title)
             .IsRequired()
-            .HasMaxLength(500);
+            .HasMaxLength(500); // Note: Enforced by SQL Server, not SQLite in tests
         
         // Instructions are optional with max length
         builder.Property(e => e.Instructions)
             .IsRequired(false)
-            .HasMaxLength(10000);
+            .HasMaxLength(10000);  // Note: Enforced by SQL Server, not SQLite in tests
         
         // Servings are required with a default value
         builder.Property(e => e.Servings)
@@ -42,8 +42,5 @@ public class RecipeConfiguration : IEntityTypeConfiguration<Recipe>
         // UserId is optional
         builder.Property(e => e.UserId)
             .IsRequired(false);
-            
-        // Add index for faster lookup by UserId
-        builder.HasIndex(e => e.UserId);
     }
 }

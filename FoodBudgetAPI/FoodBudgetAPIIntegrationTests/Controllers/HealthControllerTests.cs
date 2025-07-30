@@ -9,11 +9,11 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 namespace FoodBudgetAPIIntegrationTests.Controllers;
 
-public class HealthCheckIntegrationTests : IClassFixture<CustomWebApplicationFactory<Program>>
+public class HealthCheckIntegrationTests : IClassFixture<HttpTestFactory<Program>>
 {
     private readonly HttpClient _client;
 
-    public HealthCheckIntegrationTests(CustomWebApplicationFactory<Program> factory)
+    public HealthCheckIntegrationTests(HttpTestFactory<Program> factory)
     {
         _client = factory.WithWebHostBuilder(builder =>
         {
@@ -45,7 +45,7 @@ public class HealthCheckIntegrationTests : IClassFixture<CustomWebApplicationFac
     public async Task GetHealth_Returns503StatusCode_WhenApiIsUnhealthy()
     {
         // Arrange
-        WebApplicationFactory<Program> factory = new CustomWebApplicationFactory<Program>()
+        WebApplicationFactory<Program> factory = new HttpTestFactory<Program>()
             .WithWebHostBuilder(builder =>
             {
                 builder.ConfigureServices(services =>
@@ -72,7 +72,7 @@ public class HealthCheckIntegrationTests : IClassFixture<CustomWebApplicationFac
     public async Task GetHealth_Returns200StatusCode_WhenApiIsDegraded()
     {
         // Arrange
-        WebApplicationFactory<Program> factory = new CustomWebApplicationFactory<Program>()
+        WebApplicationFactory<Program> factory = new HttpTestFactory<Program>()
             .WithWebHostBuilder(builder =>
             {
                 builder.ConfigureServices(services =>
@@ -114,7 +114,7 @@ public class HealthCheckIntegrationTests : IClassFixture<CustomWebApplicationFac
     public async Task GetReadiness_Returns503StatusCode_WhenSystemIsNotReady()
     {
         // Arrange
-        WebApplicationFactory<Program> factory = new CustomWebApplicationFactory<Program>()
+        WebApplicationFactory<Program> factory = new HttpTestFactory<Program>()
             .WithWebHostBuilder(builder =>
             {
                 builder.ConfigureServices(services =>
@@ -144,7 +144,7 @@ public class HealthCheckIntegrationTests : IClassFixture<CustomWebApplicationFac
     public async Task GetReadiness_Returns200StatusCode_WhenSystemIsDegraded()
     {
         // Arrange
-        WebApplicationFactory<Program> factory = new CustomWebApplicationFactory<Program>()
+        WebApplicationFactory<Program> factory = new HttpTestFactory<Program>()
             .WithWebHostBuilder(builder =>
             {
                 builder.ConfigureServices(services =>
@@ -173,7 +173,7 @@ public class HealthCheckIntegrationTests : IClassFixture<CustomWebApplicationFac
     public async Task GetReadiness_ReturnsHealthyStatus_WhenNoReadyTaggedChecksExist()
     {
         // Arrange
-        WebApplicationFactory<Program> factory = new CustomWebApplicationFactory<Program>()
+        WebApplicationFactory<Program> factory = new HttpTestFactory<Program>()
             .WithWebHostBuilder(builder =>
             {
                 builder.ConfigureServices(services =>
@@ -200,7 +200,7 @@ public class HealthCheckIntegrationTests : IClassFixture<CustomWebApplicationFac
     public async Task GetReadiness_IncludesDetailsInResponse_WhenSystemIsNotReady()
     {
         // Arrange
-        WebApplicationFactory<Program> factory = new CustomWebApplicationFactory<Program>()
+        WebApplicationFactory<Program> factory = new HttpTestFactory<Program>()
             .WithWebHostBuilder(builder =>
             {
                 builder.ConfigureServices(services =>

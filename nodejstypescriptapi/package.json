@@ -9,7 +9,10 @@
     "start:prod": "NODE_ENV=production node dist/server.js",
     "lint": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:verbose": "jest --verbose"
   },
   "keywords": [],
   "author": "",
@@ -31,12 +34,17 @@
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
     "@types/helmet": "^0.0.48",
+    "@types/jest": "^30.0.0",
     "@types/morgan": "^1.9.10",
     "@types/node": "^24.2.0",
+    "@types/supertest": "^6.0.3",
     "@types/swagger-jsdoc": "^6.0.4",
     "@types/swagger-ui-express": "^4.1.8",
     "helmet": "^8.1.0",
+    "jest": "^30.0.5",
     "nodemon": "^3.1.10",
+    "supertest": "^7.1.4",
+    "ts-jest": "^29.4.1",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.2"
   }

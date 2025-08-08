@@ -29,6 +29,4 @@ export function setupErrorHandling(app: Application): void {
             ...(isDevelopment && { stack: error.stack })
         });
     });
-
-    logger.info('✅ Error handling configured');
 }

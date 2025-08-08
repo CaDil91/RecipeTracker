@@ -66,7 +66,7 @@ router.get('/health', (req: Request, res: Response) => {
  */
 router.get('/readiness', async (req: Request, res: Response) => {
     const healthChecks: ReadinessChecks = {
-        memory: checkMemory(),
+        memory: checkMemory()
         // TODO: Add database check when database is configured
         // database: await checkDatabase(),
         // TODO: Add external service checks if needed
@@ -80,8 +80,8 @@ router.get('/readiness', async (req: Request, res: Response) => {
     };
 
     // Determine overall readiness
-    const isReady = Object.values(healthChecks).every((check: HealthCheckResult) => 
-        check.status === 'healthy'
+    const isReady = Object.values(healthChecks).every(
+        (check: HealthCheckResult) => check.status === 'healthy'
     );
 
     if (isReady) {
@@ -102,7 +102,7 @@ router.get('/readiness', async (req: Request, res: Response) => {
 router.get('/health/detailed', (req: Request, res: Response) => {
     const memoryUsage = process.memoryUsage();
     const cpuUsage = process.cpuUsage();
-    
+
     res.json({
         status: 'healthy',
         service: 'FoodBudget API',
@@ -132,7 +132,7 @@ router.get('/health/detailed', (req: Request, res: Response) => {
 function checkMemory(): HealthCheckResult {
     const memoryUsage = process.memoryUsage();
     const heapUsedPercentage = (memoryUsage.heapUsed / memoryUsage.heapTotal) * 100;
-    
+
     return {
         status: heapUsedPercentage < 90 ? 'healthy' : 'unhealthy',
         details: {
@@ -151,7 +151,7 @@ function checkMemory(): HealthCheckResult {
 //         // Perform a simple database query
 //         // await db.query('SELECT 1');
 //         const responseTime = Date.now() - startTime;
-//         
+//
 //         return {
 //             status: 'healthy',
 //             responseTime

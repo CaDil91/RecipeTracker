@@ -1,19 +1,19 @@
 ﻿import express, { Application } from 'express';
-import {logger, configureLogger} from "./utility/logger";
-import {configureApp} from "./app";
+import { logger, configureLogger } from './utility/logger';
+import { configureApp } from './app';
 
 async function startServer(): Promise<void> {
     try {
         logger.info('🚀 Starting application...');
         logger.info('📋 Validating environment configuration...');
-        
-        const {env} = await import('./config/environment');
-        
+
+        const { env } = await import('./config/environment');
+
         logger.info('✅ Environment validation successful');
-        
+
         configureLogger(env.LOG_LEVEL);
         logger.info('🔧 Logger reconfigured with environment settings');
-        
+
         const app: Application = express();
         logger.info('📦 Express application created');
 
@@ -27,8 +27,7 @@ async function startServer(): Promise<void> {
         });
 
         setupGracefulShutdown(server);
-    }
-    catch (error) {
+    } catch (error) {
         logger.error('❌ Failed to start the server:', error);
         process.exit(1);
     }

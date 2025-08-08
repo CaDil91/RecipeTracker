@@ -9,7 +9,7 @@ class Logger {
         }
         return Logger.instance;
     }
-    
+
     private static createBootstrapLogger(): winston.Logger {
         return winston.createLogger({
             level: 'info',
@@ -27,13 +27,13 @@ class Logger {
                         })
                     )
                 })
-            ],
+            ]
         });
     }
-    
+
     public static configure(logLevel: string = 'info'): void {
         const isDevelopment = process.env.NODE_ENV !== 'production';
-        
+
         Logger.instance = winston.createLogger({
             level: logLevel,
             format: winston.format.combine(
@@ -43,12 +43,12 @@ class Logger {
             ),
             transports: [
                 new winston.transports.Console({
-                    format: isDevelopment 
+                    format: isDevelopment
                         ? winston.format.combine(
-                            winston.format.colorize(),
-                            winston.format.printf(({ timestamp, level, message, ...rest }) => {
-                                return `[${timestamp}] ${level}: ${message} ${Object.keys(rest).length ? JSON.stringify(rest) : ''}`;
-                            })
+                              winston.format.colorize(),
+                              winston.format.printf(({ timestamp, level, message, ...rest }) => {
+                                  return `[${timestamp}] ${level}: ${message} ${Object.keys(rest).length ? JSON.stringify(rest) : ''}`;
+                              })
                           )
                         : winston.format.json()
                 }),
@@ -59,10 +59,13 @@ class Logger {
                 new winston.transports.File({
                     filename: 'logs/combined.log'
                 })
-            ],
+            ]
         });
-        
-        Logger.instance.info('Logger reconfigured', { level: logLevel, environment: process.env.NODE_ENV });
+
+        Logger.instance.info('Logger reconfigured', {
+            level: logLevel,
+            environment: process.env.NODE_ENV
+        });
     }
 }
 

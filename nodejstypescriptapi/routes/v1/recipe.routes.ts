@@ -100,7 +100,8 @@ router.get('/:id', (req, res) => {
  *       401:
  *         description: Authentication required
  */
-router.post('/', 
+router.post(
+    '/',
     requireAuth,
     validateJson,
     validateRequired(['title', 'instructions', 'servings']),
@@ -153,7 +154,8 @@ router.post('/',
  *       404:
  *         description: Recipe not found
  */
-router.put('/:id',
+router.put(
+    '/:id',
     requireAuth,
     validateJson,
     validateRequired(['title', 'instructions', 'servings']),
@@ -186,11 +188,8 @@ router.put('/:id',
  *       404:
  *         description: Recipe not found
  */
-router.delete('/:id',
-    requireAuth,
-    (req, res) => {
-        res.json({ message: `Recipe ${req.params.id} deleted` });
-    }
-);
+router.delete('/:id', requireAuth, (req, res) => {
+    res.json({ message: `Recipe ${req.params.id} deleted` });
+});
 
 export { router as recipeRoutes };

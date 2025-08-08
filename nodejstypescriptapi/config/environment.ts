@@ -13,7 +13,7 @@ const envSchema = z.object({
     DATABASE_URL: z.string().min(1, 'Database URL is required'),
     JWT_SECRET: z.string().min(1, 'JWT secret is required'),
     LOG_LEVEL: z.enum(['error', 'warn', 'info', 'debug']).default('info'),
-    CORS_ORIGIN: z.string().optional(),
+    CORS_ORIGIN: z.string().optional()
 });
 
 // Validate and export environment variables

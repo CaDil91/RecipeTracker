@@ -19,7 +19,7 @@ const swaggerOptions: swaggerJsdoc.Options = {
                 description: 'Development server'
             },
             {
-                url: `https://api.foodbudget.com`,
+                url: 'https://api.foodbudget.com',
                 description: 'Production server'
             }
         ],
@@ -164,7 +164,7 @@ const swaggerOptions: swaggerJsdoc.Options = {
             }
         ]
     },
-    apis: ['./routes/**/*.ts'], // Path to the API routes
+    apis: ['./routes/**/*.ts'] // Path to the API routes
 };
 
 export const swaggerSpec = swaggerJsdoc(swaggerOptions);

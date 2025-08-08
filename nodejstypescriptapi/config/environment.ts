@@ -4,6 +4,7 @@ import { z } from 'zod'; // For runtime validation
 // Load environment variables
 if (process.env.NODE_ENV !== 'production') {
     dotenv.config();
+    dotenv.config({ path: '.env.local', override: true });
 }
 
 // Environment validation schema (using Zod for runtime safety)

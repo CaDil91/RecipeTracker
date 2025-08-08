@@ -1,6 +1,7 @@
 ﻿import express, { Application } from 'express';
 import { logger, configureLogger } from './utility/logger';
 import { configureApp } from './app';
+import { db } from './config/database';
 
 async function startServer(): Promise<void> {
     try {
@@ -13,6 +14,9 @@ async function startServer(): Promise<void> {
 
         configureLogger(env.LOG_LEVEL);
         logger.info('🔧 Logger reconfigured with environment settings');
+
+        logger.info('🔗 Connecting to database...');
+        await db.connect();
 
         const app: Application = express();
         logger.info('📦 Express application created');
@@ -34,10 +38,11 @@ async function startServer(): Promise<void> {
 }
 
 function setupGracefulShutdown(server: any): void {
-    const gracefulShutdown = (signal: string) => {
+    const gracefulShutdown = async (signal: string) => {
         logger.info(`Received ${signal}, shutting down gracefully...`);
-        server.close(() => {
+        server.close(async () => {
             logger.info('Server closed');
+            await db.disconnect();
             process.exit(0);
         });
     };

@@ -1,4 +1,4 @@
-﻿namespace FoodBudgetAPI.Entities;
+namespace FoodBudgetAPI.Entities;
 
 /// <summary>
 /// Represents a cooking recipe in the food budget system
@@ -21,9 +21,9 @@ public class Recipe
     public string? Instructions { get; set; }
     
     /// <summary>
-    /// Number of servings the recipe makes
+    /// Number of servings the recipe makes (required, must be greater than zero)
     /// </summary>
-    public int? Servings { get; set; }
+    public int Servings { get; set; }
     
     /// <summary>
     /// Date and time when the recipe was created (automatically set)

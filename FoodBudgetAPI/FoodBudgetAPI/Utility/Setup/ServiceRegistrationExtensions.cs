@@ -1,7 +1,8 @@
-﻿// FoodBudgetAPI/FoodBudgetAPI/Utility/Setup/ServiceRegistrationExtensions.cs
+// FoodBudgetAPI/FoodBudgetAPI/Utility/Setup/ServiceRegistrationExtensions.cs
 using System.Diagnostics.CodeAnalysis;
 using FoodBudgetAPI.Data;
 using FoodBudgetAPI.Data.Repositories;
+using FoodBudgetAPI.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace FoodBudgetAPI.Utility.Setup;
@@ -37,9 +38,7 @@ public static class ServiceRegistrationExtensions
     private static void RegisterApplicationServices(IServiceCollection services)
     {
         // Register application services, managers, and other business logic components
-        // Example:
-        // services.AddScoped<IFoodService, FoodService>();
-        // services.AddScoped<IBudgetCalculator, BudgetCalculator>();
+        services.AddScoped<IRecipeService, RecipeService>();
     }
     
     private static void RegisterConfigurationOptions(IServiceCollection services)

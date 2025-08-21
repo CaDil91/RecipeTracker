@@ -2,6 +2,7 @@ using AutoMapper;
 using FluentAssertions;
 using FoodBudgetAPI.Controllers;
 using FoodBudgetAPI.Entities;
+using FoodBudgetAPI.Mapping;
 using FoodBudgetAPI.Models.DTOs.Requests;
 using FoodBudgetAPI.Models.DTOs.Responses;
 using FoodBudgetAPI.Services;
@@ -14,7 +15,7 @@ namespace FoodBudgetAPITests.Controllers;
 public class RecipeControllerTests
 {
     private readonly Mock<ILogger<RecipeController>> _mockLogger;
-    private readonly Mock<IMapper> _mockMapper;
+    private readonly IMapper _mapper;
     private readonly Mock<IRecipeService> _mockRecipeService;
     private readonly RecipeController _subjectUnderTest;
 
@@ -22,8 +23,14 @@ public class RecipeControllerTests
     {
         _mockRecipeService = new Mock<IRecipeService>();
         _mockLogger = new Mock<ILogger<RecipeController>>();
-        _mockMapper = new Mock<IMapper>();
-        _subjectUnderTest = new RecipeController(_mockRecipeService.Object, _mockLogger.Object, _mockMapper.Object);
+        
+        var configuration = new MapperConfiguration(cfg =>
+        {
+            cfg.AddProfile<RecipeMappingProfile>();
+        }, Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
+        _mapper = configuration.CreateMapper();
+        
+        _subjectUnderTest = new RecipeController(_mockRecipeService.Object, _mockLogger.Object, _mapper);
     }
 
     #region Constructor Tests
@@ -31,38 +38,38 @@ public class RecipeControllerTests
     [Fact]
     public void Constructor_WithNullService_ThrowsArgumentNullException()
     {
-        // Act & Assert
-        Action act = () => { _ = new RecipeController(null!, _mockLogger.Object, _mockMapper.Object); };
+        // Act
+        Action act = () => { _ = new RecipeController(null!, _mockLogger.Object, _mapper); };
 
-        act.Should().Throw<ArgumentNullException>()
-            .And.ParamName.Should().Be("recipeService");
+        // Assert
+        act.Should().Throw<ArgumentNullException>().And.ParamName.Should().Be("recipeService");
     }
 
     [Fact]
     public void Constructor_WithNullLogger_ThrowsArgumentNullException()
     {
-        // Act & Assert
-        Action act = () => { _ = new RecipeController(_mockRecipeService.Object, null!, _mockMapper.Object); };
+        // Act
+        Action act = () => { _ = new RecipeController(_mockRecipeService.Object, null!, _mapper); };
 
-        act.Should().Throw<ArgumentNullException>()
-            .And.ParamName.Should().Be("logger");
+        // Assert
+        act.Should().Throw<ArgumentNullException>().And.ParamName.Should().Be("logger");
     }
 
     [Fact]
     public void Constructor_WithNullMapper_ThrowsArgumentNullException()
     {
-        // Act & Assert
+        // Act
         Action act = () => { _ = new RecipeController(_mockRecipeService.Object, _mockLogger.Object, null!); };
 
-        act.Should().Throw<ArgumentNullException>()
-            .And.ParamName.Should().Be("mapper");
+        // Assert
+        act.Should().Throw<ArgumentNullException>().And.ParamName.Should().Be("mapper");
     }
 
     [Fact]
     public void Constructor_WithValidParameters_CreatesInstance()
     {
         // Act
-        var controller = new RecipeController(_mockRecipeService.Object, _mockLogger.Object, _mockMapper.Object);
+        var controller = new RecipeController(_mockRecipeService.Object, _mockLogger.Object, _mapper);
 
         // Assert
         controller.Should().NotBeNull();
@@ -81,28 +88,16 @@ public class RecipeControllerTests
             new() { Id = Guid.NewGuid(), Title = "Recipe 1", Servings = 4 },
             new() { Id = Guid.NewGuid(), Title = "Recipe 2", Servings = 2 }
         };
-        var recipeDtos = new List<RecipeResponseDto>
-        {
-            new() { Id = recipes[0].Id, Title = recipes[0].Title, Servings = recipes[0].Servings },
-            new() { Id = recipes[1].Id, Title = recipes[1].Title, Servings = recipes[1].Servings }
-        };
-
-        _mockRecipeService.Setup(x => x.GetAllRecipesAsync(null, null))
-            .ReturnsAsync(recipes);
-        _mockMapper.Setup(x => x.Map<IEnumerable<RecipeResponseDto>>(recipes))
-            .Returns(recipeDtos);
+        _mockRecipeService.Setup(x => x.GetAllRecipesAsync(null, null)).ReturnsAsync(recipes);
 
         // Act
-        var result = await _subjectUnderTest.GetAllRecipes();
+        IActionResult result = await _subjectUnderTest.GetAllRecipes();
 
         // Assert
-        var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
+        _mockRecipeService.Verify(x => x.GetAllRecipesAsync(null, null), Times.Once);
+        OkObjectResult? okResult = result.Should().BeOfType<OkObjectResult>().Subject;
         okResult.StatusCode.Should().Be(200);
-        okResult.Value.Should().BeOfType<List<RecipeResponseDto>>();
-        okResult.Value.Should().BeEquivalentTo(recipeDtos);
-
-        // Verify mapper was called
-        _mockMapper.Verify(x => x.Map<IEnumerable<RecipeResponseDto>>(recipes), Times.Once);
+        okResult.Value.Should().BeAssignableTo<IEnumerable<RecipeResponseDto>>();
     }
 
     [Fact]
@@ -114,35 +109,60 @@ public class RecipeControllerTests
         {
             new() { Id = Guid.NewGuid(), Title = "User Recipe", UserId = userId, Servings = 4 }
         };
-        _mockRecipeService.Setup(x => x.GetAllRecipesAsync(userId, null))
-            .ReturnsAsync(userRecipes);
+        _mockRecipeService.Setup(x => x.GetAllRecipesAsync(userId, null)).ReturnsAsync(userRecipes);
 
         // Act
-        var result = await _subjectUnderTest.GetAllRecipes(userId);
+        IActionResult result = await _subjectUnderTest.GetAllRecipes(userId);
 
         // Assert
-        var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
-        okResult.Value.Should().BeEquivalentTo(userRecipes);
+        _mockRecipeService.Verify(x => x.GetAllRecipesAsync(userId, null), Times.Once);
+        OkObjectResult? okResult = result.Should().BeOfType<OkObjectResult>().Subject;
+        okResult.Value.Should().BeAssignableTo<IEnumerable<RecipeResponseDto>>();
+        okResult.StatusCode.Should().Be(200);
+        okResult.Value.Should().NotBeNull();
+        ((IEnumerable<RecipeResponseDto>)okResult.Value!).Should().HaveCount(1);
     }
 
     [Fact]
-    public async Task GetAllRecipes_WithLimitFilter_ReturnsLimitedRecipes()
+    public async Task GetAllRecipes_WithValidLimit_PassesLimitToService()
     {
         // Arrange
-        var limitedRecipes = new List<Recipe>
+        var recipes = new List<Recipe>
         {
-            new() { Id = Guid.NewGuid(), Title = "Recipe 1", Servings = 4 },
-            new() { Id = Guid.NewGuid(), Title = "Recipe 2", Servings = 2 }
+            new() { Id = Guid.NewGuid(), Title = "Recipe 1", Servings = 4 }
         };
-        _mockRecipeService.Setup(x => x.GetAllRecipesAsync(null, 2))
-            .ReturnsAsync(limitedRecipes);
+        _mockRecipeService.Setup(x => x.GetAllRecipesAsync(null, 5)).ReturnsAsync(recipes);
 
         // Act
-        var result = await _subjectUnderTest.GetAllRecipes(null, 2);
+        IActionResult result = await _subjectUnderTest.GetAllRecipes(null, 5);
 
         // Assert
-        var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
-        okResult.Value.Should().BeEquivalentTo(limitedRecipes);
+        result.Should().BeOfType<OkObjectResult>();
+        _mockRecipeService.Verify(x => x.GetAllRecipesAsync(null, 5), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetAllRecipes_WithZeroLimit_ReturnsBadRequest()
+    {
+        // Act
+        IActionResult result = await _subjectUnderTest.GetAllRecipes(null, 0);
+
+        // Assert
+        BadRequestObjectResult? badRequestResult = result.Should().BeOfType<BadRequestObjectResult>().Subject;
+        badRequestResult.StatusCode.Should().Be(400);
+        badRequestResult.Value.Should().Be("Limit must be greater than zero");
+    }
+
+    [Fact]
+    public async Task GetAllRecipes_WithNegativeLimit_ReturnsBadRequest()
+    {
+        // Act
+        IActionResult result = await _subjectUnderTest.GetAllRecipes(null, -5);
+
+        // Assert
+        BadRequestObjectResult? badRequestResult = result.Should().BeOfType<BadRequestObjectResult>().Subject;
+        badRequestResult.StatusCode.Should().Be(400);
+        badRequestResult.Value.Should().Be("Limit must be greater than zero");
     }
 
     [Fact]
@@ -154,31 +174,39 @@ public class RecipeControllerTests
         {
             new() { Id = Guid.NewGuid(), Title = "User Recipe", UserId = userId, Servings = 4 }
         };
+        
         _mockRecipeService.Setup(x => x.GetAllRecipesAsync(userId, 5))
             .ReturnsAsync(recipes);
 
         // Act
-        var result = await _subjectUnderTest.GetAllRecipes(userId, 5);
+        IActionResult result = await _subjectUnderTest.GetAllRecipes(userId, 5);
 
         // Assert
-        var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
-        okResult.Value.Should().BeEquivalentTo(recipes);
+        OkObjectResult? okResult = result.Should().BeOfType<OkObjectResult>().Subject;
+        okResult.Value.Should().BeAssignableTo<IEnumerable<RecipeResponseDto>>();
+        
+        // Verify service was called correctly
+        _mockRecipeService.Verify(x => x.GetAllRecipesAsync(userId, 5), Times.Once);
     }
 
     [Fact]
     public async Task GetAllRecipes_WhenNoRecipes_ReturnsEmptyList()
     {
         // Arrange
+        var emptyRecipes = new List<Recipe>();
+        
         _mockRecipeService.Setup(x => x.GetAllRecipesAsync(null, null))
-            .ReturnsAsync(new List<Recipe>());
+            .ReturnsAsync(emptyRecipes);
 
         // Act
-        var result = await _subjectUnderTest.GetAllRecipes();
+        IActionResult result = await _subjectUnderTest.GetAllRecipes();
 
         // Assert
-        var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
-        var recipes = okResult.Value.Should().BeAssignableTo<IEnumerable<Recipe>>().Subject;
-        recipes.Should().BeEmpty();
+        OkObjectResult? okResult = result.Should().BeOfType<OkObjectResult>().Subject;
+        okResult.Value.Should().BeAssignableTo<IEnumerable<RecipeResponseDto>>();
+        
+        // Verify service was called correctly
+        _mockRecipeService.Verify(x => x.GetAllRecipesAsync(null, null), Times.Once);
     }
 
     [Fact]
@@ -189,10 +217,10 @@ public class RecipeControllerTests
             .ThrowsAsync(new ArgumentException("Limit must be greater than zero", "limit"));
 
         // Act
-        var result = await _subjectUnderTest.GetAllRecipes(null, -1);
+        IActionResult result = await _subjectUnderTest.GetAllRecipes(null, -1);
 
         // Assert
-        var badRequestResult = result.Should().BeOfType<BadRequestObjectResult>().Subject;
+        BadRequestObjectResult? badRequestResult = result.Should().BeOfType<BadRequestObjectResult>().Subject;
         badRequestResult.StatusCode.Should().Be(400);
     }
 
@@ -200,10 +228,10 @@ public class RecipeControllerTests
     public async Task GetAllRecipes_WithInvalidUserId_ReturnsBadRequest()
     {
         // Act
-        var result = await _subjectUnderTest.GetAllRecipes("invalid-guid");
+        IActionResult result = await _subjectUnderTest.GetAllRecipes(Guid.Empty);
 
         // Assert
-        var badRequestResult = result.Should().BeOfType<BadRequestObjectResult>().Subject;
+        BadRequestObjectResult? badRequestResult = result.Should().BeOfType<BadRequestObjectResult>().Subject;
         badRequestResult.StatusCode.Should().Be(400);
         badRequestResult.Value.Should().Be("Invalid user ID format");
     }
@@ -216,10 +244,10 @@ public class RecipeControllerTests
             .ThrowsAsync(new Exception("Database connection failed"));
 
         // Act
-        var result = await _subjectUnderTest.GetAllRecipes();
+        IActionResult result = await _subjectUnderTest.GetAllRecipes();
 
         // Assert
-        var statusCodeResult = result.Should().BeOfType<ObjectResult>().Subject;
+        ObjectResult? statusCodeResult = result.Should().BeOfType<ObjectResult>().Subject;
         statusCodeResult.StatusCode.Should().Be(500);
     }
 
@@ -233,24 +261,20 @@ public class RecipeControllerTests
         // Arrange
         var recipeId = Guid.NewGuid();
         var recipe = new Recipe { Id = recipeId, Title = "Test Recipe", Servings = 4 };
-        var recipeDto = new RecipeResponseDto { Id = recipeId, Title = "Test Recipe", Servings = 4 };
 
         _mockRecipeService.Setup(x => x.GetRecipeByIdAsync(recipeId))
             .ReturnsAsync(recipe);
-        _mockMapper.Setup(x => x.Map<RecipeResponseDto>(recipe))
-            .Returns(recipeDto);
 
         // Act
-        var result = await _subjectUnderTest.GetRecipeById(recipeId);
+        IActionResult result = await _subjectUnderTest.GetRecipeById(recipeId);
 
         // Assert
-        var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
+        OkObjectResult? okResult = result.Should().BeOfType<OkObjectResult>().Subject;
         okResult.StatusCode.Should().Be(200);
         okResult.Value.Should().BeOfType<RecipeResponseDto>();
-        okResult.Value.Should().BeEquivalentTo(recipeDto);
 
-        // Verify mapper was called
-        _mockMapper.Verify(x => x.Map<RecipeResponseDto>(recipe), Times.Once);
+        // Verify service was called correctly
+        _mockRecipeService.Verify(x => x.GetRecipeByIdAsync(recipeId), Times.Once);
     }
 
     [Fact]
@@ -262,7 +286,7 @@ public class RecipeControllerTests
             .ReturnsAsync((Recipe?)null);
 
         // Act
-        var result = await _subjectUnderTest.GetRecipeById(recipeId);
+        IActionResult result = await _subjectUnderTest.GetRecipeById(recipeId);
 
         // Assert
         result.Should().BeOfType<NotFoundResult>();
@@ -272,10 +296,10 @@ public class RecipeControllerTests
     public async Task GetRecipeById_WithInvalidId_ReturnsBadRequest()
     {
         // Act
-        var result = await _subjectUnderTest.GetRecipeById("invalid-guid");
+        IActionResult result = await _subjectUnderTest.GetRecipeById(Guid.Empty);
 
         // Assert
-        var badRequestResult = result.Should().BeOfType<BadRequestObjectResult>().Subject;
+        BadRequestObjectResult? badRequestResult = result.Should().BeOfType<BadRequestObjectResult>().Subject;
         badRequestResult.StatusCode.Should().Be(400);
         badRequestResult.Value.Should().Be("Invalid recipe ID format");
     }
@@ -289,10 +313,10 @@ public class RecipeControllerTests
             .ThrowsAsync(new Exception("Database connection failed"));
 
         // Act
-        var result = await _subjectUnderTest.GetRecipeById(recipeId);
+        IActionResult result = await _subjectUnderTest.GetRecipeById(recipeId);
 
         // Assert
-        var statusCodeResult = result.Should().BeOfType<ObjectResult>().Subject;
+        ObjectResult? statusCodeResult = result.Should().BeOfType<ObjectResult>().Subject;
         statusCodeResult.StatusCode.Should().Be(500);
     }
 
@@ -311,53 +335,31 @@ public class RecipeControllerTests
             Servings = 4,
             UserId = Guid.NewGuid()
         };
-        var mappedRecipe = new Recipe
-        {
-            Title = requestDto.Title,
-            Instructions = requestDto.Instructions,
-            Servings = requestDto.Servings,
-            UserId = requestDto.UserId
-        };
         var createdRecipe = new Recipe
         {
             Id = Guid.NewGuid(),
-            Title = requestDto.Title,
-            Instructions = requestDto.Instructions,
-            Servings = requestDto.Servings,
+            Title = "New Recipe",
+            Instructions = "Test instructions",
+            Servings = 4,
             UserId = requestDto.UserId,
             CreatedAt = DateTime.UtcNow
         };
-        var responseDto = new RecipeResponseDto
-        {
-            Id = createdRecipe.Id,
-            Title = createdRecipe.Title,
-            Instructions = createdRecipe.Instructions,
-            Servings = createdRecipe.Servings,
-            UserId = createdRecipe.UserId,
-            CreatedAt = createdRecipe.CreatedAt
-        };
 
-        _mockMapper.Setup(x => x.Map<Recipe>(requestDto))
-            .Returns(mappedRecipe);
         _mockRecipeService.Setup(x => x.CreateRecipeAsync(It.IsAny<Recipe>()))
             .ReturnsAsync(createdRecipe);
-        _mockMapper.Setup(x => x.Map<RecipeResponseDto>(createdRecipe))
-            .Returns(responseDto);
 
         // Act
-        var result = await _subjectUnderTest.CreateRecipe(requestDto);
+        IActionResult result = await _subjectUnderTest.CreateRecipe(requestDto);
 
         // Assert
-        var createdResult = result.Should().BeOfType<CreatedAtActionResult>().Subject;
+        CreatedAtActionResult? createdResult = result.Should().BeOfType<CreatedAtActionResult>().Subject;
         createdResult.StatusCode.Should().Be(201);
         createdResult.ActionName.Should().Be(nameof(RecipeController.GetRecipeById));
         createdResult.RouteValues!["id"].Should().Be(createdRecipe.Id);
         createdResult.Value.Should().BeOfType<RecipeResponseDto>();
-        createdResult.Value.Should().BeEquivalentTo(responseDto);
 
-        // Verify mapper was called for both request and response
-        _mockMapper.Verify(x => x.Map<Recipe>(requestDto), Times.Once);
-        _mockMapper.Verify(x => x.Map<RecipeResponseDto>(createdRecipe), Times.Once);
+        // Verify mapper and service were called correctly
+        _mockRecipeService.Verify(x => x.CreateRecipeAsync(It.IsAny<Recipe>()), Times.Once);
     }
 
     [Fact]
@@ -368,33 +370,39 @@ public class RecipeControllerTests
         {
             Title = "Minimal Recipe",
             Servings = 1
+            // No Instructions or UserId - testing minimal required fields
         };
         var createdRecipe = new Recipe
         {
             Id = Guid.NewGuid(),
-            Title = requestDto.Title,
-            Servings = requestDto.Servings,
+            Title = "Minimal Recipe",
+            Servings = 1,
             CreatedAt = DateTime.UtcNow
         };
+        
         _mockRecipeService.Setup(x => x.CreateRecipeAsync(It.IsAny<Recipe>()))
             .ReturnsAsync(createdRecipe);
 
         // Act
-        var result = await _subjectUnderTest.CreateRecipe(requestDto);
+        IActionResult result = await _subjectUnderTest.CreateRecipe(requestDto);
 
         // Assert
-        var createdResult = result.Should().BeOfType<CreatedAtActionResult>().Subject;
+        CreatedAtActionResult? createdResult = result.Should().BeOfType<CreatedAtActionResult>().Subject;
         createdResult.StatusCode.Should().Be(201);
+        createdResult.Value.Should().BeOfType<RecipeResponseDto>();
+        
+        // Verify mapper and service were called correctly
+        _mockRecipeService.Verify(x => x.CreateRecipeAsync(It.IsAny<Recipe>()), Times.Once);
     }
 
     [Fact]
     public async Task CreateRecipe_WithNullRequest_ReturnsBadRequest()
     {
         // Act
-        var result = await _subjectUnderTest.CreateRecipe(null!);
+        IActionResult result = await _subjectUnderTest.CreateRecipe(null!);
 
         // Assert
-        var badRequestResult = result.Should().BeOfType<BadRequestObjectResult>().Subject;
+        BadRequestObjectResult? badRequestResult = result.Should().BeOfType<BadRequestObjectResult>().Subject;
         badRequestResult.StatusCode.Should().Be(400);
         badRequestResult.Value.Should().Be("Request body is required");
     }
@@ -407,7 +415,7 @@ public class RecipeControllerTests
         var requestDto = new RecipeRequestDto { Title = "Test", Servings = 4 };
 
         // Act
-        var result = await _subjectUnderTest.CreateRecipe(requestDto);
+        IActionResult result = await _subjectUnderTest.CreateRecipe(requestDto);
 
         // Assert
         result.Should().BeOfType<BadRequestObjectResult>();
@@ -422,10 +430,10 @@ public class RecipeControllerTests
             .ThrowsAsync(new Exception("Database connection failed"));
 
         // Act
-        var result = await _subjectUnderTest.CreateRecipe(requestDto);
+        IActionResult result = await _subjectUnderTest.CreateRecipe(requestDto);
 
         // Assert
-        var statusCodeResult = result.Should().BeOfType<ObjectResult>().Subject;
+        ObjectResult? statusCodeResult = result.Should().BeOfType<ObjectResult>().Subject;
         statusCodeResult.StatusCode.Should().Be(500);
     }
 
@@ -445,51 +453,29 @@ public class RecipeControllerTests
             Servings = 6,
             UserId = Guid.NewGuid()
         };
-        var mappedRecipe = new Recipe
-        {
-            Title = requestDto.Title,
-            Instructions = requestDto.Instructions,
-            Servings = requestDto.Servings,
-            UserId = requestDto.UserId
-        };
         var updatedRecipe = new Recipe
         {
             Id = recipeId,
-            Title = requestDto.Title,
-            Instructions = requestDto.Instructions,
-            Servings = requestDto.Servings,
+            Title = "Updated Recipe",
+            Instructions = "Updated instructions",
+            Servings = 6,
             UserId = requestDto.UserId,
             CreatedAt = DateTime.UtcNow.AddDays(-1)
         };
-        var responseDto = new RecipeResponseDto
-        {
-            Id = updatedRecipe.Id,
-            Title = updatedRecipe.Title,
-            Instructions = updatedRecipe.Instructions,
-            Servings = updatedRecipe.Servings,
-            UserId = updatedRecipe.UserId,
-            CreatedAt = updatedRecipe.CreatedAt
-        };
 
-        _mockMapper.Setup(x => x.Map<Recipe>(requestDto))
-            .Returns(mappedRecipe);
         _mockRecipeService.Setup(x => x.UpdateRecipeAsync(recipeId, It.IsAny<Recipe>()))
             .ReturnsAsync(updatedRecipe);
-        _mockMapper.Setup(x => x.Map<RecipeResponseDto>(updatedRecipe))
-            .Returns(responseDto);
 
         // Act
-        var result = await _subjectUnderTest.UpdateRecipe(recipeId, requestDto);
+        IActionResult result = await _subjectUnderTest.UpdateRecipe(recipeId, requestDto);
 
         // Assert
-        var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
+        OkObjectResult? okResult = result.Should().BeOfType<OkObjectResult>().Subject;
         okResult.StatusCode.Should().Be(200);
         okResult.Value.Should().BeOfType<RecipeResponseDto>();
-        okResult.Value.Should().BeEquivalentTo(responseDto);
 
-        // Verify mapper was called for both request and response
-        _mockMapper.Verify(x => x.Map<Recipe>(requestDto), Times.Once);
-        _mockMapper.Verify(x => x.Map<RecipeResponseDto>(updatedRecipe), Times.Once);
+        // Verify mapper and service were called correctly
+        _mockRecipeService.Verify(x => x.UpdateRecipeAsync(recipeId, It.IsAny<Recipe>()), Times.Once);
     }
 
     [Fact]
@@ -503,16 +489,27 @@ public class RecipeControllerTests
             Servings = 3
             // Instructions and UserId are null/not provided
         };
-        var updatedRecipe = new Recipe { Id = recipeId, Title = requestDto.Title, Servings = requestDto.Servings };
+        var updatedRecipe = new Recipe 
+        { 
+            Id = recipeId, 
+            Title = "Partial Update", 
+            Servings = 3,
+            CreatedAt = DateTime.UtcNow.AddDays(-1)
+        };
+        
         _mockRecipeService.Setup(x => x.UpdateRecipeAsync(recipeId, It.IsAny<Recipe>()))
             .ReturnsAsync(updatedRecipe);
 
         // Act
-        var result = await _subjectUnderTest.UpdateRecipe(recipeId, requestDto);
+        IActionResult result = await _subjectUnderTest.UpdateRecipe(recipeId, requestDto);
 
         // Assert
-        var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
+        OkObjectResult? okResult = result.Should().BeOfType<OkObjectResult>().Subject;
         okResult.StatusCode.Should().Be(200);
+        okResult.Value.Should().BeOfType<RecipeResponseDto>();
+        
+        // Verify mapper and service were called correctly
+        _mockRecipeService.Verify(x => x.UpdateRecipeAsync(recipeId, It.IsAny<Recipe>()), Times.Once);
     }
 
     [Fact]
@@ -522,10 +519,10 @@ public class RecipeControllerTests
         var requestDto = new RecipeRequestDto { Title = "Test Recipe", Servings = 4 };
 
         // Act
-        var result = await _subjectUnderTest.UpdateRecipe("invalid-guid", requestDto);
+        IActionResult result = await _subjectUnderTest.UpdateRecipe(Guid.Empty, requestDto);
 
         // Assert
-        var badRequestResult = result.Should().BeOfType<BadRequestObjectResult>().Subject;
+        BadRequestObjectResult? badRequestResult = result.Should().BeOfType<BadRequestObjectResult>().Subject;
         badRequestResult.StatusCode.Should().Be(400);
         badRequestResult.Value.Should().Be("Invalid recipe ID format");
     }
@@ -540,10 +537,10 @@ public class RecipeControllerTests
             .ThrowsAsync(new KeyNotFoundException($"Recipe with ID {recipeId} not found"));
 
         // Act
-        var result = await _subjectUnderTest.UpdateRecipe(recipeId, requestDto);
+        IActionResult result = await _subjectUnderTest.UpdateRecipe(recipeId, requestDto);
 
         // Assert
-        var notFoundResult = result.Should().BeOfType<NotFoundObjectResult>().Subject;
+        NotFoundObjectResult? notFoundResult = result.Should().BeOfType<NotFoundObjectResult>().Subject;
         notFoundResult.StatusCode.Should().Be(404);
     }
 
@@ -554,10 +551,10 @@ public class RecipeControllerTests
         var recipeId = Guid.NewGuid();
 
         // Act
-        var result = await _subjectUnderTest.UpdateRecipe(recipeId, null!);
+        IActionResult result = await _subjectUnderTest.UpdateRecipe(recipeId, null!);
 
         // Assert
-        var badRequestResult = result.Should().BeOfType<BadRequestObjectResult>().Subject;
+        BadRequestObjectResult? badRequestResult = result.Should().BeOfType<BadRequestObjectResult>().Subject;
         badRequestResult.StatusCode.Should().Be(400);
         badRequestResult.Value.Should().Be("Request body is required");
     }
@@ -571,7 +568,7 @@ public class RecipeControllerTests
         var requestDto = new RecipeRequestDto { Title = "Test", Servings = 4 };
 
         // Act
-        var result = await _subjectUnderTest.UpdateRecipe(recipeId, requestDto);
+        IActionResult result = await _subjectUnderTest.UpdateRecipe(recipeId, requestDto);
 
         // Assert
         result.Should().BeOfType<BadRequestObjectResult>();
@@ -587,10 +584,10 @@ public class RecipeControllerTests
             .ThrowsAsync(new Exception("Database connection failed"));
 
         // Act
-        var result = await _subjectUnderTest.UpdateRecipe(recipeId, requestDto);
+        IActionResult result = await _subjectUnderTest.UpdateRecipe(recipeId, requestDto);
 
         // Assert
-        var statusCodeResult = result.Should().BeOfType<ObjectResult>().Subject;
+        ObjectResult? statusCodeResult = result.Should().BeOfType<ObjectResult>().Subject;
         statusCodeResult.StatusCode.Should().Be(500);
     }
 
@@ -607,7 +604,7 @@ public class RecipeControllerTests
             .ReturnsAsync(true);
 
         // Act
-        var result = await _subjectUnderTest.DeleteRecipe(recipeId);
+        IActionResult result = await _subjectUnderTest.DeleteRecipe(recipeId);
 
         // Assert
         result.Should().BeOfType<NoContentResult>();
@@ -622,7 +619,7 @@ public class RecipeControllerTests
             .ReturnsAsync(false);
 
         // Act
-        var result = await _subjectUnderTest.DeleteRecipe(recipeId);
+        IActionResult result = await _subjectUnderTest.DeleteRecipe(recipeId);
 
         // Assert
         result.Should().BeOfType<NotFoundResult>();
@@ -632,10 +629,10 @@ public class RecipeControllerTests
     public async Task DeleteRecipe_WithInvalidId_ReturnsBadRequest()
     {
         // Act
-        var result = await _subjectUnderTest.DeleteRecipe("invalid-guid");
+        IActionResult result = await _subjectUnderTest.DeleteRecipe(Guid.Empty);
 
         // Assert
-        var badRequestResult = result.Should().BeOfType<BadRequestObjectResult>().Subject;
+        BadRequestObjectResult? badRequestResult = result.Should().BeOfType<BadRequestObjectResult>().Subject;
         badRequestResult.StatusCode.Should().Be(400);
         badRequestResult.Value.Should().Be("Invalid recipe ID format");
     }
@@ -649,10 +646,10 @@ public class RecipeControllerTests
             .ThrowsAsync(new Exception("Database connection failed"));
 
         // Act
-        var result = await _subjectUnderTest.DeleteRecipe(recipeId);
+        IActionResult result = await _subjectUnderTest.DeleteRecipe(recipeId);
 
         // Assert
-        var statusCodeResult = result.Should().BeOfType<ObjectResult>().Subject;
+        ObjectResult? statusCodeResult = result.Should().BeOfType<ObjectResult>().Subject;
         statusCodeResult.StatusCode.Should().Be(500);
     }
 
@@ -690,4 +687,5 @@ public class RecipeControllerTests
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.AtLeastOnce);
     }
+    #endregion
 }

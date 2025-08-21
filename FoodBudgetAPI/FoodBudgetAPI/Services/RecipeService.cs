@@ -21,8 +21,6 @@ public class RecipeService(IRecipeRepository recipeRepository, ILogger<RecipeSer
     /// <exception cref="ArgumentException">Thrown when the limit is less than or equal to zero.</exception>
     public async Task<IEnumerable<Recipe>> GetAllRecipesAsync(Guid? userId = null, int? limit = null)
     {
-        if (limit is <= 0) throw new ArgumentException("Limit must be greater than zero", nameof(limit));
-        
         _logger.LogInformation("Getting recipes with filters - UserId: {UserId}, Limit: {Limit}", 
             userId, limit);
 

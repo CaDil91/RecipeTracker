@@ -30,15 +30,42 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
     private Task HandleExceptionAsync(HttpContext context, Exception exception)
     {
         context.Response.ContentType = "application/json";
-        context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-
-        // Create a response object with a consistent structure
-        var response = new ErrorResponse
+        
+        ErrorResponse response = exception switch
         {
-            Status = context.Response.StatusCode,
-            Message = env.IsDevelopment() ? exception.Message : "An internal server error has occurred.",
-            Detail = env.IsDevelopment() ? exception.StackTrace : null
+            ArgumentException argEx => new ErrorResponse
+            {
+                Status = (int)HttpStatusCode.BadRequest,
+                Message = argEx.Message,
+                Detail = env.IsDevelopment() ? argEx.StackTrace : null
+            },
+            KeyNotFoundException keyNotFoundEx => new ErrorResponse
+            {
+                Status = (int)HttpStatusCode.NotFound,
+                Message = keyNotFoundEx.Message,
+                Detail = env.IsDevelopment() ? keyNotFoundEx.StackTrace : null
+            },
+            UnauthorizedAccessException => new ErrorResponse
+            {
+                Status = (int)HttpStatusCode.Unauthorized,
+                Message = "Unauthorized access.",
+                Detail = null
+            },
+            NotSupportedException notSupportedEx => new ErrorResponse
+            {
+                Status = (int)HttpStatusCode.BadRequest,
+                Message = notSupportedEx.Message,
+                Detail = env.IsDevelopment() ? notSupportedEx.StackTrace : null
+            },
+            _ => new ErrorResponse
+            {
+                Status = (int)HttpStatusCode.InternalServerError,
+                Message = env.IsDevelopment() ? exception.Message : "An internal server error has occurred.",
+                Detail = env.IsDevelopment() ? exception.StackTrace : null
+            }
         };
+
+        context.Response.StatusCode = response.Status;
 
         // Use the cached JSON serializer options
         string json = JsonSerializer.Serialize(response, JsonOptions);
@@ -48,7 +75,7 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
     // Define a class for consistent error response structure
     private class ErrorResponse
     {
-        public int Status { get; set; }
+        public int Status { get; init; }
         public string Message { get; set; } = string.Empty;
         public string? Detail { get; set; }
     }

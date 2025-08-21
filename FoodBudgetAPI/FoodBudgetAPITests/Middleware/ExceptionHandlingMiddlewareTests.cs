@@ -116,12 +116,144 @@ public class ExceptionHandlingMiddlewareTests
             "because stack traces should be hidden in production");
         return;
 
-        // Arrange
-
-        // Arrange
         Task Next(HttpContext _)
         {
             throw new Exception("Sensitive error details");
+        }
+    }
+
+    [Fact]
+    public async Task InvokeAsync_ArgumentException_Returns400BadRequest()
+    {
+        // Arrange
+        const string expectedMessage = "Invalid argument provided";
+        var loggerMock = new Mock<ILogger<ExceptionHandlingMiddleware>>();
+        var envMock = new Mock<IWebHostEnvironment>();
+        envMock.Setup(e => e.EnvironmentName).Returns("Development");
+        var middleware = new ExceptionHandlingMiddleware(Next, loggerMock.Object, envMock.Object);
+        var context = new DefaultHttpContext();
+        var responseBody = new MemoryStream();
+        context.Response.Body = responseBody;
+        
+        // Act
+        await middleware.InvokeAsync(context);
+        
+        // Assert
+        context.Response.StatusCode.Should().Be((int)HttpStatusCode.BadRequest);
+        context.Response.ContentType.Should().Be("application/json");
+        
+        responseBody.Position = 0;
+        string responseText = await new StreamReader(responseBody).ReadToEndAsync();
+        JsonElement response = JsonSerializer.Deserialize<JsonDocument>(responseText)!.RootElement;
+        
+        response.GetProperty("status").GetInt32().Should().Be(400);
+        response.GetProperty("message").GetString().Should().Be(expectedMessage);
+        return;
+
+        Task Next(HttpContext _)
+        {
+            throw new ArgumentException(expectedMessage);
+        }
+    }
+
+    [Fact]
+    public async Task InvokeAsync_KeyNotFoundException_Returns404NotFound()
+    {
+        // Arrange
+        const string expectedMessage = "Resource not found";
+        var loggerMock = new Mock<ILogger<ExceptionHandlingMiddleware>>();
+        var envMock = new Mock<IWebHostEnvironment>();
+        envMock.Setup(e => e.EnvironmentName).Returns("Development");
+        var middleware = new ExceptionHandlingMiddleware(Next, loggerMock.Object, envMock.Object);
+        var context = new DefaultHttpContext();
+        var responseBody = new MemoryStream();
+        context.Response.Body = responseBody;
+        
+        // Act
+        await middleware.InvokeAsync(context);
+        
+        // Assert
+        context.Response.StatusCode.Should().Be((int)HttpStatusCode.NotFound);
+        context.Response.ContentType.Should().Be("application/json");
+        
+        responseBody.Position = 0;
+        string responseText = await new StreamReader(responseBody).ReadToEndAsync();
+        JsonElement response = JsonSerializer.Deserialize<JsonDocument>(responseText)!.RootElement;
+        
+        response.GetProperty("status").GetInt32().Should().Be(404);
+        response.GetProperty("message").GetString().Should().Be(expectedMessage);
+        return;
+
+        Task Next(HttpContext _)
+        {
+            throw new KeyNotFoundException(expectedMessage);
+        }
+    }
+
+    [Fact]
+    public async Task InvokeAsync_UnauthorizedAccessException_Returns401Unauthorized()
+    {
+        // Arrange
+        var loggerMock = new Mock<ILogger<ExceptionHandlingMiddleware>>();
+        var envMock = new Mock<IWebHostEnvironment>();
+        envMock.Setup(e => e.EnvironmentName).Returns("Development");
+        var middleware = new ExceptionHandlingMiddleware(Next, loggerMock.Object, envMock.Object);
+        var context = new DefaultHttpContext();
+        var responseBody = new MemoryStream();
+        context.Response.Body = responseBody;
+        
+        // Act
+        await middleware.InvokeAsync(context);
+        
+        // Assert
+        context.Response.StatusCode.Should().Be((int)HttpStatusCode.Unauthorized);
+        context.Response.ContentType.Should().Be("application/json");
+        
+        responseBody.Position = 0;
+        string responseText = await new StreamReader(responseBody).ReadToEndAsync();
+        JsonElement response = JsonSerializer.Deserialize<JsonDocument>(responseText)!.RootElement;
+        
+        response.GetProperty("status").GetInt32().Should().Be(401);
+        response.GetProperty("message").GetString().Should().Be("Unauthorized access.");
+        return;
+
+        Task Next(HttpContext _)
+        {
+            throw new UnauthorizedAccessException("User not authorized");
+        }
+    }
+
+    [Fact]
+    public async Task InvokeAsync_NotSupportedException_Returns400BadRequest()
+    {
+        // Arrange
+        const string expectedMessage = "Operation not supported";
+        var loggerMock = new Mock<ILogger<ExceptionHandlingMiddleware>>();
+        var envMock = new Mock<IWebHostEnvironment>();
+        envMock.Setup(e => e.EnvironmentName).Returns("Development");
+        var middleware = new ExceptionHandlingMiddleware(Next, loggerMock.Object, envMock.Object);
+        var context = new DefaultHttpContext();
+        var responseBody = new MemoryStream();
+        context.Response.Body = responseBody;
+        
+        // Act
+        await middleware.InvokeAsync(context);
+        
+        // Assert
+        context.Response.StatusCode.Should().Be((int)HttpStatusCode.BadRequest);
+        context.Response.ContentType.Should().Be("application/json");
+        
+        responseBody.Position = 0;
+        string responseText = await new StreamReader(responseBody).ReadToEndAsync();
+        JsonElement response = JsonSerializer.Deserialize<JsonDocument>(responseText)!.RootElement;
+        
+        response.GetProperty("status").GetInt32().Should().Be(400);
+        response.GetProperty("message").GetString().Should().Be(expectedMessage);
+        return;
+
+        Task Next(HttpContext _)
+        {
+            throw new NotSupportedException(expectedMessage);
         }
     }
 }

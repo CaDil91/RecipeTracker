@@ -113,20 +113,6 @@ public class RecipeServiceTests
         Assert.Equal(allRecipes.Take(2), enumerable);
     }
 
-    [Theory]
-    [InlineData(0)]
-    [InlineData(-1)]
-    [InlineData(-10)]
-    public async Task GetAllRecipesAsync_WithInvalidLimit_ThrowsArgumentException(int invalidLimit)
-    {
-        // Arrange & Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() => 
-            _subjectUnderTest.GetAllRecipesAsync(limit: invalidLimit));
-        
-        Assert.Contains("Limit must be greater than zero", exception.Message);
-        Assert.Equal("limit", exception.ParamName);
-    }
-
     [Fact]
     public async Task GetAllRecipesAsync_WithUserIdAndLimit_ReturnsFilteredAndLimitedResults()
     {

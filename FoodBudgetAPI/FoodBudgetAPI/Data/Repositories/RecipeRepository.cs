@@ -3,13 +3,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace FoodBudgetAPI.Data.Repositories;
 
-public class RecipeRepository : Repository<Recipe>, IRecipeRepository
+public class RecipeRepository(FoodBudgetDbContext context, ILogger<RecipeRepository> logger)
+    : Repository<Recipe>(context, logger), IRecipeRepository
 {
-    public RecipeRepository(FoodBudgetDbContext context, ILogger<RecipeRepository> logger) 
-        : base(context, logger)
-    {
-    }
-
     public async Task<IEnumerable<Recipe>> GetByTitleAsync(string title)
     {
         return await DbSet

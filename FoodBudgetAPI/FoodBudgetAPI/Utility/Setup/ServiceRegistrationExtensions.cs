@@ -2,6 +2,7 @@
 using System.Diagnostics.CodeAnalysis;
 using FoodBudgetAPI.Data;
 using FoodBudgetAPI.Data.Repositories;
+using FoodBudgetAPI.Mapping;
 using FoodBudgetAPI.Services;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,34 +11,26 @@ namespace FoodBudgetAPI.Utility.Setup;
 [ExcludeFromCodeCoverage]
 public static class ServiceRegistrationExtensions
 {
-    public static IServiceCollection RegisterServices(this IServiceCollection services, ConfigurationManager builderConfiguration)
+    public static void RegisterServices(this IServiceCollection services, ConfigurationManager builderConfiguration)
     {
-        // Register application services
         RegisterInfrastructureServices(services, builderConfiguration);
         RegisterApplicationServices(services);
         RegisterConfigurationOptions(services);
-        
-        return services;
     }
     
     private static void RegisterInfrastructureServices(IServiceCollection services, IConfiguration configuration)
     {
-        // Register database contexts, repositories, and other infrastructure services
-        // Example:
-        // services.AddDbContext<FoodBudgetDbContext>(options => 
-        //     options.UseSqlServer(configuration.GetConnectionString("DefaultConnection")));
-        // services.AddScoped<IFoodRepository, FoodRepository>();
-        
         services.AddDbContext<FoodBudgetDbContext>(options =>
             options.UseSqlServer(configuration.GetConnectionString("DefaultConnection")));
         
         services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
         services.AddScoped<IRecipeRepository, RecipeRepository>();
+        
+        services.AddAutoMapper(_ => { }, typeof(RecipeMappingProfile));
     }
     
     private static void RegisterApplicationServices(IServiceCollection services)
     {
-        // Register application services, managers, and other business logic components
         services.AddScoped<IRecipeService, RecipeService>();
     }
     

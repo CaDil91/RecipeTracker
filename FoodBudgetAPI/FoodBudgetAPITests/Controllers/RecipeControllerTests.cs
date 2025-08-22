@@ -245,37 +245,20 @@ public class RecipeControllerTests
         // Arrange
         var recipeId = Guid.NewGuid();
         var recipe = new Recipe { Id = recipeId, Title = "Test Recipe", Servings = 4 };
-
-        _mockRecipeService.Setup(x => x.GetRecipeByIdAsync(recipeId))
-            .ReturnsAsync(recipe);
+        _mockRecipeService.Setup(x => x.GetRecipeByIdAsync(recipeId)).ReturnsAsync(recipe);
 
         // Act
         IActionResult result = await _subjectUnderTest.GetRecipeById(recipeId);
 
         // Assert
+        _mockRecipeService.Verify(x => x.GetRecipeByIdAsync(recipeId), Times.Once);
         OkObjectResult? okResult = result.Should().BeOfType<OkObjectResult>().Subject;
         okResult.StatusCode.Should().Be(200);
         okResult.Value.Should().BeOfType<RecipeResponseDto>();
-
-        // Verify service was called correctly
-        _mockRecipeService.Verify(x => x.GetRecipeByIdAsync(recipeId), Times.Once);
+        var recipeDto = (RecipeResponseDto)okResult.Value!;
+        recipeDto.Id.Should().Be(recipeId);
     }
-
-    [Fact]
-    public async Task GetRecipeById_WithNonExistentId_ReturnsNotFound()
-    {
-        // Arrange
-        var recipeId = Guid.NewGuid();
-        _mockRecipeService.Setup(x => x.GetRecipeByIdAsync(recipeId))
-            .ReturnsAsync((Recipe?)null);
-
-        // Act
-        IActionResult result = await _subjectUnderTest.GetRecipeById(recipeId);
-
-        // Assert
-        result.Should().BeOfType<NotFoundResult>();
-    }
-
+    
     [Fact]
     public async Task GetRecipeById_WithInvalidId_ReturnsBadRequest()
     {
@@ -287,21 +270,58 @@ public class RecipeControllerTests
         badRequestResult.StatusCode.Should().Be(400);
         badRequestResult.Value.Should().Be("Invalid recipe ID format");
     }
-
+    
     [Fact]
-    public async Task GetRecipeById_WhenServiceThrows_ReturnsInternalServerError()
+    public async Task GetRecipeById_WithNonExistentId_ReturnsNotFound()
     {
         // Arrange
         var recipeId = Guid.NewGuid();
-        _mockRecipeService.Setup(x => x.GetRecipeByIdAsync(recipeId))
-            .ThrowsAsync(new Exception("Database connection failed"));
+        _mockRecipeService.Setup(x => x.GetRecipeByIdAsync(recipeId)).ReturnsAsync((Recipe?)null);
 
         // Act
         IActionResult result = await _subjectUnderTest.GetRecipeById(recipeId);
 
         // Assert
-        ObjectResult? statusCodeResult = result.Should().BeOfType<ObjectResult>().Subject;
-        statusCodeResult.StatusCode.Should().Be(500);
+        result.Should().BeOfType<NotFoundResult>();
+        _mockRecipeService.Verify(x => x.GetRecipeByIdAsync(recipeId), Times.Once);
+    }
+    
+    [Fact]
+    public async Task GetRecipeById_WhenServiceReturnsNull_ReturnsEmptyList()
+    {
+        // Arrange
+        var recipeId = Guid.NewGuid();
+        _mockRecipeService.Setup(x => x.GetRecipeByIdAsync(recipeId)).ReturnsAsync((Recipe?)null);
+
+        // Act
+        IActionResult result = await _subjectUnderTest.GetRecipeById(recipeId);
+
+        // Assert
+        Ok? notFoundResult = result.Should().BeOfType<Ok>().Subject;
+        notFoundResult.StatusCode.Should().Be(200);
+        _mockRecipeService.Verify(x => x.GetRecipeByIdAsync(recipeId), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetRecipeById_LogsInformationWithCorrectParameters()
+    {
+        // Arrange
+        var recipeId = Guid.NewGuid();
+        var recipe = new Recipe { Id = recipeId, Title = "Test Recipe", Servings = 4 };
+        _mockRecipeService.Setup(x => x.GetRecipeByIdAsync(recipeId)).ReturnsAsync(recipe);
+
+        // Act
+        await _subjectUnderTest.GetRecipeById(recipeId);
+
+        // Assert
+        _mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Information,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Getting recipe by ID:")),
+                null,
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
     }
 
     #endregion

@@ -35,7 +35,15 @@ public class RecipeController(IRecipeService recipeService, ILogger<RecipeContro
     [HttpGet("{id}")]
     public async Task<IActionResult> GetRecipeById(Guid id)
     {
-        throw new NotImplementedException();
+        _logger.LogInformation("Getting recipe by ID: {RecipeId}", id);
+        
+        if (id == Guid.Empty) return BadRequest("Invalid recipe ID format");
+        
+        Recipe? recipe = await _recipeService.GetRecipeByIdAsync(id);
+        if (recipe == null) return NotFound();
+        
+        var recipeDto = _mapper.Map<RecipeResponseDto>(recipe);
+        return Ok(recipeDto);
     }
 
     [HttpPost]

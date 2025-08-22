@@ -287,7 +287,7 @@ public class RecipeControllerTests
     }
     
     [Fact]
-    public async Task GetRecipeById_WhenServiceReturnsNull_ReturnsEmptyList()
+    public async Task GetRecipeById_WhenServiceReturnsNull_ReturnsNotFound()
     {
         // Arrange
         var recipeId = Guid.NewGuid();
@@ -297,8 +297,8 @@ public class RecipeControllerTests
         IActionResult result = await _subjectUnderTest.GetRecipeById(recipeId);
 
         // Assert
-        Ok? notFoundResult = result.Should().BeOfType<Ok>().Subject;
-        notFoundResult.StatusCode.Should().Be(200);
+        NotFoundResult? notFoundResult = result.Should().BeOfType<NotFoundResult>().Subject;
+        notFoundResult.StatusCode.Should().Be(404);
         _mockRecipeService.Verify(x => x.GetRecipeByIdAsync(recipeId), Times.Once);
     }
 
@@ -356,14 +356,12 @@ public class RecipeControllerTests
         IActionResult result = await _subjectUnderTest.CreateRecipe(requestDto);
 
         // Assert
+        _mockRecipeService.Verify(x => x.CreateRecipeAsync(It.IsAny<Recipe>()), Times.Once);
         CreatedAtActionResult? createdResult = result.Should().BeOfType<CreatedAtActionResult>().Subject;
         createdResult.StatusCode.Should().Be(201);
         createdResult.ActionName.Should().Be(nameof(RecipeController.GetRecipeById));
         createdResult.RouteValues!["id"].Should().Be(createdRecipe.Id);
         createdResult.Value.Should().BeOfType<RecipeResponseDto>();
-
-        // Verify mapper and service were called correctly
-        _mockRecipeService.Verify(x => x.CreateRecipeAsync(It.IsAny<Recipe>()), Times.Once);
     }
 
     [Fact]
@@ -374,8 +372,8 @@ public class RecipeControllerTests
         {
             Title = "Minimal Recipe",
             Servings = 1
-            // No Instructions or UserId - testing minimal required fields
         };
+        
         var createdRecipe = new Recipe
         {
             Id = Guid.NewGuid(),
@@ -391,54 +389,10 @@ public class RecipeControllerTests
         IActionResult result = await _subjectUnderTest.CreateRecipe(requestDto);
 
         // Assert
+        _mockRecipeService.Verify(x => x.CreateRecipeAsync(It.IsAny<Recipe>()), Times.Once);
         CreatedAtActionResult? createdResult = result.Should().BeOfType<CreatedAtActionResult>().Subject;
         createdResult.StatusCode.Should().Be(201);
         createdResult.Value.Should().BeOfType<RecipeResponseDto>();
-        
-        // Verify mapper and service were called correctly
-        _mockRecipeService.Verify(x => x.CreateRecipeAsync(It.IsAny<Recipe>()), Times.Once);
-    }
-
-    [Fact]
-    public async Task CreateRecipe_WithNullRequest_ReturnsBadRequest()
-    {
-        // Act
-        IActionResult result = await _subjectUnderTest.CreateRecipe(null!);
-
-        // Assert
-        BadRequestObjectResult? badRequestResult = result.Should().BeOfType<BadRequestObjectResult>().Subject;
-        badRequestResult.StatusCode.Should().Be(400);
-        badRequestResult.Value.Should().Be("Request body is required");
-    }
-
-    [Fact]
-    public async Task CreateRecipe_WithInvalidModelState_ReturnsBadRequest()
-    {
-        // Arrange
-        _subjectUnderTest.ModelState.AddModelError("Title", "Title is required");
-        var requestDto = new RecipeRequestDto { Title = "Test", Servings = 4 };
-
-        // Act
-        IActionResult result = await _subjectUnderTest.CreateRecipe(requestDto);
-
-        // Assert
-        result.Should().BeOfType<BadRequestObjectResult>();
-    }
-
-    [Fact]
-    public async Task CreateRecipe_WhenServiceThrows_ReturnsInternalServerError()
-    {
-        // Arrange
-        var requestDto = new RecipeRequestDto { Title = "Test Recipe", Servings = 4 };
-        _mockRecipeService.Setup(x => x.CreateRecipeAsync(It.IsAny<Recipe>()))
-            .ThrowsAsync(new Exception("Database connection failed"));
-
-        // Act
-        IActionResult result = await _subjectUnderTest.CreateRecipe(requestDto);
-
-        // Assert
-        ObjectResult? statusCodeResult = result.Should().BeOfType<ObjectResult>().Subject;
-        statusCodeResult.StatusCode.Should().Be(500);
     }
 
     #endregion

@@ -32,7 +32,7 @@ public class RecipeController(IRecipeService recipeService, ILogger<RecipeContro
         return Ok(recipeDTOs);
     }
 
-    [HttpGet("{id}")]
+    [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetRecipeById(Guid id)
     {
         _logger.LogInformation("Getting recipe by ID: {RecipeId}", id);
@@ -49,7 +49,11 @@ public class RecipeController(IRecipeService recipeService, ILogger<RecipeContro
     [HttpPost]
     public async Task<IActionResult> CreateRecipe([FromBody] RecipeRequestDto request)
     {
-        throw new NotImplementedException();
+        var recipe = _mapper.Map<Recipe>(request);
+        Recipe createdRecipe = await _recipeService.CreateRecipeAsync(recipe);
+        
+        var recipeDto = _mapper.Map<RecipeResponseDto>(createdRecipe);
+        return CreatedAtAction(nameof(GetRecipeById), new { id = createdRecipe.Id }, recipeDto);
     }
 
     [HttpPut("{id}")]

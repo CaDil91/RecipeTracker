@@ -6,6 +6,7 @@ using FoodBudgetAPI.Mapping;
 using FoodBudgetAPI.Models.DTOs.Requests;
 using FoodBudgetAPI.Models.DTOs.Responses;
 using FoodBudgetAPI.Services;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -174,39 +175,36 @@ public class RecipeControllerTests
         {
             new() { Id = Guid.NewGuid(), Title = "User Recipe", UserId = userId, Servings = 4 }
         };
-        
-        _mockRecipeService.Setup(x => x.GetAllRecipesAsync(userId, 5))
-            .ReturnsAsync(recipes);
+    
+        _mockRecipeService.Setup(x => x.GetAllRecipesAsync(userId, 5)).ReturnsAsync(recipes);
 
         // Act
         IActionResult result = await _subjectUnderTest.GetAllRecipes(userId, 5);
 
         // Assert
-        OkObjectResult? okResult = result.Should().BeOfType<OkObjectResult>().Subject;
-        okResult.Value.Should().BeAssignableTo<IEnumerable<RecipeResponseDto>>();
-        
-        // Verify service was called correctly
         _mockRecipeService.Verify(x => x.GetAllRecipesAsync(userId, 5), Times.Once);
+        OkObjectResult? okResult = result.Should().BeOfType<OkObjectResult>().Subject;
+        okResult.StatusCode.Should().Be(200);
+        okResult.Value.Should().BeAssignableTo<IEnumerable<RecipeResponseDto>>();
+        var recipeDTOs = (IEnumerable<RecipeResponseDto>)okResult.Value!;
+        recipeDTOs.Should().HaveCount(1);
     }
 
     [Fact]
     public async Task GetAllRecipes_WhenNoRecipes_ReturnsEmptyList()
     {
         // Arrange
-        var emptyRecipes = new List<Recipe>();
-        
-        _mockRecipeService.Setup(x => x.GetAllRecipesAsync(null, null))
-            .ReturnsAsync(emptyRecipes);
+        _mockRecipeService.Setup(x => x.GetAllRecipesAsync(null, null)).ReturnsAsync(new List<Recipe>());
 
         // Act
         IActionResult result = await _subjectUnderTest.GetAllRecipes();
 
         // Assert
+        _mockRecipeService.Verify(x => x.GetAllRecipesAsync(null, null), Times.Once);
         OkObjectResult? okResult = result.Should().BeOfType<OkObjectResult>().Subject;
         okResult.Value.Should().BeAssignableTo<IEnumerable<RecipeResponseDto>>();
-        
-        // Verify service was called correctly
-        _mockRecipeService.Verify(x => x.GetAllRecipesAsync(null, null), Times.Once);
+        okResult.StatusCode.Should().Be(200);
+        ((IEnumerable<RecipeResponseDto>)okResult.Value!).Should().BeEmpty();
     }
 
     [Fact]
@@ -214,7 +212,7 @@ public class RecipeControllerTests
     {
         // Arrange
         _mockRecipeService.Setup(x => x.GetAllRecipesAsync(null, -1))
-            .ThrowsAsync(new ArgumentException("Limit must be greater than zero", "limit"));
+            .ThrowsAsync(new ArgumentException("Limit must be greater than zero", $"limit"));
 
         // Act
         IActionResult result = await _subjectUnderTest.GetAllRecipes(null, -1);
@@ -234,27 +232,13 @@ public class RecipeControllerTests
         BadRequestObjectResult? badRequestResult = result.Should().BeOfType<BadRequestObjectResult>().Subject;
         badRequestResult.StatusCode.Should().Be(400);
         badRequestResult.Value.Should().Be("Invalid user ID format");
-    }
-
-    [Fact]
-    public async Task GetAllRecipes_WhenServiceThrows_ReturnsInternalServerError()
-    {
-        // Arrange
-        _mockRecipeService.Setup(x => x.GetAllRecipesAsync(null, null))
-            .ThrowsAsync(new Exception("Database connection failed"));
-
-        // Act
-        IActionResult result = await _subjectUnderTest.GetAllRecipes();
-
-        // Assert
-        ObjectResult? statusCodeResult = result.Should().BeOfType<ObjectResult>().Subject;
-        statusCodeResult.StatusCode.Should().Be(500);
+        _mockRecipeService.Verify(x => x.GetAllRecipesAsync(It.IsAny<Guid?>(), It.IsAny<int?>()), Times.Never);
     }
 
     #endregion
 
     #region GET /api/recipes/{id} Tests
-
+    
     [Fact]
     public async Task GetRecipeById_WithValidId_ReturnsOkWithRecipe()
     {

@@ -81,8 +81,6 @@ public class RecipeService(IRecipeRepository recipeRepository, ILogger<RecipeSer
     /// <exception cref="KeyNotFoundException">Thrown when a recipe with the specified ID does not exist.</exception>
     public async Task<Recipe> UpdateRecipeAsync(Guid id, Recipe recipe)
     {
-        ArgumentNullException.ThrowIfNull(recipe);
-
         if (string.IsNullOrWhiteSpace(recipe.Title))
             throw new ArgumentException("Recipe title is required", nameof(recipe));
 

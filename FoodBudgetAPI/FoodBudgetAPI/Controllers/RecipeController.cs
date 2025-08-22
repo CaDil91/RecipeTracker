@@ -1,4 +1,4 @@
-﻿using Asp.Versioning;
+using Asp.Versioning;
 using AutoMapper;
 using FoodBudgetAPI.Entities;
 using FoodBudgetAPI.Models.DTOs.Requests;
@@ -56,15 +56,31 @@ public class RecipeController(IRecipeService recipeService, ILogger<RecipeContro
         return CreatedAtAction(nameof(GetRecipeById), new { id = createdRecipe.Id }, recipeDto);
     }
 
-    [HttpPut("{id}")]
+    [HttpPut("{id:guid}")]
     public async Task<IActionResult> UpdateRecipe(Guid id, [FromBody] RecipeRequestDto request)
     {
-        throw new NotImplementedException();
+        _logger.LogInformation("Updating recipe: {RecipeId}", id);
+        
+        if (id == Guid.Empty) return BadRequest("Invalid recipe ID format");
+        
+        var recipe = _mapper.Map<Recipe>(request);
+        Recipe updatedRecipe = await _recipeService.UpdateRecipeAsync(id, recipe);
+        
+        var recipeDto = _mapper.Map<RecipeResponseDto>(updatedRecipe);
+        return Ok(recipeDto);
     }
 
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteRecipe(Guid id)
     {
-        throw new NotImplementedException();
+        _logger.LogInformation("Deleting recipe: {RecipeId}", id);
+        
+        if (id == Guid.Empty) return BadRequest("Invalid recipe ID format");
+        
+        bool deleted = await _recipeService.DeleteRecipeAsync(id);
+        
+        if (!deleted) return NotFound();
+        
+        return NoContent();
     }
 }

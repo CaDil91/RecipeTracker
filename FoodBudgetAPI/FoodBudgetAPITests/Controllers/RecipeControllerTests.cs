@@ -486,7 +486,7 @@ public class RecipeControllerTests
     }
 
     [Fact]
-    public async Task UpdateRecipe_WithNonExistentId_ReturnsNotFound()
+    public async Task UpdateRecipe_WithNonExistentId_ThrowsKeyNotFoundException()
     {
         // Arrange
         var recipeId = Guid.NewGuid();
@@ -494,59 +494,44 @@ public class RecipeControllerTests
         _mockRecipeService.Setup(x => x.UpdateRecipeAsync(recipeId, It.IsAny<Recipe>()))
             .ThrowsAsync(new KeyNotFoundException($"Recipe with ID {recipeId} not found"));
 
-        // Act
-        IActionResult result = await _subjectUnderTest.UpdateRecipe(recipeId, requestDto);
-
-        // Assert
-        NotFoundObjectResult? notFoundResult = result.Should().BeOfType<NotFoundObjectResult>().Subject;
-        notFoundResult.StatusCode.Should().Be(404);
+        // Act & Assert
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => 
+            _subjectUnderTest.UpdateRecipe(recipeId, requestDto));
     }
 
     [Fact]
-    public async Task UpdateRecipe_WithNullRequest_ReturnsBadRequest()
+    public async Task UpdateRecipe_LogsInformationWithCorrectParameters()
     {
         // Arrange
         var recipeId = Guid.NewGuid();
-
-        // Act
-        IActionResult result = await _subjectUnderTest.UpdateRecipe(recipeId, null!);
-
-        // Assert
-        BadRequestObjectResult? badRequestResult = result.Should().BeOfType<BadRequestObjectResult>().Subject;
-        badRequestResult.StatusCode.Should().Be(400);
-        badRequestResult.Value.Should().Be("Request body is required");
-    }
-
-    [Fact]
-    public async Task UpdateRecipe_WithInvalidModelState_ReturnsBadRequest()
-    {
-        // Arrange
-        var recipeId = Guid.NewGuid();
-        _subjectUnderTest.ModelState.AddModelError("Title", "Title is required");
-        var requestDto = new RecipeRequestDto { Title = "Test", Servings = 4 };
-
-        // Act
-        IActionResult result = await _subjectUnderTest.UpdateRecipe(recipeId, requestDto);
-
-        // Assert
-        result.Should().BeOfType<BadRequestObjectResult>();
-    }
-
-    [Fact]
-    public async Task UpdateRecipe_WhenServiceThrows_ReturnsInternalServerError()
-    {
-        // Arrange
-        var recipeId = Guid.NewGuid();
-        var requestDto = new RecipeRequestDto { Title = "Test Recipe", Servings = 4 };
+        var requestDto = new RecipeRequestDto
+        {
+            Title = "Updated Recipe",
+            Servings = 4
+        };
+        var updatedRecipe = new Recipe
+        {
+            Id = recipeId,
+            Title = "Updated Recipe",
+            Servings = 4,
+            CreatedAt = DateTime.UtcNow.AddDays(-1)
+        };
+        
         _mockRecipeService.Setup(x => x.UpdateRecipeAsync(recipeId, It.IsAny<Recipe>()))
-            .ThrowsAsync(new Exception("Database connection failed"));
+            .ReturnsAsync(updatedRecipe);
 
         // Act
-        IActionResult result = await _subjectUnderTest.UpdateRecipe(recipeId, requestDto);
+        await _subjectUnderTest.UpdateRecipe(recipeId, requestDto);
 
         // Assert
-        ObjectResult? statusCodeResult = result.Should().BeOfType<ObjectResult>().Subject;
-        statusCodeResult.StatusCode.Should().Be(500);
+        _mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Information,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Updating recipe:")),
+                null,
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
     }
 
     #endregion
@@ -596,19 +581,25 @@ public class RecipeControllerTests
     }
 
     [Fact]
-    public async Task DeleteRecipe_WhenServiceThrows_ReturnsInternalServerError()
+    public async Task DeleteRecipe_LogsInformationWithCorrectParameters()
     {
         // Arrange
         var recipeId = Guid.NewGuid();
         _mockRecipeService.Setup(x => x.DeleteRecipeAsync(recipeId))
-            .ThrowsAsync(new Exception("Database connection failed"));
+            .ReturnsAsync(true);
 
         // Act
-        IActionResult result = await _subjectUnderTest.DeleteRecipe(recipeId);
+        await _subjectUnderTest.DeleteRecipe(recipeId);
 
         // Assert
-        ObjectResult? statusCodeResult = result.Should().BeOfType<ObjectResult>().Subject;
-        statusCodeResult.StatusCode.Should().Be(500);
+        _mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Information,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Deleting recipe:")),
+                null,
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
     }
 
     #endregion

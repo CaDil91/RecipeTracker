@@ -4,6 +4,7 @@ using FoodBudgetAPI.Entities;
 using FoodBudgetAPI.Mapping;
 using FoodBudgetAPI.Models.DTOs.Requests;
 using FoodBudgetAPI.Models.DTOs.Responses;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace FoodBudgetAPITests.Mapping;
 
@@ -16,7 +17,7 @@ public class RecipeMappingProfileTests
         var configuration = new MapperConfiguration(cfg =>
         {
             cfg.AddProfile<RecipeMappingProfile>();
-        }, null);
+        }, NullLoggerFactory.Instance);
         
         _mapper = configuration.CreateMapper();
     }
@@ -100,8 +101,9 @@ public class RecipeMappingProfileTests
         var dtos = _mapper.Map<IEnumerable<RecipeResponseDto>>(recipes);
 
         // Assert
-        dtos.Should().HaveCount(2);
-        var dtoList = dtos.ToList();
+        IEnumerable<RecipeResponseDto> recipeResponseDTOs = dtos as RecipeResponseDto[] ?? dtos.ToArray();
+        recipeResponseDTOs.Should().HaveCount(2);
+        List<RecipeResponseDto> dtoList = recipeResponseDTOs.ToList();
         
         dtoList[0].Id.Should().Be(recipes[0].Id);
         dtoList[0].Title.Should().Be(recipes[0].Title);
@@ -213,8 +215,9 @@ public class RecipeMappingProfileTests
         var recipes = _mapper.Map<IEnumerable<Recipe>>(dtos);
 
         // Assert
-        recipes.Should().HaveCount(2);
-        var recipeList = recipes.ToList();
+        IEnumerable<Recipe> enumerable = recipes as Recipe[] ?? recipes.ToArray();
+        enumerable.Should().HaveCount(2);
+        List<Recipe> recipeList = enumerable.ToList();
         
         recipeList[0].Title.Should().Be(dtos[0].Title);
         recipeList[0].Servings.Should().Be(dtos[0].Servings);

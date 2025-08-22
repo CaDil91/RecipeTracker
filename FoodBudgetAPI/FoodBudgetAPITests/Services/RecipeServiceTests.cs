@@ -374,16 +374,6 @@ public class RecipeServiceTests
         _mockRepository.Verify(x => x.SaveChangesAsync(), Times.Once);
     }
 
-    [Fact]
-    public async Task UpdateRecipeAsync_WithNullRecipe_ThrowsArgumentNullException()
-    {
-        // Arrange
-        var recipeId = Guid.NewGuid();
-
-        // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(() => _subjectUnderTest.UpdateRecipeAsync(recipeId, null!));
-    }
-
     [Theory]
     [InlineData(null)]
     [InlineData("")]

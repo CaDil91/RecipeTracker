@@ -1,4 +1,4 @@
-﻿using FluentAssertions;
+using FluentAssertions;
 using FoodBudgetAPI;
 using FoodBudgetAPI.Data;
 using FoodBudgetAPI.Entities;
@@ -104,6 +104,7 @@ public class RecipeDbContextTests(DbTestFactory<Program> factory) : IClassFixtur
         var recipe = new Recipe
         {
             Title = "Recipe to Delete",
+            Servings = 4,
             CreatedAt = DateTime.UtcNow
         };
         
@@ -126,9 +127,9 @@ public class RecipeDbContextTests(DbTestFactory<Program> factory) : IClassFixtur
         await using FoodBudgetDbContext context = factory.CreateContext();
         var recipes = new List<Recipe>
         {
-            new() { Title = "Bulk Recipe 1", CreatedAt = DateTime.UtcNow },
-            new() { Title = "Bulk Recipe 2", CreatedAt = DateTime.UtcNow },
-            new() { Title = "Bulk Recipe 3", CreatedAt = DateTime.UtcNow }
+            new() { Title = "Bulk Recipe 1", Servings = 2, CreatedAt = DateTime.UtcNow },
+            new() { Title = "Bulk Recipe 2", Servings = 4, CreatedAt = DateTime.UtcNow },
+            new() { Title = "Bulk Recipe 3", Servings = 6, CreatedAt = DateTime.UtcNow }
         };
 
         // Act
@@ -149,9 +150,9 @@ public class RecipeDbContextTests(DbTestFactory<Program> factory) : IClassFixtur
         await using FoodBudgetDbContext context = factory.CreateContext();
         var recipes = new List<Recipe>
         {
-            new() { Title = "Delete Recipe 1", CreatedAt = DateTime.UtcNow },
-            new() { Title = "Delete Recipe 2", CreatedAt = DateTime.UtcNow },
-            new() { Title = "Delete Recipe 3", CreatedAt = DateTime.UtcNow }
+            new() { Title = "Delete Recipe 1", Servings = 2, CreatedAt = DateTime.UtcNow },
+            new() { Title = "Delete Recipe 2", Servings = 4, CreatedAt = DateTime.UtcNow },
+            new() { Title = "Delete Recipe 3", Servings = 6, CreatedAt = DateTime.UtcNow }
         };
         
         context.Recipes.AddRange(recipes);
@@ -209,6 +210,7 @@ public class RecipeDbContextTests(DbTestFactory<Program> factory) : IClassFixtur
         var recipe = new Recipe
         {
             Title = null!,
+            Servings = 4,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -237,6 +239,7 @@ public class RecipeDbContextTests(DbTestFactory<Program> factory) : IClassFixtur
         {
             Title = "Recipe without instructions",
             Instructions = null,
+            Servings = 4,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -289,6 +292,7 @@ public class RecipeDbContextTests(DbTestFactory<Program> factory) : IClassFixtur
         {
             Title = "Recipe without user",
             UserId = null,
+            Servings = 4,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -311,6 +315,7 @@ public class RecipeDbContextTests(DbTestFactory<Program> factory) : IClassFixtur
         {
             Title = "Recipe with user",
             UserId = userId,
+            Servings = 4,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -332,6 +337,7 @@ public class RecipeDbContextTests(DbTestFactory<Program> factory) : IClassFixtur
         var recipe = new Recipe
         {
             Title = "Recipe with auto timestamp",
+            Servings = 4,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -354,6 +360,7 @@ public class RecipeDbContextTests(DbTestFactory<Program> factory) : IClassFixtur
         var recipe = new Recipe
         {
             Title = "Original Recipe",
+            Servings = 4,
             CreatedAt = DateTime.UtcNow
         };
         
@@ -380,6 +387,7 @@ public class RecipeDbContextTests(DbTestFactory<Program> factory) : IClassFixtur
         {
             Id = Guid.Empty, // Explicitly set to empty
             Title = "Test Recipe",
+            Servings = 4,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -401,6 +409,7 @@ public class RecipeDbContextTests(DbTestFactory<Program> factory) : IClassFixtur
         var recipe = new Recipe
         {
             Title = specialTitle,
+            Servings = 4,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -423,6 +432,7 @@ public class RecipeDbContextTests(DbTestFactory<Program> factory) : IClassFixtur
         {
             Title = "Test Recipe",
             Instructions = specialInstructions,
+            Servings = 4,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -444,9 +454,9 @@ public class RecipeDbContextTests(DbTestFactory<Program> factory) : IClassFixtur
     {
         // Arrange
         await using FoodBudgetDbContext context = factory.CreateContext();
-        var recipe1 = new Recipe { Title = "Chocolate Cake", CreatedAt = DateTime.UtcNow };
-        var recipe2 = new Recipe { Title = "Vanilla Cake", CreatedAt = DateTime.UtcNow };
-        var recipe3 = new Recipe { Title = "Apple Pie", CreatedAt = DateTime.UtcNow };
+        var recipe1 = new Recipe { Title = "Chocolate Cake", Servings = 8, CreatedAt = DateTime.UtcNow };
+        var recipe2 = new Recipe { Title = "Vanilla Cake", Servings = 10, CreatedAt = DateTime.UtcNow };
+        var recipe3 = new Recipe { Title = "Apple Pie", Servings = 6, CreatedAt = DateTime.UtcNow };
         
         context.Recipes.AddRange(recipe1, recipe2, recipe3);
         await context.SaveChangesAsync();
@@ -470,9 +480,9 @@ public class RecipeDbContextTests(DbTestFactory<Program> factory) : IClassFixtur
         var userId1 = Guid.NewGuid();
         var userId2 = Guid.NewGuid();
         
-        var recipe1 = new Recipe { Title = "User1 Recipe1", UserId = userId1, CreatedAt = DateTime.UtcNow };
-        var recipe2 = new Recipe { Title = "User1 Recipe2", UserId = userId1, CreatedAt = DateTime.UtcNow };
-        var recipe3 = new Recipe { Title = "User2 Recipe1", UserId = userId2, CreatedAt = DateTime.UtcNow };
+        var recipe1 = new Recipe { Title = "User1 Recipe1", UserId = userId1, Servings = 4, CreatedAt = DateTime.UtcNow };
+        var recipe2 = new Recipe { Title = "User1 Recipe2", UserId = userId1, Servings = 6, CreatedAt = DateTime.UtcNow };
+        var recipe3 = new Recipe { Title = "User2 Recipe1", UserId = userId2, Servings = 2, CreatedAt = DateTime.UtcNow };
         
         context.Recipes.AddRange(recipe1, recipe2, recipe3);
         await context.SaveChangesAsync();
@@ -516,9 +526,9 @@ public class RecipeDbContextTests(DbTestFactory<Program> factory) : IClassFixtur
         // Arrange
         await using FoodBudgetDbContext context = factory.CreateContext();
         DateTime now = DateTime.UtcNow;
-        var recipe1 = new Recipe { Title = "First Recipe", CreatedAt = now.AddMinutes(-2) };
-        var recipe2 = new Recipe { Title = "Second Recipe", CreatedAt = now.AddMinutes(-1) };
-        var recipe3 = new Recipe { Title = "Third Recipe", CreatedAt = now };
+        var recipe1 = new Recipe { Title = "First Recipe", Servings = 4, CreatedAt = now.AddMinutes(-2) };
+        var recipe2 = new Recipe { Title = "Second Recipe", Servings = 4, CreatedAt = now.AddMinutes(-1) };
+        var recipe3 = new Recipe { Title = "Third Recipe", Servings = 4, CreatedAt = now };
         
         context.Recipes.AddRange(recipe1, recipe2, recipe3);
         await context.SaveChangesAsync();
@@ -557,8 +567,8 @@ public class RecipeDbContextTests(DbTestFactory<Program> factory) : IClassFixtur
         await using FoodBudgetDbContext context = factory.CreateContext();
         await using IDbContextTransaction transaction = await context.Database.BeginTransactionAsync();
         
-        var validRecipe = new Recipe { Title = "Valid Recipe", CreatedAt = DateTime.UtcNow };
-        var invalidRecipe = new Recipe { Title = null!, CreatedAt = DateTime.UtcNow }; // Invalid
+        var validRecipe = new Recipe { Title = "Valid Recipe", Servings = 4, CreatedAt = DateTime.UtcNow };
+        var invalidRecipe = new Recipe { Title = null!, Servings = 4, CreatedAt = DateTime.UtcNow }; // Invalid
 
         // Act & Assert
         context.Recipes.Add(validRecipe);

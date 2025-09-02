@@ -1,4 +1,4 @@
-﻿using FoodBudgetAPI.Entities;
+using FoodBudgetAPI.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -31,9 +31,9 @@ public class RecipeConfiguration : IEntityTypeConfiguration<Recipe>
             .IsRequired(false)
             .HasMaxLength(10000);  // Note: Enforced by SQL Server, not SQLite in tests
         
-        // Servings are required with a default value
+        // Servings are required
         builder.Property(e => e.Servings)
-            .IsRequired(false);
+            .IsRequired();
         
         // CreatedAt is required
         builder.Property(e => e.CreatedAt)

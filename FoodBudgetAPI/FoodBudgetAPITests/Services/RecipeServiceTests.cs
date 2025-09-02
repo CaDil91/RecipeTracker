@@ -57,8 +57,8 @@ public class RecipeServiceTests
         // Arrange
         var expectedRecipes = new List<Recipe>
         {
-            new() { Id = Guid.NewGuid(), Title = "Recipe 1" },
-            new() { Id = Guid.NewGuid(), Title = "Recipe 2" }
+            new() { Id = Guid.NewGuid(), Title = "Recipe 1", Servings = 4 },
+            new() { Id = Guid.NewGuid(), Title = "Recipe 2", Servings = 2 }
         };
         _mockRepository.Setup(x => x.GetAllAsync()).ReturnsAsync(expectedRecipes);
 
@@ -78,8 +78,8 @@ public class RecipeServiceTests
         var userId = Guid.NewGuid();
         var expectedRecipes = new List<Recipe>
         {
-            new() { Id = Guid.NewGuid(), Title = "User Recipe 1", UserId = userId },
-            new() { Id = Guid.NewGuid(), Title = "User Recipe 2", UserId = userId }
+            new() { Id = Guid.NewGuid(), Title = "User Recipe 1", UserId = userId, Servings = 3 },
+            new() { Id = Guid.NewGuid(), Title = "User Recipe 2", UserId = userId, Servings = 4 }
         };
         _mockRepository.Setup(x => x.GetByUserIdAsync(userId)).ReturnsAsync(expectedRecipes);
 
@@ -98,9 +98,9 @@ public class RecipeServiceTests
         // Arrange
         var allRecipes = new List<Recipe>
         {
-            new() { Id = Guid.NewGuid(), Title = "Recipe 1" },
-            new() { Id = Guid.NewGuid(), Title = "Recipe 2" },
-            new() { Id = Guid.NewGuid(), Title = "Recipe 3" }
+            new() { Id = Guid.NewGuid(), Title = "Recipe 1", Servings = 2 },
+            new() { Id = Guid.NewGuid(), Title = "Recipe 2", Servings = 4 },
+            new() { Id = Guid.NewGuid(), Title = "Recipe 3", Servings = 6 }
         };
         _mockRepository.Setup(x => x.GetAllAsync()).ReturnsAsync(allRecipes);
 
@@ -120,9 +120,9 @@ public class RecipeServiceTests
         var userId = Guid.NewGuid();
         var userRecipes = new List<Recipe>
         {
-            new() { Id = Guid.NewGuid(), Title = "User Recipe 1", UserId = userId },
-            new() { Id = Guid.NewGuid(), Title = "User Recipe 2", UserId = userId },
-            new() { Id = Guid.NewGuid(), Title = "User Recipe 3", UserId = userId }
+            new() { Id = Guid.NewGuid(), Title = "User Recipe 1", UserId = userId, Servings = 2 },
+            new() { Id = Guid.NewGuid(), Title = "User Recipe 2", UserId = userId, Servings = 4 },
+            new() { Id = Guid.NewGuid(), Title = "User Recipe 3", UserId = userId, Servings = 6 }
         };
         _mockRepository.Setup(x => x.GetByUserIdAsync(userId)).ReturnsAsync(userRecipes);
 
@@ -166,7 +166,7 @@ public class RecipeServiceTests
     {
         // Arrange
         var recipeId = Guid.NewGuid();
-        var expectedRecipe = new Recipe { Id = recipeId, Title = "Test Recipe" };
+        var expectedRecipe = new Recipe { Id = recipeId, Title = "Test Recipe", Servings = 4 };
         _mockRepository.Setup(x => x.GetByIdAsync(recipeId)).ReturnsAsync(expectedRecipe);
 
         // Act
@@ -512,7 +512,7 @@ public class RecipeServiceTests
     {
         // Arrange
         var recipeId = Guid.NewGuid();
-        var existingRecipe = new Recipe { Id = recipeId, Title = "Test Recipe" };
+        var existingRecipe = new Recipe { Id = recipeId, Title = "Test Recipe", Servings = 4 };
         _mockRepository.Setup(x => x.GetByIdAsync(recipeId)).ReturnsAsync(existingRecipe);
         _mockRepository.Setup(x => x.DeleteAsync(recipeId)).Returns(Task.CompletedTask);
         _mockRepository.Setup(x => x.SaveChangesAsync()).Returns(Task.CompletedTask);
@@ -570,7 +570,7 @@ public class RecipeServiceTests
     {
         // Arrange
         var recipeId = Guid.NewGuid();
-        var existingRecipe = new Recipe { Id = recipeId, Title = "Test Recipe" };
+        var existingRecipe = new Recipe { Id = recipeId, Title = "Test Recipe", Servings = 4 };
         _mockRepository.Setup(x => x.GetByIdAsync(recipeId)).ReturnsAsync(existingRecipe);
         _mockRepository.Setup(x => x.DeleteAsync(recipeId)).Returns(Task.CompletedTask);
         _mockRepository.Setup(x => x.SaveChangesAsync()).Returns(Task.CompletedTask);

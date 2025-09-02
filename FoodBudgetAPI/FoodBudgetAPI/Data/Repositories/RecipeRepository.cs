@@ -9,7 +9,7 @@ public class RecipeRepository(FoodBudgetDbContext context, ILogger<RecipeReposit
     public async Task<IEnumerable<Recipe>> GetByTitleAsync(string title)
     {
         return await DbSet
-            .Where(r => r.Title.Contains(title))
+            .Where(r => r.Title.ToLower().Contains(title.ToLower()))
             .ToListAsync();
     }
 

@@ -1,5 +1,6 @@
-﻿using System.Net;
+using System.Net;
 using System.Text.Json;
+using Microsoft.AspNetCore.Mvc;
 
 namespace FoodBudgetAPI.Middleware;
 
@@ -8,6 +9,15 @@ namespace FoodBudgetAPI.Middleware;
 /// </summary>
 public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<ExceptionHandlingMiddleware> logger, IWebHostEnvironment env)
 {
+    private static class ProblemTypes
+    {
+        public const string BAD_REQUEST = "https://foodbudgetapi.example.com/problems/bad-request";
+        public const string NOT_FOUND = "https://foodbudgetapi.example.com/problems/not-found";
+        public const string UNAUTHORIZED = "https://foodbudgetapi.example.com/problems/unauthorized";
+        public const string INTERNAL_SERVER_ERROR = "https://foodbudgetapi.example.com/problems/internal-server-error";
+        public const string VALIDATION_ERROR = "https://foodbudgetapi.example.com/problems/validation-error";
+    }
+
     // Cache the JSON serializer options
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -29,54 +39,64 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
 
     private Task HandleExceptionAsync(HttpContext context, Exception exception)
     {
-        context.Response.ContentType = "application/json";
+        context.Response.ContentType = "application/problem+json";
         
-        ErrorResponse response = exception switch
+        ProblemDetails problemDetails = exception switch
         {
-            ArgumentException argEx => new ErrorResponse
+            ArgumentException argEx => new ProblemDetails
             {
+                Type = ProblemTypes.BAD_REQUEST,
+                Title = "Bad Request",
                 Status = (int)HttpStatusCode.BadRequest,
-                Message = argEx.Message,
-                Detail = env.IsDevelopment() ? argEx.StackTrace : null
+                Detail = argEx.Message,
+                Instance = context.Request.Path
             },
-            KeyNotFoundException keyNotFoundEx => new ErrorResponse
+            KeyNotFoundException keyNotFoundEx => new ProblemDetails
             {
+                Type = ProblemTypes.NOT_FOUND, 
+                Title = "Not Found",
                 Status = (int)HttpStatusCode.NotFound,
-                Message = keyNotFoundEx.Message,
-                Detail = env.IsDevelopment() ? keyNotFoundEx.StackTrace : null
+                Detail = keyNotFoundEx.Message,
+                Instance = context.Request.Path
             },
-            UnauthorizedAccessException => new ErrorResponse
+            UnauthorizedAccessException => new ProblemDetails
             {
+                Type = ProblemTypes.UNAUTHORIZED,
+                Title = "Unauthorized", 
                 Status = (int)HttpStatusCode.Unauthorized,
-                Message = "Unauthorized access.",
-                Detail = null
+                Detail = "Unauthorized access.",
+                Instance = context.Request.Path
             },
-            NotSupportedException notSupportedEx => new ErrorResponse
+            NotSupportedException notSupportedEx => new ProblemDetails
             {
+                Type = ProblemTypes.BAD_REQUEST,
+                Title = "Bad Request",
                 Status = (int)HttpStatusCode.BadRequest,
-                Message = notSupportedEx.Message,
-                Detail = env.IsDevelopment() ? notSupportedEx.StackTrace : null
+                Detail = notSupportedEx.Message,
+                Instance = context.Request.Path
             },
-            _ => new ErrorResponse
+            _ => new ProblemDetails
             {
+                Type = ProblemTypes.INTERNAL_SERVER_ERROR,
+                Title = "Internal Server Error",
                 Status = (int)HttpStatusCode.InternalServerError,
-                Message = env.IsDevelopment() ? exception.Message : "An internal server error has occurred.",
-                Detail = env.IsDevelopment() ? exception.StackTrace : null
+                Detail = env.IsDevelopment() ? exception.Message : "An internal server error has occurred.",
+                Instance = context.Request.Path
             }
         };
 
-        context.Response.StatusCode = response.Status;
+        // Add RFC 9457 compliant extensions
+        problemDetails.Extensions["timestamp"] = DateTimeOffset.UtcNow;
+        problemDetails.Extensions["traceId"] = context.TraceIdentifier;
+        
+        if (env.IsDevelopment() && exception.StackTrace != null)
+        {
+            problemDetails.Extensions["stackTrace"] = exception.StackTrace;
+        }
 
-        // Use the cached JSON serializer options
-        string json = JsonSerializer.Serialize(response, JsonOptions);
+        context.Response.StatusCode = problemDetails.Status ?? 500;
+
+        string json = JsonSerializer.Serialize(problemDetails, JsonOptions);
         return context.Response.WriteAsync(json);
-    }
-    
-    // Define a class for consistent error response structure
-    private class ErrorResponse
-    {
-        public int Status { get; init; }
-        public string Message { get; set; } = string.Empty;
-        public string? Detail { get; set; }
     }
 }

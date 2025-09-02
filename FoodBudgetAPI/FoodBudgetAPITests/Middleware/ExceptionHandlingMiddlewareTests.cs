@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Text.Json;
 using FluentAssertions;
 using FoodBudgetAPI.Middleware;
@@ -56,18 +56,20 @@ public class ExceptionHandlingMiddlewareTests
         context.Response.StatusCode.Should().Be((int)HttpStatusCode.InternalServerError, 
             "because exceptions should result in a 500 status code");
             
-        context.Response.ContentType.Should().Be("application/json", 
-            "because the error response should be in JSON format");
+        context.Response.ContentType.Should().Be("application/problem+json", 
+            "because the error response should be in RFC 9457 format");
         
         responseBody.Position = 0;
         string responseText = await new StreamReader(responseBody).ReadToEndAsync();
         JsonElement response = JsonSerializer.Deserialize<JsonDocument>(responseText)!.RootElement;
         
+        response.GetProperty("type").GetString().Should().Be("https://foodbudgetapi.example.com/problems/internal-server-error");
         response.GetProperty("status").GetInt32().Should().Be(500);
-        response.GetProperty("message").GetString().Should().Be(expectedMessage,
+        response.GetProperty("title").GetString().Should().Be("Internal Server Error");
+        response.GetProperty("detail").GetString().Should().Be(expectedMessage,
             "because in development mode, the real exception message should be returned");
-        response.GetProperty("detail").GetString().Should().NotBeNullOrEmpty(
-            "because in development mode, stack trace details should be included");
+        response.GetProperty("timestamp").Should().NotBeNull();
+        response.GetProperty("traceId").GetString().Should().NotBeNull();
         
         // Verify logging occurred
         loggerMock.Verify(
@@ -109,10 +111,11 @@ public class ExceptionHandlingMiddlewareTests
         string responseText = await new StreamReader(responseBody).ReadToEndAsync();
         JsonElement response = JsonSerializer.Deserialize<JsonDocument>(responseText)!.RootElement;
         
-        response.GetProperty("message").GetString().Should().Be("An internal server error has occurred.",
+        response.GetProperty("type").GetString().Should().Be("https://foodbudgetapi.example.com/problems/internal-server-error");
+        response.GetProperty("detail").GetString().Should().Be("An internal server error has occurred.",
             "because production environments should not expose exception details");
             
-        response.GetProperty("detail").ValueKind.Should().Be(JsonValueKind.Null,
+        response.TryGetProperty("stackTrace", out _).Should().BeFalse(
             "because stack traces should be hidden in production");
         return;
 
@@ -140,14 +143,18 @@ public class ExceptionHandlingMiddlewareTests
         
         // Assert
         context.Response.StatusCode.Should().Be((int)HttpStatusCode.BadRequest);
-        context.Response.ContentType.Should().Be("application/json");
+        context.Response.ContentType.Should().Be("application/problem+json");
         
         responseBody.Position = 0;
         string responseText = await new StreamReader(responseBody).ReadToEndAsync();
         JsonElement response = JsonSerializer.Deserialize<JsonDocument>(responseText)!.RootElement;
         
+        response.GetProperty("type").GetString().Should().Be("https://foodbudgetapi.example.com/problems/bad-request");
         response.GetProperty("status").GetInt32().Should().Be(400);
-        response.GetProperty("message").GetString().Should().Be(expectedMessage);
+        response.GetProperty("title").GetString().Should().Be("Bad Request");
+        response.GetProperty("detail").GetString().Should().Be(expectedMessage);
+        response.GetProperty("timestamp").Should().NotBeNull();
+        response.GetProperty("traceId").GetString().Should().NotBeNull();
         return;
 
         Task Next(HttpContext _)
@@ -174,14 +181,18 @@ public class ExceptionHandlingMiddlewareTests
         
         // Assert
         context.Response.StatusCode.Should().Be((int)HttpStatusCode.NotFound);
-        context.Response.ContentType.Should().Be("application/json");
+        context.Response.ContentType.Should().Be("application/problem+json");
         
         responseBody.Position = 0;
         string responseText = await new StreamReader(responseBody).ReadToEndAsync();
         JsonElement response = JsonSerializer.Deserialize<JsonDocument>(responseText)!.RootElement;
         
+        response.GetProperty("type").GetString().Should().Be("https://foodbudgetapi.example.com/problems/not-found");
         response.GetProperty("status").GetInt32().Should().Be(404);
-        response.GetProperty("message").GetString().Should().Be(expectedMessage);
+        response.GetProperty("title").GetString().Should().Be("Not Found");
+        response.GetProperty("detail").GetString().Should().Be(expectedMessage);
+        response.GetProperty("timestamp").Should().NotBeNull();
+        response.GetProperty("traceId").GetString().Should().NotBeNull();
         return;
 
         Task Next(HttpContext _)
@@ -207,14 +218,18 @@ public class ExceptionHandlingMiddlewareTests
         
         // Assert
         context.Response.StatusCode.Should().Be((int)HttpStatusCode.Unauthorized);
-        context.Response.ContentType.Should().Be("application/json");
+        context.Response.ContentType.Should().Be("application/problem+json");
         
         responseBody.Position = 0;
         string responseText = await new StreamReader(responseBody).ReadToEndAsync();
         JsonElement response = JsonSerializer.Deserialize<JsonDocument>(responseText)!.RootElement;
         
+        response.GetProperty("type").GetString().Should().Be("https://foodbudgetapi.example.com/problems/unauthorized");
         response.GetProperty("status").GetInt32().Should().Be(401);
-        response.GetProperty("message").GetString().Should().Be("Unauthorized access.");
+        response.GetProperty("title").GetString().Should().Be("Unauthorized");
+        response.GetProperty("detail").GetString().Should().Be("Unauthorized access.");
+        response.GetProperty("timestamp").Should().NotBeNull();
+        response.GetProperty("traceId").GetString().Should().NotBeNull();
         return;
 
         Task Next(HttpContext _)
@@ -241,14 +256,18 @@ public class ExceptionHandlingMiddlewareTests
         
         // Assert
         context.Response.StatusCode.Should().Be((int)HttpStatusCode.BadRequest);
-        context.Response.ContentType.Should().Be("application/json");
+        context.Response.ContentType.Should().Be("application/problem+json");
         
         responseBody.Position = 0;
         string responseText = await new StreamReader(responseBody).ReadToEndAsync();
         JsonElement response = JsonSerializer.Deserialize<JsonDocument>(responseText)!.RootElement;
         
+        response.GetProperty("type").GetString().Should().Be("https://foodbudgetapi.example.com/problems/bad-request");
         response.GetProperty("status").GetInt32().Should().Be(400);
-        response.GetProperty("message").GetString().Should().Be(expectedMessage);
+        response.GetProperty("title").GetString().Should().Be("Bad Request");
+        response.GetProperty("detail").GetString().Should().Be(expectedMessage);
+        response.GetProperty("timestamp").Should().NotBeNull();
+        response.GetProperty("traceId").GetString().Should().NotBeNull();
         return;
 
         Task Next(HttpContext _)

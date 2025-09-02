@@ -1,5 +1,6 @@
-﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.CodeAnalysis;
 using Asp.Versioning;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
@@ -27,7 +28,30 @@ public static class ServiceConfiguration
         
         // Core services
         builder.Services.RegisterServices(builder.Configuration);
-        builder.Services.AddControllers();
+        builder.Services.AddControllers()
+            .ConfigureApiBehaviorOptions(options =>
+            {
+                // Configure RFC 9457 compliant validation error responses
+                options.InvalidModelStateResponseFactory = context =>
+                {
+                    var problemDetails = new ValidationProblemDetails(context.ModelState)
+                    {
+                        Type = "https://foodbudgetapi.example.com/problems/validation-error",
+                        Title = "Validation Error",
+                        Status = StatusCodes.Status400BadRequest,
+                        Detail = "One or more validation errors occurred.",
+                        Instance = context.HttpContext.Request.Path
+                    };
+
+                    problemDetails.Extensions["timestamp"] = DateTimeOffset.UtcNow;
+                    problemDetails.Extensions["traceId"] = context.HttpContext.TraceIdentifier;
+
+                    return new BadRequestObjectResult(problemDetails)
+                    {
+                        ContentTypes = { "application/problem+json" }
+                    };
+                };
+            });
         builder.Services.AddEndpointsApiExplorer();
         
         // CORS

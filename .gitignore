@@ -44,3 +44,14 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+
+# IDE files (all projects)
+.idea/
+*.user
+
+# Logs (all projects) 
+logs/
+*.log
+
+# Personal settings
+.claude/

@@ -4,10 +4,6 @@ import { FetchClient } from '../fetch-client';
 global.fetch = jest.fn();
 global.clearTimeout = jest.fn();
 const originalSetTimeout = global.setTimeout;
-global.setTimeout = jest.fn((callback, ms) => {
-  // Return a mock timer ID
-  return 123 as any;
-});
 
 // Mock console for development logging tests
 const originalConsoleLog = console.log;
@@ -25,10 +21,10 @@ describe('FetchClient', () => {
     (global as any).__DEV__ = false;
     
     // Mock setTimeout to avoid real timers in tests
-    global.setTimeout = jest.fn((callback, ms) => {
+    global.setTimeout = jest.fn().mockImplementation((callback, ms) => {
       // Return a mock timer ID without actually creating a timer
       return 123 as any;
-    });
+    }) as any;
   });
 
   afterEach(() => {

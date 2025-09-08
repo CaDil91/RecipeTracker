@@ -6,7 +6,7 @@ riderModule.iml
 /_ReSharper.Caches/
 /FoodBudgetAPI/FoodBudgetAPI/appsettings.Development.json
 /FoodBudgetMobileApp/.idea/*
-/FoodBudgetAPI/.idea/*
+/FoodBudgetAPI/.idea/*1
 /FoodBudgetAPI/FoodBudgetAPI.sln.DotSettings.user
 
 # dependencies
@@ -44,6 +44,10 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+
+# Coverage reports
+coverage/
+*.lcov
 
 # IDE files (all projects)
 .idea/

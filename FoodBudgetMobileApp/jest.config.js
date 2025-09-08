@@ -13,3 +13,11 @@ export const collectCoverageFrom = [
     'src/**/*.{ts,tsx}',
     '!**/node_modules/**'
 ];
+export const coveragePathIgnorePatterns = [
+    '/node_modules/',
+    '/src/.*/index\\.ts$',
+    '/src/.*/index\\.tsx$',
+    '/src/types/.*\\.ts$',
+    '/src/lib/shared/types/.*\\.ts$',
+    '/src/navigation/AppNavigator\\.tsx$'
+];

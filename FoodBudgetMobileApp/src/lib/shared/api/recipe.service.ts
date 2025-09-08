@@ -9,6 +9,7 @@ import {
   parseRecipeRequest,
   safeParseRecipeResponse 
 } from '../schemas';
+import { FetchClient } from './fetch-client';
 
 /**
  * API response wrapper for success/error handling
@@ -25,13 +26,27 @@ export class RecipeService {
   private static headers = API_CONFIG.HEADERS;
 
   /**
-   * Get all recipes
+   * Get all recipes with optional filters
    */
-  static async getAllRecipes(): Promise<ApiResponse<RecipeResponseDto[]>> {
+  static async getAllRecipes(
+    userId?: string,
+    limit?: number
+  ): Promise<ApiResponse<RecipeResponseDto[]>> {
     try {
-      const response = await fetch(getApiUrl(API_CONFIG.ENDPOINTS.RECIPES), {
+      const params = new URLSearchParams();
+      if (userId) params.append('userId', userId);
+      if (limit) params.append('limit', limit.toString());
+      
+      const url = params.toString() 
+        ? `${API_CONFIG.ENDPOINTS.RECIPES}?${params}`
+        : API_CONFIG.ENDPOINTS.RECIPES;
+
+      const response = await FetchClient.request(getApiUrl(url), {
         method: 'GET',
         headers: this.headers,
+        timeout: API_CONFIG.TIMEOUT,
+        retries: API_CONFIG.MAX_RETRIES,
+        retryDelay: API_CONFIG.RETRY_DELAY,
       });
 
       if (!response.ok) {
@@ -57,11 +72,14 @@ export class RecipeService {
    */
   static async getRecipeById(id: string): Promise<ApiResponse<RecipeResponseDto>> {
     try {
-      const response = await fetch(
+      const response = await FetchClient.request(
         getApiUrl(`${API_CONFIG.ENDPOINTS.RECIPES}/${id}`),
         {
           method: 'GET',
           headers: this.headers,
+          timeout: API_CONFIG.TIMEOUT,
+          retries: API_CONFIG.MAX_RETRIES,
+          retryDelay: API_CONFIG.RETRY_DELAY,
         }
       );
 
@@ -85,11 +103,14 @@ export class RecipeService {
   static async searchRecipesByTitle(title: string): Promise<ApiResponse<RecipeResponseDto[]>> {
     try {
       const params = new URLSearchParams({ title });
-      const response = await fetch(
+      const response = await FetchClient.request(
         getApiUrl(`${API_CONFIG.ENDPOINTS.RECIPES}/search?${params}`),
         {
           method: 'GET',
           headers: this.headers,
+          timeout: API_CONFIG.TIMEOUT,
+          retries: API_CONFIG.MAX_RETRIES,
+          retryDelay: API_CONFIG.RETRY_DELAY,
         }
       );
 
@@ -117,10 +138,13 @@ export class RecipeService {
       // Validate request data before sending
       const validatedRequest = parseRecipeRequest(recipe);
       
-      const response = await fetch(getApiUrl(API_CONFIG.ENDPOINTS.RECIPES), {
+      const response = await FetchClient.request(getApiUrl(API_CONFIG.ENDPOINTS.RECIPES), {
         method: 'POST',
         headers: this.headers,
         body: JSON.stringify(validatedRequest),
+        timeout: API_CONFIG.TIMEOUT,
+        retries: API_CONFIG.MAX_RETRIES,
+        retryDelay: API_CONFIG.RETRY_DELAY,
       });
 
       if (!response.ok) {
@@ -148,12 +172,15 @@ export class RecipeService {
       // Validate request data before sending
       const validatedRequest = parseRecipeRequest(recipe);
       
-      const response = await fetch(
+      const response = await FetchClient.request(
         getApiUrl(`${API_CONFIG.ENDPOINTS.RECIPES}/${id}`),
         {
           method: 'PUT',
           headers: this.headers,
           body: JSON.stringify(validatedRequest),
+          timeout: API_CONFIG.TIMEOUT,
+          retries: API_CONFIG.MAX_RETRIES,
+          retryDelay: API_CONFIG.RETRY_DELAY,
         }
       );
 
@@ -176,11 +203,14 @@ export class RecipeService {
    */
   static async deleteRecipe(id: string): Promise<ApiResponse<void>> {
     try {
-      const response = await fetch(
+      const response = await FetchClient.request(
         getApiUrl(`${API_CONFIG.ENDPOINTS.RECIPES}/${id}`),
         {
           method: 'DELETE',
           headers: this.headers,
+          timeout: API_CONFIG.TIMEOUT,
+          retries: API_CONFIG.MAX_RETRIES,
+          retryDelay: API_CONFIG.RETRY_DELAY,
         }
       );
 

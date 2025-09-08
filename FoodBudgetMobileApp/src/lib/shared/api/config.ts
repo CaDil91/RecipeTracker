@@ -14,6 +14,11 @@ export const API_CONFIG = {
   HEADERS: {
     'Content-Type': 'application/json',
   },
+
+  // Request configuration
+  TIMEOUT: 30000, // 30 seconds
+  MAX_RETRIES: 3,
+  RETRY_DELAY: 1000, // 1-second base delay (exponential backoff)
 } as const;
 
 /**

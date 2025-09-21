@@ -1,93 +1,94 @@
 ﻿// src/screens/RecipeListScreen.tsx
-import React from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { Appbar } from 'react-native-paper';
 import { RootStackParamList } from '../types/navigation';
+import { Container, RecipeList } from '../components/shared';
+import { RecipeResponseDto } from '../lib/shared/types/dto';
 
 type RecipeListScreenProps = {
   navigation: StackNavigationProp<RootStackParamList, 'RecipeList'>;
 };
 
-// Placeholder recipe data
-const placeholderRecipes = [
-  { id: '1', title: 'Pasta Carbonara' },
-  { id: '2', title: 'Chicken Curry' },
-  { id: '3', title: 'Caesar Salad' },
+// Placeholder recipe data with proper RecipeResponseDto structure
+const placeholderRecipes: RecipeResponseDto[] = [
+  { 
+    id: '550e8400-e29b-41d4-a716-446655440001',
+    title: 'Pasta Carbonara',
+    instructions: 'Cook pasta according to package directions. In a bowl, whisk eggs and cheese. Fry bacon until crispy. Mix hot pasta with egg mixture and bacon.',
+    servings: 4,
+    createdAt: '2024-01-15T10:30:00Z',
+  },
+  { 
+    id: '550e8400-e29b-41d4-a716-446655440002',
+    title: 'Chicken Curry',
+    instructions: 'Sauté onions and garlic. Add curry paste and cook. Add chicken and simmer. Pour in coconut milk and cook until chicken is done.',
+    servings: 6,
+    createdAt: '2024-01-20T14:45:00Z',
+  },
+  { 
+    id: '550e8400-e29b-41d4-a716-446655440003',
+    title: 'Caesar Salad',
+    instructions: 'Chop romaine lettuce. Make dressing with lemon, garlic, and anchovies. Toss lettuce with dressing, add croutons and parmesan.',
+    servings: 2,
+    createdAt: '2024-02-01T09:15:00Z',
+  },
 ];
 
 const RecipeListScreen: React.FC<RecipeListScreenProps> = ({ navigation }) => {
+  const [recipes, setRecipes] = useState<RecipeResponseDto[]>(placeholderRecipes);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRecipePress = (recipe: RecipeResponseDto) => {
+    console.log('View recipe:', recipe);
+    // TODO: Navigate to recipe detail screen
+  };
+
+  const handleRecipeEdit = (recipe: RecipeResponseDto) => {
+    console.log('Edit recipe:', recipe);
+    // TODO: Navigate to edit screen with recipe data
+    navigation.navigate('AddRecipe');
+  };
+
+  const handleRecipeDelete = (recipe: RecipeResponseDto) => {
+    console.log('Delete recipe:', recipe);
+    // TODO: Implement delete confirmation and API call
+    setRecipes(prev => prev.filter(r => r.id !== recipe.id));
+  };
+
+  const handleAddRecipe = () => {
+    navigation.navigate('AddRecipe');
+  };
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    // TODO: Fetch recipes from API
+    setTimeout(() => {
+      setIsRefreshing(false);
+    }, 1000);
+  };
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>My Recipes</Text>
+    <>
+      <Appbar.Header>
+        <Appbar.Content title="My Recipes" />
+      </Appbar.Header>
       
-      {placeholderRecipes.length > 0 ? (
-        <FlatList
-          data={placeholderRecipes}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <TouchableOpacity style={styles.recipeItem}>
-              <Text style={styles.recipeTitle}>{item.title}</Text>
-            </TouchableOpacity>
-          )}
-          style={styles.list}
+      <Container padded={false} useSafeArea={false}>
+        <RecipeList
+          recipes={recipes}
+          onRecipePress={handleRecipePress}
+          onRecipeEdit={handleRecipeEdit}
+          onRecipeDelete={handleRecipeDelete}
+          onAddRecipe={handleAddRecipe}
+          onRefresh={handleRefresh}
+          isRefreshing={isRefreshing}
+          emptyTitle="No recipes yet"
+          emptyMessage="Start by adding your first recipe!"
         />
-      ) : (
-        <Text style={styles.emptyText}>No recipes found. Add your first recipe!</Text>
-      )}
-      
-      <TouchableOpacity 
-        style={styles.addButton}
-        onPress={() => navigation.navigate('AddRecipe')}
-      >
-        <Text style={styles.addButtonText}>+ Add Recipe</Text>
-      </TouchableOpacity>
-    </View>
+      </Container>
+    </>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 20,
-  },
-  list: {
-    flex: 1,
-  },
-  recipeItem: {
-    backgroundColor: '#f9f9f9',
-    padding: 15,
-    borderRadius: 8,
-    marginBottom: 10,
-    borderLeftWidth: 4,
-    borderLeftColor: '#4a90e2',
-  },
-  recipeTitle: {
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  emptyText: {
-    textAlign: 'center',
-    marginTop: 50,
-    fontSize: 16,
-    color: '#888',
-  },
-  addButton: {
-    backgroundColor: '#4a90e2',
-    padding: 15,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  addButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-});
 
 export default RecipeListScreen;

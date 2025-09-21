@@ -40,10 +40,11 @@ describe('RecipeListScreen', () => {
       expect(getByText('Caesar Salad')).toBeTruthy();
     });
 
-    it('displays add recipe button', () => {
-      const { getByText } = setupComponent();
+    it('displays add recipe FAB when recipes exist', () => {
+      const { getByTestId } = setupComponent();
 
-      expect(getByText('+ Add Recipe')).toBeTruthy();
+      // FAB should be present when there are recipes
+      expect(getByTestId('recipe-list-fab')).toBeTruthy();
     });
   });
 
@@ -88,9 +89,9 @@ describe('RecipeListScreen', () => {
 
   describe('Navigation', () => {
     it('navigates to AddRecipe when add button is pressed', () => {
-      const { getByText } = setupComponent();
+      const { getByTestId } = setupComponent();
       
-      const addButton = getByText('+ Add Recipe');
+      const addButton = getByTestId('recipe-list-fab');
       fireEvent.press(addButton);
       
       expect(mockNavigationProp.navigate).toHaveBeenCalledTimes(1);
@@ -98,9 +99,9 @@ describe('RecipeListScreen', () => {
     });
 
     it('prevents multiple navigation calls on rapid button presses', () => {
-      const { getByText } = setupComponent();
+      const { getByTestId } = setupComponent();
       
-      const addButton = getByText('+ Add Recipe');
+      const addButton = getByTestId('recipe-list-fab');
       
       // Simulate rapid button presses
       fireEvent.press(addButton);
@@ -132,19 +133,19 @@ describe('RecipeListScreen', () => {
     });
 
     it('provides clear call-to-action for empty state', () => {
-      const { getByText } = setupComponent();
+      const { getByTestId } = setupComponent();
       
       // Even with recipes present, add button should be available
-      expect(getByText('+ Add Recipe')).toBeTruthy();
+      expect(getByTestId('recipe-list-fab')).toBeTruthy();
     });
   });
 
   describe('User Experience', () => {
     it('provides consistent interaction patterns', () => {
-      const { getByText } = setupComponent();
+      const { getByText, getByTestId } = setupComponent();
       
       // Test that UI elements are accessible and interactive
-      const addButton = getByText('+ Add Recipe');
+      const addButton = getByTestId('recipe-list-fab');
       const pastaRecipe = getByText('Pasta Carbonara');
       
       expect(addButton).toBeTruthy();
@@ -172,32 +173,32 @@ describe('RecipeListScreen', () => {
       
       mockNavigationProp.navigate = mockNavigateWithError;
       
-      const { getByText } = setupComponent();
+      const { getByTestId } = setupComponent();
       
       // Should not crash when navigation fails
       expect(() => {
-        fireEvent.press(getByText('+ Add Recipe'));
+        fireEvent.press(getByTestId('recipe-list-fab'));
       }).toThrow('Navigation failed');
       
       expect(mockNavigateWithError).toHaveBeenCalledWith('AddRecipe');
     });
 
     it('handles missing navigation prop gracefully', () => {
-      const { getByText } = render(<RecipeListScreen navigation={{} as any} />);
+      const { getByText, getByTestId } = render(<RecipeListScreen navigation={{} as any} />);
       
       // Component should still render even with incomplete navigation prop
       expect(getByText('My Recipes')).toBeTruthy();
       expect(getByText('Pasta Carbonara')).toBeTruthy();
-      expect(getByText('+ Add Recipe')).toBeTruthy();
+      expect(getByTestId('recipe-list-fab')).toBeTruthy();
     });
 
     it('handles empty recipe data gracefully', () => {
-      const { getByText } = setupComponent();
+      const { getByText, getByTestId } = setupComponent();
       
       // Component should render even if recipe data structure changes
       // Current implementation uses hardcoded placeholder data
       expect(getByText('My Recipes')).toBeTruthy();
-      expect(getByText('+ Add Recipe')).toBeTruthy();
+      expect(getByTestId('recipe-list-fab')).toBeTruthy();
     });
   });
 

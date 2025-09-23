@@ -71,6 +71,69 @@ jest.mock('react-native-paper', () => ({
   },
 }));
 
+// Mock RecipeGrid component
+jest.mock('../../components/shared/recipe/RecipeGrid', () => ({
+  RecipeGrid: function MockRecipeGrid({
+    recipes,
+    onRecipePress,
+    onRecipeEdit,
+    onRecipeDelete,
+    onRefresh,
+    isRefreshing,
+    columns,
+    emptyTitle,
+    emptyMessage,
+    testID
+  }: any) {
+    const { View, Text, TouchableOpacity, ScrollView, RefreshControl } = require('react-native');
+    return (
+      <ScrollView
+        testID={testID || "recipe-grid"}
+        refreshControl={
+          onRefresh ? (
+            <RefreshControl
+              refreshing={isRefreshing || false}
+              onRefresh={onRefresh}
+              testID="refresh-control-grid"
+            />
+          ) : undefined
+        }
+      >
+        <Text testID="grid-columns">{columns || 2}</Text>
+        {recipes && recipes.length > 0 ? (
+          recipes.map((recipe: RecipeResponseDto, index: number) => (
+            <View key={recipe.id} testID={`grid-recipe-${recipe.id}`}>
+              <TouchableOpacity
+                testID={`grid-recipe-press-${recipe.id}`}
+                onPress={() => onRecipePress?.(recipe)}
+              >
+                <Text>{recipe.title}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                testID={`grid-recipe-edit-${recipe.id}`}
+                onPress={() => onRecipeEdit?.(recipe)}
+              >
+                <Text>Edit</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                testID={`grid-recipe-delete-${recipe.id}`}
+                onPress={() => onRecipeDelete?.(recipe)}
+              >
+                <Text>Delete</Text>
+              </TouchableOpacity>
+            </View>
+          ))
+        ) : (
+          <View testID="grid-empty-state">
+            <Text testID="grid-empty-title">{emptyTitle}</Text>
+            <Text testID="grid-empty-message">{emptyMessage}</Text>
+          </View>
+        )}
+      </ScrollView>
+    );
+  },
+}));
+
 // Partially mock shared components to test interactions
 jest.mock('../../components/shared', () => {
   const actual = jest.requireActual('../../components/shared');
@@ -397,7 +460,140 @@ describe.skip('RecipeListScreen - Integration Tests (Disabled due to SafeAreaPro
 
     // Component renders with theme context
     expect(getByTestId('container')).toBeTruthy();
-    expect(getByTestId('recipe-list')).toBeTruthy();
+    expect(getByTestId('recipe-grid')).toBeTruthy(); // Updated to check grid by default
+  });
+
+  /**
+   * INTEGRATION TEST 11: Grid View Mode Toggle
+   * Tests: View mode switching between list and grid
+   */
+  it('switches between list and grid view modes', () => {
+    const { getByTestId, queryByTestId } = render(
+      <TestWrapper>
+        <RecipeListScreen navigation={null as any} />
+      </TestWrapper>
+    );
+
+    // Default should be grid view
+    expect(getByTestId('recipe-grid')).toBeTruthy();
+    expect(queryByTestId('recipe-list')).toBeNull();
+
+    // Should display recipes in grid
+    expect(getByTestId('grid-recipe-550e8400-e29b-41d4-a716-446655440001')).toBeTruthy();
+  });
+
+  /**
+   * INTEGRATION TEST 12: Grid Column Configuration
+   * Tests: Grid renders with correct column count
+   */
+  it('renders recipes in grid layout with correct column configuration', () => {
+    const { getByTestId } = render(
+      <TestWrapper>
+        <RecipeListScreen navigation={null as any} />
+      </TestWrapper>
+    );
+
+    // Should render grid with default 2 columns
+    expect(getByTestId('recipe-grid')).toBeTruthy();
+    expect(getByTestId('grid-columns')).toBeTruthy();
+    expect(getByTestId('grid-columns').props.children).toBe(2);
+  });
+
+  /**
+   * INTEGRATION TEST 13: Grid Recipe Interactions
+   * Tests: Recipe interactions work in grid mode
+   */
+  it('handles recipe interactions in grid mode', () => {
+    const mockNavigate = jest.fn();
+    const navigation = createMockNavigation({ navigate: mockNavigate });
+
+    const { getByTestId } = render(
+      <TestWrapper>
+        <RecipeListScreen navigation={navigation} />
+      </TestWrapper>
+    );
+
+    // Test grid recipe edit
+    fireEvent.press(getByTestId('grid-recipe-edit-550e8400-e29b-41d4-a716-446655440001'));
+    expect(mockNavigate).toHaveBeenCalledWith('Add');
+
+    // Test grid recipe press
+    const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+    fireEvent.press(getByTestId('grid-recipe-press-550e8400-e29b-41d4-a716-446655440002'));
+    expect(consoleSpy).toHaveBeenCalledWith(
+      'View recipe:',
+      expect.objectContaining({
+        id: '550e8400-e29b-41d4-a716-446655440002',
+        title: 'Chicken Curry'
+      })
+    );
+    consoleSpy.mockRestore();
+  });
+
+  /**
+   * INTEGRATION TEST 14: Grid Recipe Deletion
+   * Tests: Recipe deletion works in grid mode
+   */
+  it('handles recipe deletion in grid mode', () => {
+    const { getByTestId, queryByTestId } = render(
+      <TestWrapper>
+        <RecipeListScreen navigation={null as any} />
+      </TestWrapper>
+    );
+
+    // Verify recipe exists in grid
+    expect(getByTestId('grid-recipe-550e8400-e29b-41d4-a716-446655440003')).toBeTruthy();
+
+    // Delete the recipe in grid
+    fireEvent.press(getByTestId('grid-recipe-delete-550e8400-e29b-41d4-a716-446655440003'));
+
+    // Verify recipe is removed from grid
+    expect(queryByTestId('grid-recipe-550e8400-e29b-41d4-a716-446655440003')).toBeNull();
+  });
+
+  /**
+   * INTEGRATION TEST 15: Grid Refresh Functionality
+   * Tests: Pull-to-refresh works in grid mode
+   */
+  it('handles refresh in grid mode', async () => {
+    const { getByTestId } = render(
+      <TestWrapper>
+        <RecipeListScreen navigation={null as any} />
+      </TestWrapper>
+    );
+
+    const refreshControl = getByTestId('refresh-control-grid');
+
+    fireEvent(refreshControl, 'refresh');
+
+    // Wait for refresh to complete (mocked with setTimeout)
+    await waitFor(() => {
+      expect(refreshControl.props.refreshing).toBe(false);
+    }, { timeout: 1500 });
+  });
+
+  /**
+   * INTEGRATION TEST 16: Grid Empty State
+   * Tests: Empty state displays correctly in grid mode
+   */
+  it('shows empty state in grid mode when no recipes', () => {
+    const { getByTestId, queryByTestId } = render(
+      <TestWrapper>
+        <RecipeListScreen navigation={null as any} />
+      </TestWrapper>
+    );
+
+    // Delete all recipes in grid mode
+    fireEvent.press(getByTestId('grid-recipe-delete-550e8400-e29b-41d4-a716-446655440001'));
+    fireEvent.press(getByTestId('grid-recipe-delete-550e8400-e29b-41d4-a716-446655440002'));
+    fireEvent.press(getByTestId('grid-recipe-delete-550e8400-e29b-41d4-a716-446655440003'));
+    fireEvent.press(getByTestId('grid-recipe-delete-550e8400-e29b-41d4-a716-446655440004'));
+    fireEvent.press(getByTestId('grid-recipe-delete-550e8400-e29b-41d4-a716-446655440005'));
+
+    // Verify grid empty state is shown
+    expect(getByTestId('grid-empty-state')).toBeTruthy();
+    expect(getByTestId('grid-empty-title').props.children).toBe('No recipes yet');
+    expect(getByTestId('grid-empty-message').props.children).toBe('Start by adding your first recipe!');
   });
 });
 

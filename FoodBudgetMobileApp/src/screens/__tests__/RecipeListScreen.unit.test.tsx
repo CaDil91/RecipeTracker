@@ -33,6 +33,26 @@ jest.mock('react-native-paper', () => ({
       </TouchableOpacity>
     );
   },
+  Menu: function MockMenu({ children, visible, onDismiss, anchor }: any) {
+    const { View } = require('react-native');
+    return visible ? <View testID="menu">{children}</View> : null;
+  },
+  MenuItem: function MockMenuItem({ onPress, title, testID }: any) {
+    const { TouchableOpacity, Text } = require('react-native');
+    return (
+      <TouchableOpacity testID={testID} onPress={onPress}>
+        <Text>{title}</Text>
+      </TouchableOpacity>
+    );
+  },
+  IconButton: function MockIconButton({ testID, onPress, icon }: any) {
+    const { TouchableOpacity, Text } = require('react-native');
+    return (
+      <TouchableOpacity testID={testID} onPress={onPress}>
+        <Text>{icon}</Text>
+      </TouchableOpacity>
+    );
+  },
   Chip: function MockChip({ children, testID, onPress }: any) {
     const { TouchableOpacity, Text } = require('react-native');
     return (
@@ -80,6 +100,20 @@ jest.mock('../../components/FilterChips', () => ({
   },
 }));
 
+// Mock RecipeGrid component (default view)
+jest.mock('../../components/shared/recipe/RecipeGrid', () => ({
+  RecipeGrid: function MockRecipeGrid(props: any) {
+    const { View, Text } = require('react-native');
+    return (
+      <View testID="recipe-grid">
+        <Text testID="recipe-count">{props.recipes?.length || 0}</Text>
+        {props.emptyTitle && <Text testID="empty-title">{props.emptyTitle}</Text>}
+        {props.emptyMessage && <Text testID="empty-message">{props.emptyMessage}</Text>}
+      </View>
+    );
+  },
+}));
+
 // Mock shared components
 jest.mock('../../components/shared', () => ({
   Container: function MockContainer({ children }: { children: React.ReactNode }) {
@@ -115,7 +149,7 @@ describe('RecipeListScreen - Unit Tests', () => {
     expect(getByTestId('appbar-header')).toBeTruthy();
     expect(getByTestId('appbar-content')).toBeTruthy();
     expect(getByTestId('container')).toBeTruthy();
-    expect(getByTestId('recipe-list')).toBeTruthy();
+    expect(getByTestId('recipe-grid')).toBeTruthy();
   });
 
   /**

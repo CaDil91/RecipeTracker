@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, ScrollView, ViewStyle, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Surface } from 'react-native-paper';
+import { Surface, useTheme } from 'react-native-paper';
 
 export interface ContainerProps {
   children: React.ReactNode;
@@ -23,9 +23,11 @@ export const Container: React.FC<ContainerProps> = ({
   testID,
 }) => {
   const insets = useSafeAreaInsets();
-  
+  const theme = useTheme();
+
   const containerStyle: ViewStyle = {
     flex: 1,
+    backgroundColor: theme.colors.background,
     ...(useSafeArea && {
       paddingTop: insets.top,
       paddingBottom: insets.bottom,
@@ -41,7 +43,7 @@ export const Container: React.FC<ContainerProps> = ({
   if (scrollable) {
     return (
       <ScrollView
-        style={styles.scrollView}
+        style={[styles.scrollView, { backgroundColor: theme.colors.background }]}
         contentContainerStyle={[styles.scrollContent, containerStyle]}
         testID={testID}
         showsVerticalScrollIndicator={false}

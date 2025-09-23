@@ -29,8 +29,8 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({
   };
 
   return (
-    <Card 
-      style={styles.card} 
+    <Card
+      style={styles.card}
       onPress={onPress}
       mode="elevated"
       testID={testID}

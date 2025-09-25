@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { FlatList, RefreshControl, StyleSheet, View } from 'react-native';
 import { Searchbar, Divider, FAB } from 'react-native-paper';
-import { RecipeResponseDto } from '../../../lib/shared/types/dto';
+import { RecipeResponseDto } from '../../../lib/shared';
 import { RecipeCard } from './RecipeCard';
 import { EmptyState } from '../feedback/EmptyState';
 import { LoadingIndicator } from '../feedback/LoadingIndicator';

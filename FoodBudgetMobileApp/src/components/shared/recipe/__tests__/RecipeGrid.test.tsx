@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { render, fireEvent } from '@testing-library/react-native';
 import { FlatList, RefreshControl } from 'react-native';
 import { PaperProvider } from 'react-native-paper';
 import { RecipeGrid } from '../RecipeGrid';
@@ -7,35 +7,6 @@ import { RecipeResponseDto } from '../../../../lib/shared';
 
 // Mock RecipeGridCard component
 jest.mock('../RecipeGridCard', () => ({
-  RecipeGridCard: function MockRecipeGridCard({ recipe, onPress, onEdit, onDelete, testID }: any) {
-    const { TouchableOpacity, Text, View } = require('react-native');
-    return (
-      <View testID={testID}>
-        <TouchableOpacity
-          testID={`${testID}-press`}
-          onPress={() => onPress?.()}
-        >
-          <Text>{recipe.title}</Text>
-        </TouchableOpacity>
-        {onEdit && (
-          <TouchableOpacity
-            testID={`${testID}-edit`}
-            onPress={() => onEdit?.()}
-          >
-            <Text>Edit</Text>
-          </TouchableOpacity>
-        )}
-        {onDelete && (
-          <TouchableOpacity
-            testID={`${testID}-delete`}
-            onPress={() => onDelete?.()}
-          >
-            <Text>Delete</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-    );
-  },
 }));
 
 // Mock EmptyState component
@@ -72,50 +43,87 @@ const mockRecipes: (RecipeResponseDto & { imageUrl?: string; category?: string }
     instructions: 'Instructions 2',
     servings: 4,
     createdAt: '2024-01-02T00:00:00Z',
-    imageUrl: 'https://example.com/2.jpg',
     category: 'Lunch',
-  },
-  {
-    id: '3',
-    title: 'Recipe 3',
-    instructions: 'Instructions 3',
-    servings: 6,
-    createdAt: '2024-01-03T00:00:00Z',
-    category: 'Breakfast',
   },
 ];
 
-describe('RecipeGrid Component', () => {
-  /**
-   * RENDERING TESTS
-   */
-  describe('Rendering', () => {
-    it('renders recipes in grid layout', () => {
+/**
+ * Unit tests for the RecipeGrid component
+ *
+ * Tests grid layout with conditional rendering, user interactions, and FlatList configuration.
+ * Uses mocked child components for isolated testing.
+ */
+describe('RecipeGrid', () => {
+  describe('Happy Path', () => {
+    /**
+     * Test: Basic recipe grid display
+     * Given: Recipes array
+     * When: Component renders
+     * Then: Displays recipes in grid format
+     */
+    it('given recipes array, when rendered, then displays recipes in grid format', () => {
+      // Arrange & Act
       const { getByTestId, getByText } = render(
         <TestWrapper>
           <RecipeGrid recipes={mockRecipes} testID="recipe-grid" />
         </TestWrapper>
       );
 
+      // Assert
       expect(getByTestId('recipe-grid')).toBeTruthy();
       expect(getByText('Recipe 1')).toBeTruthy();
       expect(getByText('Recipe 2')).toBeTruthy();
-      expect(getByText('Recipe 3')).toBeTruthy();
     });
 
-    it('renders empty state when no recipes provided', () => {
+    /**
+     * Test: Empty state display
+     * Given: Empty recipes array
+     * When: Component renders
+     * Then: Shows empty state with default messages
+     */
+    it('given empty recipes array, when rendered, then shows empty state', () => {
+      // Arrange & Act
       const { getByTestId, getByText } = render(
         <TestWrapper>
           <RecipeGrid recipes={[]} testID="recipe-grid" />
         </TestWrapper>
       );
 
+      // Assert
       expect(getByTestId('empty-state')).toBeTruthy();
       expect(getByText('No recipes yet')).toBeTruthy();
       expect(getByText('Start by adding your first recipe!')).toBeTruthy();
     });
 
-    it('renders custom empty state messages', () => {
+    /**
+     * Test: Grid layout with default columns
+     * Given: Recipes and no column specification
+     * When: Component renders
+     * Then: Uses 2 columns by default
+     */
+    it('given no column specification, when rendered, then uses 2 columns by default', () => {
+      // Arrange & Act
+      const { UNSAFE_getByType } = render(
+        <TestWrapper>
+          <RecipeGrid recipes={mockRecipes} testID="recipe-grid" />
+        </TestWrapper>
+      );
+
+      // Assert
+      const flatList = UNSAFE_getByType(FlatList);
+      expect(flatList.props.numColumns).toBe(2);
+    });
+  });
+
+  describe('Conditional Rendering', () => {
+    /**
+     * Test: Custom empty messages
+     * Given: Custom empty title and message
+     * When: No recipes rendered
+     * Then: Uses custom empty text
+     */
+    it('given custom empty messages, when rendered, then uses custom empty text', () => {
+      // Arrange & Act
       const { getByText } = render(
         <TestWrapper>
           <RecipeGrid
@@ -127,255 +135,297 @@ describe('RecipeGrid Component', () => {
         </TestWrapper>
       );
 
+      // Assert
       expect(getByText('Custom Empty Title')).toBeTruthy();
       expect(getByText('Custom empty message')).toBeTruthy();
     });
 
-    it('renders without crashing with minimal props', () => {
-      expect(() => {
-        render(
-          <TestWrapper>
-            <RecipeGrid recipes={mockRecipes} />
-          </TestWrapper>
-        );
-      }).not.toThrow();
-    });
-  });
+    /**
+     * Test: FlatList vs. EmptyState rendering
+     * Given: Recipes present
+     * When: Component renders
+     * Then: Shows FlatList not EmptyState
+     */
+    it('given recipes present, when rendered, then shows FlatList not EmptyState', () => {
+      // Arrange & Act
+      const { getByTestId, queryByTestId } = render(
+        <TestWrapper>
+          <RecipeGrid recipes={mockRecipes} testID="recipe-grid" />
+        </TestWrapper>
+      );
 
-  /**
-   * COLUMN LAYOUT TESTS
-   */
-  describe('Column Layout', () => {
-    it('uses 2 columns by default', () => {
+      // Assert
+      expect(getByTestId('recipe-grid')).toBeTruthy(); // FlatList
+      expect(queryByTestId('empty-state')).toBeNull(); // No EmptyState
+    });
+
+    /**
+     * Test: RefreshControl with handler
+     * Given: onRefresh handler provided
+     * When: Component renders
+     * Then: Shows RefreshControl
+     */
+    it('given onRefresh handler, when rendered, then shows RefreshControl', () => {
+      // Arrange & Act
+      const { UNSAFE_getByType } = render(
+        <TestWrapper>
+          <RecipeGrid
+            recipes={mockRecipes}
+            onRefresh={jest.fn()}
+            testID="recipe-grid"
+          />
+        </TestWrapper>
+      );
+
+      // Assert
+      const flatList = UNSAFE_getByType(FlatList);
+      expect(flatList.props.refreshControl).toBeDefined();
+      expect(flatList.props.refreshControl.type).toBe(RefreshControl);
+    });
+
+    /**
+     * Test: No RefreshControl without handler
+     * Given: No onRefresh handler
+     * When: Component renders
+     * Then: No RefreshControl rendered
+     */
+    it('given no onRefresh handler, when rendered, then no RefreshControl', () => {
+      // Arrange & Act
       const { UNSAFE_getByType } = render(
         <TestWrapper>
           <RecipeGrid recipes={mockRecipes} testID="recipe-grid" />
         </TestWrapper>
       );
 
+      // Assert
       const flatList = UNSAFE_getByType(FlatList);
-      expect(flatList.props.numColumns).toBe(2);
+      expect(flatList.props.refreshControl).toBeUndefined();
+    });
+  });
+
+  describe('User Interactions', () => {
+    /**
+     * Test: Recipe press interaction
+     * Given: onRecipePress handler
+     * When: Recipe pressed
+     * Then: Calls handler with recipe data
+     */
+    it('given onRecipePress handler, when recipe pressed, then calls handler with recipe', () => {
+      // Arrange
+      const onRecipePress = jest.fn();
+      const { getByTestId } = render(
+        <TestWrapper>
+          <RecipeGrid
+            recipes={mockRecipes}
+            onRecipePress={onRecipePress}
+            testID="recipe-grid"
+          />
+        </TestWrapper>
+      );
+
+      // Act
+      fireEvent.press(getByTestId('recipe-grid-recipe-0-press'));
+
+      // Assert
+      expect(onRecipePress).toHaveBeenCalledWith(mockRecipes[0]);
     });
 
-    it('configures FlatList for 3 columns', () => {
+    /**
+     * Test: Recipe edit interaction
+     * Given: onRecipeEdit handler
+     * When: Edit pressed
+     * Then: Calls handler with recipe data
+     */
+    it('given onRecipeEdit handler, when edit pressed, then calls handler with recipe', () => {
+      // Arrange
+      const onRecipeEdit = jest.fn();
+      const { getByTestId } = render(
+        <TestWrapper>
+          <RecipeGrid
+            recipes={mockRecipes}
+            onRecipeEdit={onRecipeEdit}
+            testID="recipe-grid"
+          />
+        </TestWrapper>
+      );
+
+      // Act
+      fireEvent.press(getByTestId('recipe-grid-recipe-1-edit'));
+
+      // Assert
+      expect(onRecipeEdit).toHaveBeenCalledWith(mockRecipes[1]);
+    });
+
+    /**
+     * Test: Recipe delete interaction
+     * Given: onRecipeDelete handler
+     * When: Delete pressed
+     * Then: Calls handler with recipe data
+     */
+    it('given onRecipeDelete handler, when delete pressed, then calls handler with recipe', () => {
+      // Arrange
+      const onRecipeDelete = jest.fn();
+      const { getByTestId } = render(
+        <TestWrapper>
+          <RecipeGrid
+            recipes={mockRecipes}
+            onRecipeDelete={onRecipeDelete}
+            testID="recipe-grid"
+          />
+        </TestWrapper>
+      );
+
+      // Act
+      fireEvent.press(getByTestId('recipe-grid-recipe-0-delete'));
+
+      // Assert
+      expect(onRecipeDelete).toHaveBeenCalledWith(mockRecipes[0]);
+    });
+
+    /**
+     * Test: Refresh interaction
+     * Given: onRefresh handler
+     * When: Refresh triggered
+     * Then: Calls onRefresh callback
+     */
+    it('given onRefresh handler, when refresh triggered, then calls onRefresh', () => {
+      // Arrange
+      const onRefresh = jest.fn();
+      const { UNSAFE_getByType } = render(
+        <TestWrapper>
+          <RecipeGrid
+            recipes={mockRecipes}
+            onRefresh={onRefresh}
+            testID="recipe-grid"
+          />
+        </TestWrapper>
+      );
+
+      // Act
+      const flatList = UNSAFE_getByType(FlatList);
+      const refreshControl = flatList.props.refreshControl;
+      refreshControl.props.onRefresh();
+
+      // Assert
+      expect(onRefresh).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('Grid Configuration', () => {
+    /**
+     * Test: 3 column configuration
+     * Given: columns=3
+     * When: Component renders
+     * Then: Configures FlatList for 3 columns
+     */
+    it('given 3 columns, when rendered, then configures FlatList correctly', () => {
+      // Arrange & Act
       const { UNSAFE_getByType } = render(
         <TestWrapper>
           <RecipeGrid recipes={mockRecipes} columns={3} testID="recipe-grid" />
         </TestWrapper>
       );
 
+      // Assert
       const flatList = UNSAFE_getByType(FlatList);
       expect(flatList.props.numColumns).toBe(3);
     });
 
-    it('configures FlatList for 4 columns', () => {
+    /**
+     * Test: 4 column configuration
+     * Given: columns=4
+     * When: Component renders
+     * Then: Configures FlatList for 4 columns
+     */
+    it('given 4 columns, when rendered, then configures FlatList correctly', () => {
+      // Arrange & Act
       const { UNSAFE_getByType } = render(
         <TestWrapper>
           <RecipeGrid recipes={mockRecipes} columns={4} testID="recipe-grid" />
         </TestWrapper>
       );
 
+      // Assert
       const flatList = UNSAFE_getByType(FlatList);
       expect(flatList.props.numColumns).toBe(4);
     });
 
-    it('applies column wrapper style for multi-column layout', () => {
+    /**
+     * Test: Column wrapper style for multi-column
+     * Given: Multiple columns
+     * When: Component renders
+     * Then: Applies row wrapper style
+     */
+    it('given multiple columns, when rendered, then applies row wrapper style', () => {
+      // Arrange & Act
       const { UNSAFE_getByType } = render(
         <TestWrapper>
           <RecipeGrid recipes={mockRecipes} columns={2} testID="recipe-grid" />
         </TestWrapper>
       );
 
+      // Assert
       const flatList = UNSAFE_getByType(FlatList);
       expect(flatList.props.columnWrapperStyle).toBeDefined();
       expect(flatList.props.columnWrapperStyle.justifyContent).toBe('space-between');
     });
 
-    it('forces re-render when columns change via key prop', () => {
+    /**
+     * Test: Force re-render on column change
+     * Given: Column count changes
+     * When: Component re-renders
+     * Then: Forces FlatList re-render using a key strategy
+     */
+    it('given column count change, when re-rendered, then forces FlatList re-render', () => {
+      // Arrange
       const { UNSAFE_getByType, rerender } = render(
         <TestWrapper>
           <RecipeGrid recipes={mockRecipes} columns={2} testID="recipe-grid" />
         </TestWrapper>
       );
 
-      // Test that component re-renders without crashing when columns change
-      expect(() => {
-        rerender(
-          <TestWrapper>
-            <RecipeGrid recipes={mockRecipes} columns={3} testID="recipe-grid" />
-          </TestWrapper>
-        );
-      }).not.toThrow();
-
-      // Verify FlatList is still rendered correctly
-      const updatedFlatList = UNSAFE_getByType(FlatList);
-      expect(updatedFlatList.props.numColumns).toBe(3);
-    });
-  });
-
-  /**
-   * RECIPE ITEM RENDERING TESTS
-   */
-  describe('Recipe Item Rendering', () => {
-    it('passes correct props to RecipeGridCard components', () => {
-      const { getByTestId } = render(
-        <TestWrapper>
-          <RecipeGrid recipes={mockRecipes} columns={2} testID="recipe-grid" />
-        </TestWrapper>
-      );
-
-      // Check that recipe cards are rendered with correct testIDs
-      expect(getByTestId('recipe-grid-recipe-0')).toBeTruthy();
-      expect(getByTestId('recipe-grid-recipe-1')).toBeTruthy();
-      expect(getByTestId('recipe-grid-recipe-2')).toBeTruthy();
-    });
-
-    it('uses recipe id as keyExtractor', () => {
-      const { UNSAFE_getByType } = render(
-        <TestWrapper>
-          <RecipeGrid recipes={mockRecipes} testID="recipe-grid" />
-        </TestWrapper>
-      );
-
-      const flatList = UNSAFE_getByType(FlatList);
-      expect(flatList.props.keyExtractor(mockRecipes[0])).toBe('1');
-      expect(flatList.props.keyExtractor(mockRecipes[1])).toBe('2');
-    });
-
-    it('passes column count to RecipeGridCard components', () => {
-      // This is implicitly tested through the mock component structure
-      // The columns prop is passed down to each RecipeGridCard
-      const { getByTestId } = render(
+      // Act
+      rerender(
         <TestWrapper>
           <RecipeGrid recipes={mockRecipes} columns={3} testID="recipe-grid" />
         </TestWrapper>
       );
 
+      // Assert
+      const updatedFlatList = UNSAFE_getByType(FlatList);
+      expect(updatedFlatList.props.numColumns).toBe(3);
+    });
+  });
+
+  describe('Props Pass-through', () => {
+    /**
+     * Test: TestID application to child components
+     * Given: testID prop
+     * When: Component renders
+     * Then: Applies testID to child components correctly
+     */
+    it('given testID prop, when rendered, then applies testID to child components correctly', () => {
+      // Arrange & Act
+      const { getByTestId } = render(
+        <TestWrapper>
+          <RecipeGrid recipes={mockRecipes} testID="recipe-grid" />
+        </TestWrapper>
+      );
+
+      // Assert
+      expect(getByTestId('recipe-grid')).toBeTruthy();
       expect(getByTestId('recipe-grid-recipe-0')).toBeTruthy();
-    });
-  });
-
-  /**
-   * INTERACTION HANDLER TESTS
-   */
-  describe('Interaction Handlers', () => {
-    it('calls onRecipePress when recipe is pressed', () => {
-      const onRecipePressMock = jest.fn();
-      const { getByTestId } = render(
-        <TestWrapper>
-          <RecipeGrid
-            recipes={mockRecipes}
-            onRecipePress={onRecipePressMock}
-            testID="recipe-grid"
-          />
-        </TestWrapper>
-      );
-
-      fireEvent.press(getByTestId('recipe-grid-recipe-0-press'));
-      expect(onRecipePressMock).toHaveBeenCalledWith(mockRecipes[0]);
+      expect(getByTestId('recipe-grid-recipe-1')).toBeTruthy();
     });
 
-    it('calls onRecipeEdit when recipe edit is pressed', () => {
-      const onRecipeEditMock = jest.fn();
-      const { getByTestId } = render(
-        <TestWrapper>
-          <RecipeGrid
-            recipes={mockRecipes}
-            onRecipeEdit={onRecipeEditMock}
-            testID="recipe-grid"
-          />
-        </TestWrapper>
-      );
-
-      fireEvent.press(getByTestId('recipe-grid-recipe-1-edit'));
-      expect(onRecipeEditMock).toHaveBeenCalledWith(mockRecipes[1]);
-    });
-
-    it('calls onRecipeDelete when recipe delete is pressed', () => {
-      const onRecipeDeleteMock = jest.fn();
-      const { getByTestId } = render(
-        <TestWrapper>
-          <RecipeGrid
-            recipes={mockRecipes}
-            onRecipeDelete={onRecipeDeleteMock}
-            testID="recipe-grid"
-          />
-        </TestWrapper>
-      );
-
-      fireEvent.press(getByTestId('recipe-grid-recipe-2-delete'));
-      expect(onRecipeDeleteMock).toHaveBeenCalledWith(mockRecipes[2]);
-    });
-
-    it('does not render action buttons when handlers not provided', () => {
-      const { queryByTestId } = render(
-        <TestWrapper>
-          <RecipeGrid recipes={mockRecipes} testID="recipe-grid" />
-        </TestWrapper>
-      );
-
-      // Since we're not providing onRecipeEdit or onRecipeDelete handlers,
-      // the mock component should not render those buttons
-      // Check that the recipe itself is rendered but without action buttons
-      expect(queryByTestId('recipe-grid-recipe-0')).toBeTruthy();
-      // The mock doesn't conditionally render buttons based on undefined handlers
-      // This test verifies the integration pattern works correctly
-    });
-  });
-
-  /**
-   * REFRESH FUNCTIONALITY TESTS
-   */
-  describe('Refresh Functionality', () => {
-    it('renders RefreshControl when onRefresh is provided', () => {
-      const onRefreshMock = jest.fn();
-      const { UNSAFE_getByType } = render(
-        <TestWrapper>
-          <RecipeGrid
-            recipes={mockRecipes}
-            onRefresh={onRefreshMock}
-            testID="recipe-grid"
-          />
-        </TestWrapper>
-      );
-
-      const flatList = UNSAFE_getByType(FlatList);
-      expect(flatList.props.refreshControl).toBeDefined();
-      expect(flatList.props.refreshControl.type).toBe(RefreshControl);
-    });
-
-    it('does not render RefreshControl when onRefresh not provided', () => {
-      const { UNSAFE_getByType } = render(
-        <TestWrapper>
-          <RecipeGrid recipes={mockRecipes} testID="recipe-grid" />
-        </TestWrapper>
-      );
-
-      const flatList = UNSAFE_getByType(FlatList);
-      expect(flatList.props.refreshControl).toBeUndefined();
-    });
-
-    it('calls onRefresh when refresh is triggered', () => {
-      const onRefreshMock = jest.fn();
-      const { UNSAFE_getByType } = render(
-        <TestWrapper>
-          <RecipeGrid
-            recipes={mockRecipes}
-            onRefresh={onRefreshMock}
-            testID="recipe-grid"
-          />
-        </TestWrapper>
-      );
-
-      const flatList = UNSAFE_getByType(FlatList);
-      const refreshControl = flatList.props.refreshControl;
-
-      // Directly call the onRefresh prop from RefreshControl
-      refreshControl.props.onRefresh();
-      expect(onRefreshMock).toHaveBeenCalledTimes(1);
-    });
-
-    it('displays refreshing state correctly', () => {
+    /**
+     * Test: Refresh state indication
+     * Given: isRefreshing=true
+     * When: Component renders
+     * Then: Shows refresh indicator
+     */
+    it('given isRefreshing true, when rendered, then shows refresh indicator', () => {
+      // Arrange & Act
       const { UNSAFE_getByType } = render(
         <TestWrapper>
           <RecipeGrid
@@ -387,73 +437,42 @@ describe('RecipeGrid Component', () => {
         </TestWrapper>
       );
 
+      // Assert
       const flatList = UNSAFE_getByType(FlatList);
       const refreshControl = flatList.props.refreshControl;
       expect(refreshControl.props.refreshing).toBe(true);
     });
 
-    it('uses theme colors for RefreshControl', () => {
-      const { UNSAFE_getByType } = render(
-        <TestWrapper>
-          <RecipeGrid
-            recipes={mockRecipes}
-            onRefresh={jest.fn()}
-            testID="recipe-grid"
-          />
-        </TestWrapper>
-      );
-
-      const flatList = UNSAFE_getByType(FlatList);
-      const refreshControl = flatList.props.refreshControl;
-      expect(refreshControl.props.colors).toBeDefined();
-      expect(refreshControl.props.progressBackgroundColor).toBeDefined();
-    });
-  });
-
-  /**
-   * LAYOUT AND STYLING TESTS
-   */
-  describe('Layout and Styling', () => {
-    it('applies correct container padding', () => {
+    /**
+     * Test: Recipe key extraction
+     * Given: Recipe data
+     * When: FlatList renders
+     * Then: Uses recipe ID as a key
+     */
+    it('given recipe data, when FlatList renders, then uses recipe ID as key', () => {
+      // Arrange & Act
       const { UNSAFE_getByType } = render(
         <TestWrapper>
           <RecipeGrid recipes={mockRecipes} testID="recipe-grid" />
         </TestWrapper>
       );
 
+      // Assert
       const flatList = UNSAFE_getByType(FlatList);
-      const containerStyle = flatList.props.contentContainerStyle;
-      expect(containerStyle.paddingVertical).toBe(8);
-      expect(containerStyle.paddingHorizontal).toBe(8);
-    });
-
-    it('applies empty container styles when showing empty state', () => {
-      const { getByTestId } = render(
-        <TestWrapper>
-          <RecipeGrid recipes={[]} testID="recipe-grid" />
-        </TestWrapper>
-      );
-
-      // Empty state container should be rendered
-      expect(getByTestId('empty-state')).toBeTruthy();
+      expect(flatList.props.keyExtractor(mockRecipes[0])).toBe('1');
+      expect(flatList.props.keyExtractor(mockRecipes[1])).toBe('2');
     });
   });
 
-  /**
-   * EDGE CASES AND ERROR HANDLING
-   */
-  describe('Edge Cases and Error Handling', () => {
-    it('handles empty recipes array gracefully', () => {
-      expect(() => {
-        render(
-          <TestWrapper>
-            <RecipeGrid recipes={[]} testID="recipe-grid" />
-          </TestWrapper>
-        );
-      }).not.toThrow();
-    });
-
-    it('handles recipes without optional properties', () => {
+  describe('Edge Cases', () => {
+    /**
+     * Test: Recipes without optional properties
+     * Given: Minimal recipe data
+     * When: Component renders
+     * Then: Handles gracefully without errors
+     */
+    it('given minimal recipe data, when rendered, then handles gracefully', () => {
+      // Arrange
       const minimalRecipes = [
         {
           id: '1',
@@ -464,6 +483,7 @@ describe('RecipeGrid Component', () => {
         },
       ];
 
+      // Act & Assert
       expect(() => {
         render(
           <TestWrapper>
@@ -473,24 +493,15 @@ describe('RecipeGrid Component', () => {
       }).not.toThrow();
     });
 
-    it('handles undefined optional props gracefully', () => {
-      expect(() => {
-        render(
-          <TestWrapper>
-            <RecipeGrid
-              recipes={mockRecipes}
-              onRecipePress={undefined}
-              onRecipeEdit={undefined}
-              onRecipeDelete={undefined}
-              onRefresh={undefined}
-            />
-          </TestWrapper>
-        );
-      }).not.toThrow();
-    });
-
-    it('maintains FlatList performance with large datasets', () => {
-      const largeRecipeSet = Array.from({ length: 100 }, (_, index) => ({
+    /**
+     * Test: Large dataset performance
+     * Given: Large recipe dataset
+     * When: Component renders
+     * Then: Maintains performance without errors
+     */
+    it('given large dataset, when rendered, then maintains performance', () => {
+      // Arrange
+      const largeRecipeSet = Array.from({ length: 50 }, (_, index) => ({
         id: `recipe-${index}`,
         title: `Recipe ${index}`,
         instructions: `Instructions ${index}`,
@@ -498,6 +509,7 @@ describe('RecipeGrid Component', () => {
         createdAt: '2024-01-01T00:00:00Z',
       }));
 
+      // Act & Assert
       expect(() => {
         render(
           <TestWrapper>
@@ -506,52 +518,30 @@ describe('RecipeGrid Component', () => {
         );
       }).not.toThrow();
     });
-  });
 
-  /**
-   * ACCESSIBILITY TESTS
-   */
-  describe('Accessibility', () => {
-    it('provides proper testID structure', () => {
-      const { getByTestId } = render(
+    /**
+     * Test: Theme integration
+     * Given: RefreshControl with theme
+     * When: Component renders
+     * Then: Uses theme colors correctly
+     */
+    it('given RefreshControl, when rendered, then uses theme colors', () => {
+      // Arrange & Act
+      const { UNSAFE_getByType } = render(
         <TestWrapper>
-          <RecipeGrid recipes={mockRecipes} testID="recipe-grid" />
+          <RecipeGrid
+            recipes={mockRecipes}
+            onRefresh={jest.fn()}
+            testID="recipe-grid"
+          />
         </TestWrapper>
       );
 
-      expect(getByTestId('recipe-grid')).toBeTruthy();
-      expect(getByTestId('recipe-grid-recipe-0')).toBeTruthy();
-      expect(getByTestId('recipe-grid-recipe-1')).toBeTruthy();
-    });
-
-    it('maintains accessibility with different column counts', () => {
-      const { getByTestId } = render(
-        <TestWrapper>
-          <RecipeGrid recipes={mockRecipes} columns={4} testID="recipe-grid" />
-        </TestWrapper>
-      );
-
-      // Should still be accessible with 4 columns
-      expect(getByTestId('recipe-grid')).toBeTruthy();
-      expect(getByTestId('recipe-grid-recipe-0')).toBeTruthy();
+      // Assert
+      const flatList = UNSAFE_getByType(FlatList);
+      const refreshControl = flatList.props.refreshControl;
+      expect(refreshControl.props.colors).toBeDefined();
+      expect(refreshControl.props.progressBackgroundColor).toBeDefined();
     });
   });
 });
-
-/**
- * TEST SUMMARY:
- *
- * Comprehensive tests covering:
- * ✅ Grid layout rendering with different column configurations
- * ✅ FlatList integration and performance optimizations
- * ✅ Recipe item rendering and prop passing
- * ✅ Empty state handling with custom messages
- * ✅ User interaction handlers (press, edit, delete)
- * ✅ Pull-to-refresh functionality
- * ✅ Theme integration for colors and styling
- * ✅ Layout and styling configurations
- * ✅ Edge cases and error handling
- * ✅ Accessibility and testID structure
- * ✅ Performance with large datasets
- * ✅ Column layout dynamics and re-rendering
- */

@@ -4,8 +4,6 @@ import { PaperProvider } from 'react-native-paper';
 import { RecipeGridCard } from '../RecipeGridCard';
 import { RecipeResponseDto } from '../../../../lib/shared';
 
-// No React Native mocking - let it use defaults
-
 // Test wrapper with theme provider
 const TestWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <PaperProvider>{children}</PaperProvider>
@@ -21,215 +19,62 @@ const mockRecipe: RecipeResponseDto & { imageUrl?: string; category?: string } =
   category: 'Dinner',
 };
 
-describe('RecipeGridCard Component', () => {
-  /**
-   * BASIC RENDERING TESTS
-   */
-  describe('Basic Rendering', () => {
-    it('renders recipe title correctly', () => {
+/**
+ * Unit tests for the RecipeGridCard component
+ *
+ * Tests recipe grid card with dynamic layout, image handling, and conditional rendering.
+ * Uses sociable testing approach with real React Native Paper components.
+ */
+describe('RecipeGridCard', () => {
+  describe('Happy Path', () => {
+    /**
+     * Test: Basic recipe card rendering
+     * Given: Recipe with all properties
+     * When: Card renders
+     * Then: Displays recipe information correctly
+     */
+    it('given recipe with all properties, when rendered, then displays recipe information', () => {
+      // Arrange & Act
       const { getByText } = render(
         <TestWrapper>
           <RecipeGridCard recipe={mockRecipe} testID="recipe-card" />
         </TestWrapper>
       );
+
+      // Assert
       expect(getByText('Test Recipe')).toBeTruthy();
-    });
-
-    it('displays servings count', () => {
-      const { getByText } = render(
-        <TestWrapper>
-          <RecipeGridCard recipe={mockRecipe} testID="recipe-card" />
-        </TestWrapper>
-      );
       expect(getByText('4')).toBeTruthy();
-    });
-
-    it('shows category chip when provided', () => {
-      const { getByText } = render(
-        <TestWrapper>
-          <RecipeGridCard recipe={mockRecipe} testID="recipe-card" />
-        </TestWrapper>
-      );
       expect(getByText('Dinner')).toBeTruthy();
     });
 
-    it('hides category chip when category is "All"', () => {
-      const recipeWithAllCategory = { ...mockRecipe, category: 'All' };
-      const { queryByText } = render(
-        <TestWrapper>
-          <RecipeGridCard recipe={recipeWithAllCategory} testID="recipe-card" />
-        </TestWrapper>
-      );
-      expect(queryByText('All')).toBeNull();
-    });
-
-    it('renders without crashing with minimal props', () => {
-      expect(() => {
-        render(
-          <TestWrapper>
-            <RecipeGridCard recipe={mockRecipe} />
-          </TestWrapper>
-        );
-      }).not.toThrow();
-    });
-  });
-
-  /**
-   * COLUMN LAYOUT TESTS
-   */
-  describe('Column Layout', () => {
-    it('renders with different column configurations', () => {
-      // Test 2 columns
-      const { unmount: unmount2 } = render(
-        <TestWrapper>
-          <RecipeGridCard recipe={mockRecipe} columns={2} testID="recipe-card" />
-        </TestWrapper>
-      );
-      unmount2();
-
-      // Test 3 columns
-      const { unmount: unmount3 } = render(
-        <TestWrapper>
-          <RecipeGridCard recipe={mockRecipe} columns={3} testID="recipe-card" />
-        </TestWrapper>
-      );
-      unmount3();
-
-      // Both should render without errors
-      expect(true).toBe(true);
-    });
-
-    it('limits title to 2 lines', () => {
-      const longTitleRecipe = {
-        ...mockRecipe,
-        title: 'This is a very long recipe title that should be truncated to two lines maximum',
-      };
-
-      const { getByText } = render(
-        <TestWrapper>
-          <RecipeGridCard recipe={longTitleRecipe} testID="recipe-card" />
-        </TestWrapper>
-      );
-
-      const titleElement = getByText(/This is a very long recipe title/);
-      expect(titleElement.props.numberOfLines).toBe(2);
-    });
-  });
-
-  /**
-   * ACTION HANDLERS TESTS
-   */
-  describe('Action Handlers', () => {
-    it('calls onPress when card is pressed', () => {
-      const onPressMock = jest.fn();
-      const { getByTestId } = render(
-        <TestWrapper>
-          <RecipeGridCard
-            recipe={mockRecipe}
-            onPress={onPressMock}
-            testID="recipe-card"
-          />
-        </TestWrapper>
-      );
-
-      fireEvent.press(getByTestId('recipe-card'));
-      expect(onPressMock).toHaveBeenCalledTimes(1);
-    });
-
-    it('calls onEdit when edit button is pressed', () => {
-      const onEditMock = jest.fn();
-      const { getByTestId } = render(
-        <TestWrapper>
-          <RecipeGridCard
-            recipe={mockRecipe}
-            onEdit={onEditMock}
-            testID="recipe-card"
-          />
-        </TestWrapper>
-      );
-
-      fireEvent.press(getByTestId('recipe-card-edit'));
-      expect(onEditMock).toHaveBeenCalledTimes(1);
-    });
-
-    it('calls onDelete when delete button is pressed', () => {
-      const onDeleteMock = jest.fn();
-      const { getByTestId } = render(
-        <TestWrapper>
-          <RecipeGridCard
-            recipe={mockRecipe}
-            onDelete={onDeleteMock}
-            testID="recipe-card"
-          />
-        </TestWrapper>
-      );
-
-      fireEvent.press(getByTestId('recipe-card-delete'));
-      expect(onDeleteMock).toHaveBeenCalledTimes(1);
-    });
-
-    it('shows action buttons only when handlers provided', () => {
-      const { getByTestId } = render(
-        <TestWrapper>
-          <RecipeGridCard
-            recipe={mockRecipe}
-            onEdit={jest.fn()}
-            onDelete={jest.fn()}
-            testID="recipe-card"
-          />
-        </TestWrapper>
-      );
-
-      expect(getByTestId('recipe-card-edit')).toBeTruthy();
-      expect(getByTestId('recipe-card-delete')).toBeTruthy();
-    });
-
-    it('hides action buttons when no handlers provided', () => {
-      const { queryByTestId } = render(
-        <TestWrapper>
-          <RecipeGridCard recipe={mockRecipe} testID="recipe-card" />
-        </TestWrapper>
-      );
-
-      expect(queryByTestId('recipe-card-edit')).toBeNull();
-      expect(queryByTestId('recipe-card-delete')).toBeNull();
-    });
-  });
-
-  /**
-   * IMAGE HANDLING TESTS
-   */
-  describe('Image Handling', () => {
-    it('displays image when imageUrl is provided', () => {
+    /**
+     * Test: Card with image display
+     * Given: Recipe with imageUrl
+     * When: Card renders
+     * Then: Displays image with a correct source
+     */
+    it('given recipe with imageUrl, when rendered, then displays image', () => {
+      // Arrange & Act
       const { UNSAFE_getByType } = render(
         <TestWrapper>
           <RecipeGridCard recipe={mockRecipe} testID="recipe-card" />
         </TestWrapper>
       );
 
+      // Assert
       const { Image } = require('react-native');
       const imageElement = UNSAFE_getByType(Image);
       expect(imageElement.props.source.uri).toBe('https://example.com/recipe.jpg');
     });
 
-    it('displays placeholder when no imageUrl provided', () => {
-      const recipeWithoutImage = { ...mockRecipe, imageUrl: undefined };
-      const { getByTestId } = render(
-        <TestWrapper>
-          <RecipeGridCard recipe={recipeWithoutImage} testID="recipe-card" />
-        </TestWrapper>
-      );
-
-      // Should render placeholder with an icon
-      expect(getByTestId('recipe-card')).toBeTruthy();
-    });
-  });
-
-  /**
-   * ACCESSIBILITY TESTS
-   */
-  describe('Accessibility', () => {
-    it('provides proper testID structure', () => {
+    /**
+     * Test: Card with action buttons
+     * Given: Edit and delete handlers
+     * When: Card renders
+     * Then: Displays action buttons
+     */
+    it('given edit and delete handlers, when rendered, then displays action buttons', () => {
+      // Arrange & Act
       const { getByTestId } = render(
         <TestWrapper>
           <RecipeGridCard
@@ -241,12 +86,341 @@ describe('RecipeGridCard Component', () => {
         </TestWrapper>
       );
 
+      // Assert
+      expect(getByTestId('recipe-card-edit')).toBeTruthy();
+      expect(getByTestId('recipe-card-delete')).toBeTruthy();
+    });
+  });
+
+  describe('Business Rules', () => {
+    /**
+     * Test: Category chip visibility
+     * Given: Recipe with 'All' category
+     * When: Card renders
+     * Then: Hides category chip
+     */
+    it('given recipe with All category, when rendered, then hides category chip', () => {
+      // Arrange
+      const recipeWithAllCategory = { ...mockRecipe, category: 'All' };
+
+      // Act
+      const { queryByText } = render(
+        <TestWrapper>
+          <RecipeGridCard recipe={recipeWithAllCategory} testID="recipe-card" />
+        </TestWrapper>
+      );
+
+      // Assert
+      expect(queryByText('All')).toBeNull();
+    });
+
+    /**
+     * Test: Category chip without category
+     * Given: Recipe without category
+     * When: Card renders
+     * Then: Shows only servings chip
+     */
+    it('given recipe without category, when rendered, then shows only servings chip', () => {
+      // Arrange
+      const recipeWithoutCategory = { ...mockRecipe, category: undefined };
+
+      // Act
+      const { getByText, queryByText } = render(
+        <TestWrapper>
+          <RecipeGridCard recipe={recipeWithoutCategory} testID="recipe-card" />
+        </TestWrapper>
+      );
+
+      // Assert
+      expect(getByText('4')).toBeTruthy();
+      expect(queryByText('Dinner')).toBeNull();
+    });
+
+    /**
+     * Test: Title line truncation
+     * Given: Recipe with long title
+     * When: Card renders
+     * Then: Limits title to 2 lines
+     */
+    it('given recipe with long title, when rendered, then limits to 2 lines', () => {
+      // Arrange
+      const longTitleRecipe = {
+        ...mockRecipe,
+        title: 'This is a very long recipe title that should be truncated to two lines maximum',
+      };
+
+      // Act
+      const { getByText } = render(
+        <TestWrapper>
+          <RecipeGridCard recipe={longTitleRecipe} testID="recipe-card" />
+        </TestWrapper>
+      );
+
+      // Assert
+      const titleElement = getByText(/This is a very long recipe title/);
+      expect(titleElement.props.numberOfLines).toBe(2);
+    });
+
+    /**
+     * Test: Text variant based on columns
+     * Given: Card with 3 columns
+     * When: Card renders
+     * Then: Uses smaller text variant
+     */
+    it('given 3 columns, when rendered, then uses titleSmall variant', () => {
+      // Arrange & Act
+      const { getByText } = render(
+        <TestWrapper>
+          <RecipeGridCard recipe={mockRecipe} columns={3} testID="recipe-card" />
+        </TestWrapper>
+      );
+
+      // Assert
+      const titleElement = getByText('Test Recipe');
+      expect(titleElement.props.variant).toBe('titleSmall');
+    });
+
+    /**
+     * Test: Text variant for default columns
+     * Given: Card with default columns (2)
+     * When: Card renders
+     * Then: Uses medium text variant
+     */
+    it('given default columns, when rendered, then uses titleMedium variant', () => {
+      // Arrange & Act
+      const { getByText } = render(
+        <TestWrapper>
+          <RecipeGridCard recipe={mockRecipe} testID="recipe-card" />
+        </TestWrapper>
+      );
+
+      // Assert
+      const titleElement = getByText('Test Recipe');
+      expect(titleElement.props.variant).toBe('titleMedium');
+    });
+  });
+
+  describe('User Interactions', () => {
+    /**
+     * Test: Card press interaction
+     * Given: onPress handler
+     * When: Card pressed
+     * Then: Calls onPress callback
+     */
+    it('given onPress handler, when card pressed, then calls onPress', () => {
+      // Arrange
+      const onPress = jest.fn();
+      const { getByTestId } = render(
+        <TestWrapper>
+          <RecipeGridCard
+            recipe={mockRecipe}
+            onPress={onPress}
+            testID="recipe-card"
+          />
+        </TestWrapper>
+      );
+
+      // Act
+      fireEvent.press(getByTestId('recipe-card'));
+
+      // Assert
+      expect(onPress).toHaveBeenCalledTimes(1);
+    });
+
+    /**
+     * Test: Edit button interaction
+     * Given: onEdit handler
+     * When: Edit button pressed
+     * Then: Calls onEdit callback
+     */
+    it('given onEdit handler, when edit button pressed, then calls onEdit', () => {
+      // Arrange
+      const onEdit = jest.fn();
+      const { getByTestId } = render(
+        <TestWrapper>
+          <RecipeGridCard
+            recipe={mockRecipe}
+            onEdit={onEdit}
+            testID="recipe-card"
+          />
+        </TestWrapper>
+      );
+
+      // Act
+      fireEvent.press(getByTestId('recipe-card-edit'));
+
+      // Assert
+      expect(onEdit).toHaveBeenCalledTimes(1);
+    });
+
+    /**
+     * Test: Delete button interaction
+     * Given: onDelete handler
+     * When: Delete button pressed
+     * Then: Calls onDelete callback
+     */
+    it('given onDelete handler, when delete button pressed, then calls onDelete', () => {
+      // Arrange
+      const onDelete = jest.fn();
+      const { getByTestId } = render(
+        <TestWrapper>
+          <RecipeGridCard
+            recipe={mockRecipe}
+            onDelete={onDelete}
+            testID="recipe-card"
+          />
+        </TestWrapper>
+      );
+
+      // Act
+      fireEvent.press(getByTestId('recipe-card-delete'));
+
+      // Assert
+      expect(onDelete).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('Conditional Rendering', () => {
+    /**
+     * Test: Action buttons with handlers
+     * Given: Edit and delete handlers
+     * When: Card renders
+     * Then: Shows action buttons
+     */
+    it('given edit and delete handlers, when rendered, then shows action buttons', () => {
+      // Arrange & Act
+      const { getByTestId } = render(
+        <TestWrapper>
+          <RecipeGridCard
+            recipe={mockRecipe}
+            onEdit={jest.fn()}
+            onDelete={jest.fn()}
+            testID="recipe-card"
+          />
+        </TestWrapper>
+      );
+
+      // Assert
+      expect(getByTestId('recipe-card-edit')).toBeTruthy();
+      expect(getByTestId('recipe-card-delete')).toBeTruthy();
+    });
+
+    /**
+     * Test: No action buttons without handlers
+     * Given: No action handlers
+     * When: Card renders
+     * Then: Hides action buttons
+     */
+    it('given no action handlers, when rendered, then hides action buttons', () => {
+      // Arrange & Act
+      const { queryByTestId } = render(
+        <TestWrapper>
+          <RecipeGridCard recipe={mockRecipe} testID="recipe-card" />
+        </TestWrapper>
+      );
+
+      // Assert
+      expect(queryByTestId('recipe-card-edit')).toBeNull();
+      expect(queryByTestId('recipe-card-delete')).toBeNull();
+    });
+
+    /**
+     * Test: Image display when available
+     * Given: Recipe with imageUrl
+     * When: Card renders
+     * Then: Shows image instead of placeholder
+     */
+    it('given recipe with imageUrl, when rendered, then shows image', () => {
+      // Arrange & Act
+      const { UNSAFE_getByType } = render(
+        <TestWrapper>
+          <RecipeGridCard recipe={mockRecipe} testID="recipe-card" />
+        </TestWrapper>
+      );
+
+      // Assert
+      const { Image } = require('react-native');
+      const imageElement = UNSAFE_getByType(Image);
+      expect(imageElement.props.source.uri).toBe('https://example.com/recipe.jpg');
+    });
+
+    /**
+     * Test: Placeholder when no image
+     * Given: Recipe without imageUrl
+     * When: Card renders
+     * Then: Shows placeholder with icon
+     */
+    it('given recipe without imageUrl, when rendered, then shows placeholder', () => {
+      // Arrange
+      const recipeWithoutImage = { ...mockRecipe, imageUrl: undefined };
+
+      // Act & Assert
+      expect(() => {
+        render(
+          <TestWrapper>
+            <RecipeGridCard recipe={recipeWithoutImage} testID="recipe-card" />
+          </TestWrapper>
+        );
+      }).not.toThrow();
+    });
+  });
+
+  describe('Props Pass-through', () => {
+    /**
+     * Test: TestID structure
+     * Given: testID prop
+     * When: Card renders with actions
+     * Then: Applies testID to all interactive elements
+     */
+    it('given testID prop, when rendered with actions, then applies testID structure', () => {
+      // Arrange & Act
+      const { getByTestId } = render(
+        <TestWrapper>
+          <RecipeGridCard
+            recipe={mockRecipe}
+            onEdit={jest.fn()}
+            onDelete={jest.fn()}
+            testID="recipe-card"
+          />
+        </TestWrapper>
+      );
+
+      // Assert
       expect(getByTestId('recipe-card')).toBeTruthy();
       expect(getByTestId('recipe-card-edit')).toBeTruthy();
       expect(getByTestId('recipe-card-delete')).toBeTruthy();
     });
 
-    it('handles undefined optional props gracefully', () => {
+    /**
+     * Test: Different column configurations
+     * Given: Various column counts
+     * When: Card renders
+     * Then: Handles all configurations without errors
+     */
+    it('given various column counts, when rendered, then handles all configurations', () => {
+      // Arrange & Act & Assert
+      [2, 3, 4].forEach((columns) => {
+        expect(() => {
+          const { unmount } = render(
+            <TestWrapper>
+              <RecipeGridCard recipe={mockRecipe} columns={columns as 2 | 3 | 4} testID="recipe-card" />
+            </TestWrapper>
+          );
+          unmount();
+        }).not.toThrow();
+      });
+    });
+  });
+
+  describe('Edge Cases', () => {
+    /**
+     * Test: Minimal recipe data
+     * Given: Recipe with only required properties
+     * When: Card renders
+     * Then: Handles gracefully without errors
+     */
+    it('given minimal recipe data, when rendered, then handles gracefully', () => {
+      // Arrange
       const minimalRecipe = {
         id: '1',
         title: 'Minimal Recipe',
@@ -255,6 +429,7 @@ describe('RecipeGridCard Component', () => {
         createdAt: '2024-01-01T00:00:00Z',
       };
 
+      // Act & Assert
       expect(() => {
         render(
           <TestWrapper>
@@ -263,38 +438,45 @@ describe('RecipeGridCard Component', () => {
         );
       }).not.toThrow();
     });
-  });
 
-  /**
-   * THEME INTEGRATION TESTS
-   */
-  describe('Theme Integration', () => {
-    it('uses Surface component with elevation', () => {
+    /**
+     * Test: Surface component integration
+     * Given: Card component
+     * When: Rendered
+     * Then: Uses Surface with correct elevation
+     */
+    it('given card component, when rendered, then uses Surface with elevation', () => {
+      // Arrange & Act
       const { UNSAFE_getByType } = render(
         <TestWrapper>
           <RecipeGridCard recipe={mockRecipe} testID="recipe-card" />
         </TestWrapper>
       );
 
+      // Assert
       const { Surface } = require('react-native-paper');
       const surfaceElement = UNSAFE_getByType(Surface);
       expect(surfaceElement.props.elevation).toBe(2);
     });
 
-    it('applies theme-based border radius', () => {
+    /**
+     * Test: Image error handling
+     * Given: Image with onError
+     * When: Image fails to load
+     * Then: Component handles error gracefully
+     */
+    it('given image with onError, when image fails, then handles error gracefully', () => {
+      // Arrange & Act
       const { UNSAFE_getByType } = render(
         <TestWrapper>
           <RecipeGridCard recipe={mockRecipe} testID="recipe-card" />
         </TestWrapper>
       );
 
-      const { Surface } = require('react-native-paper');
-      const surfaceElement = UNSAFE_getByType(Surface);
-      // Check if the style is array or object and extract borderRadius
-      const style = Array.isArray(surfaceElement.props.style)
-        ? surfaceElement.props.style.find((s: any) => s && s.borderRadius)
-        : surfaceElement.props.style;
-      expect(style?.borderRadius || 12).toBe(12); // Default to 12 if not found
+      // Assert
+      const { Image } = require('react-native');
+      const imageElement = UNSAFE_getByType(Image);
+      expect(typeof imageElement.props.onError).toBe('function');
     });
   });
 });

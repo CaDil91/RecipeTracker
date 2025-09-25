@@ -220,7 +220,7 @@ describe('RecipeGridCard Component', () => {
         </TestWrapper>
       );
 
-      // Should render placeholder with icon
+      // Should render placeholder with an icon
       expect(getByTestId('recipe-card')).toBeTruthy();
     });
   });
@@ -290,32 +290,11 @@ describe('RecipeGridCard Component', () => {
 
       const { Surface } = require('react-native-paper');
       const surfaceElement = UNSAFE_getByType(Surface);
-      // Check if style is array or object and extract borderRadius
+      // Check if the style is array or object and extract borderRadius
       const style = Array.isArray(surfaceElement.props.style)
-        ? surfaceElement.props.style.find(s => s && s.borderRadius)
+        ? surfaceElement.props.style.find((s: any) => s && s.borderRadius)
         : surfaceElement.props.style;
       expect(style?.borderRadius || 12).toBe(12); // Default to 12 if not found
     });
   });
 });
-
-/**
- * SIMPLIFIED TEST SUMMARY:
- *
- * Essential tests covering:
- * ✅ Basic component rendering and content display
- * ✅ Column layout text variants
- * ✅ Action handler integration (onPress, onEdit, onDelete)
- * ✅ Image handling (with/without imageUrl)
- * ✅ Accessibility and testID structure
- * ✅ Theme integration basics
- * ✅ Error handling and edge cases
- *
- * Removed complex tests that were causing mocking issues:
- * ❌ Detailed responsive sizing calculations
- * ❌ Dynamic dimension change testing
- * ❌ Complex image error simulation
- * ❌ Touch opacity testing
- *
- * This provides solid coverage while avoiding test environment issues.
- */

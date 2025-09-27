@@ -1,53 +1,31 @@
-// Mock React Native Paper components that cause issues in tests
-jest.mock('react-native-paper', () => {
-  const React = require('react');
-  const { View, Text, TouchableOpacity } = require('react-native');
-  const RealModule = jest.requireActual('react-native-paper');
-  
-  // Mock IconButton component
-  const IconButton = ({ icon, onPress, testID, accessibilityLabel, ...props }: any) => {
-    return React.createElement(TouchableOpacity, { 
-      onPress, 
-      testID,
-      accessibilityLabel,
-      ...props 
-    }, React.createElement(Text, {}, `IconButton:${icon}`));
-  };
+import {QueryClient} from '@tanstack/react-query';
 
-  // Mock FAB component  
-  const FAB = ({ icon, onPress, testID, accessibilityLabel, style, ...props }: any) => {
-    return React.createElement(TouchableOpacity, { 
-      onPress, 
-      testID,
-      accessibilityLabel,
-      style,
-      ...props 
-    }, React.createElement(Text, {}, `FAB:${icon}`));
-  };
+// Simple hook mocking approach for mobile app testing
 
-  const MockedModule = {
-    ...RealModule,
-    Portal: ({ children }: any) => children,
-    PaperProvider: ({ children }: any) => children,
-    Icon: ({ source, ...props }: any) => {
-      return React.createElement(Text, { ...props }, `Icon:${source}`);
+// Global test query client - shared across all tests
+const createTestQueryClient = () => new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: false, // Disable retries in tests
+      gcTime: Infinity, // Doesn't garbage collect during tests
     },
-    IconButton,
-    FAB,
-  };
-  return MockedModule;
+    mutations: {
+      retry: false, // Disable mutation retries in tests
+    },
+  },
 });
 
-// Mock react-native-safe-area-context
-jest.mock('react-native-safe-area-context', () => {
-  const inset = { top: 0, right: 0, bottom: 0, left: 0 };
-  return {
-    SafeAreaProvider: ({ children }: any) => children,
-    SafeAreaConsumer: ({ children }: any) => children(inset),
-    useSafeAreaInsets: () => inset,
-    SafeAreaView: ({ children }: any) => children,
-  };
-});
+// Create a global instance
+(global as any).testQueryClient = createTestQueryClient();
+
+// Note: We're NOT mocking react-native-paper anymore
+// Using real Paper components follows a "sociable unit test" approach
+// Only mock true external boundaries like API services
+
+// Mock react-native-safe-area-context using official built-in mock
+// This is an external boundary (platform safe area APIs), so mocking is appropriate
+import mockSafeAreaContext from 'react-native-safe-area-context/jest/mock';
+jest.mock('react-native-safe-area-context', () => mockSafeAreaContext);
 
 // Mock vector icons
 jest.mock('react-native-vector-icons/MaterialCommunityIcons', () => {
@@ -73,3 +51,8 @@ beforeAll(() => {
 afterAll(() => {
   console.warn = originalWarn;
 });
+
+// Note: We're NOT mocking React Query globally anymore
+// Tests should use real React Query with test QueryClient
+// This follows the "sociable unit test" pattern - testing with real collaborators
+// Only mock external boundaries like API services

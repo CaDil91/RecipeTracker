@@ -4,9 +4,14 @@
   "main": "index.ts",
   "scripts": {
     "start": "expo start",
+    "start:mock": "cross-env EXPO_PUBLIC_USE_MSW=true expo start",
     "android": "expo start --android",
+    "android:mock": "cross-env EXPO_PUBLIC_USE_MSW=true expo start --android",
     "ios": "expo start --ios",
+    "ios:mock": "cross-env EXPO_PUBLIC_USE_MSW=true expo start --ios",
     "web": "expo start --web",
+    "web:mock": "cross-env EXPO_PUBLIC_USE_MSW=true expo start --web",
+    "msw:init": "npx msw init public/ --save",
     "test": "jest",
     "test:coverage": "jest --coverage --coverageDirectory=coverage"
   },
@@ -16,10 +21,12 @@
     "@react-navigation/native": "^7.1.14",
     "@react-navigation/native-stack": "^7.3.21",
     "@react-navigation/stack": "^7.4.2",
+    "@tanstack/react-query": "^5.90.2",
     "expo": "53.0.22",
     "expo-status-bar": "~2.2.3",
     "react": "19.0.0",
     "react-dom": "19.0.0",
+    "react-hook-form": "^7.63.0",
     "react-native": "^0.79.5",
     "react-native-paper": "^5.14.5",
     "react-native-safe-area-context": "5.4.0",
@@ -33,9 +40,18 @@
     "@testing-library/react-native": "^13.3.3",
     "@types/jest": "^30.0.0",
     "@types/react": "~19.0.10",
+    "cross-env": "^10.0.0",
+    "fast-text-encoding": "^1.0.6",
     "jest": "^29.7.0",
     "jest-expo": "~53.0.10",
+    "msw": "^2.11.3",
+    "react-native-url-polyfill": "^3.0.0",
     "typescript": "~5.8.3"
   },
-  "private": true
+  "private": true,
+  "msw": {
+    "workerDirectory": [
+      "public"
+    ]
+  }
 }

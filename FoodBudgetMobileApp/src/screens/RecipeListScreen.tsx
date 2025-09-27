@@ -1,13 +1,14 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { View, StyleSheet } from 'react-native';
-import { Appbar, FAB, SegmentedButtons, IconButton, Menu, useTheme } from 'react-native-paper';
+import { View, StyleSheet, Alert } from 'react-native';
+import { Appbar, FAB, IconButton, Menu, useTheme, Snackbar, ActivityIndicator } from 'react-native-paper';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { RecipeListScreenNavigationProp } from '../types/navigation';
 import { Container, RecipeList } from '../components/shared';
 import { RecipeResponseDto } from '../lib/shared';
 import SearchBar from '../components/SearchBar';
 import FilterChips, { FilterType } from '../components/FilterChips';
-import { placeholderRecipes, RecipeWithCategory } from '../data/mockRecipes';
 import { RecipeGrid } from '../components/shared/recipe/RecipeGrid';
+import { RecipeService } from '../lib/shared';
 
 type ViewMode = 'list' | 'grid';
 type GridColumns = 2 | 3 | 4;
@@ -16,15 +17,55 @@ type RecipeListScreenProps = {
   navigation: RecipeListScreenNavigationProp;
 };
 
+// Main screen component for displaying and managing recipes
 const RecipeListScreen: React.FC<RecipeListScreenProps> = ({ navigation }) => {
   const theme = useTheme();
-  const [recipes, setRecipes] = useState<RecipeWithCategory[]>(placeholderRecipes);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const queryClient = useQueryClient();
+
+  // UI state
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState<FilterType>('All');
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [gridColumns, setGridColumns] = useState<GridColumns>(2);
   const [menuVisible, setMenuVisible] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
+
+  // Fetch recipes using TanStack Query
+  const {
+    data: recipesData,
+    isLoading,
+    error,
+    refetch,
+    isRefetching,
+  } = useQuery({
+    queryKey: ['recipes'],
+    queryFn: async () => {
+      const response = await RecipeService.getAllRecipes();
+      if (!response.success) {
+        throw new Error(
+          typeof response.error === 'string'
+            ? response.error
+            : response.error.title || 'Failed to fetch recipes'
+        );
+      }
+      // TODO: Remove this transformation once API supports imageUrl and category fields
+      // TODO: Backend API needs migration to add imageUrl and category fields to Recipe entity
+      // NOTE: We cast to 'any' first to preserve fields that aren't in RecipeResponseDto type
+      const rawData = response.data as any[];
+      const transformedData = rawData.map(recipe => ({
+        ...recipe,
+        // TODO: Remove - temporary for MSW mock data compatibility
+        category: recipe.category || 'All' as FilterType,
+        // TODO: Remove - temporary for MSW mock data compatibility
+        imageUrl: recipe.imageUrl || undefined,
+      }));
+
+      return transformedData;
+    },
+  });
+
+  // Use an empty array if no data yet
+  const recipes = recipesData || [];
 
   // Filter and search recipes
   const filteredRecipes = useMemo(() => {
@@ -58,39 +99,97 @@ const RecipeListScreen: React.FC<RecipeListScreenProps> = ({ navigation }) => {
     navigation.navigate('Add');
   }, [navigation]);
 
+  // Delete mutation using TanStack Query
+  const deleteMutation = useMutation({
+    mutationFn: async (recipeId: string) => {
+      const response = await RecipeService.deleteRecipe(recipeId);
+      if (!response.success) {
+        throw new Error(
+          typeof response.error === 'string'
+            ? response.error
+            : response.error.title || 'Failed to delete recipe'
+        );
+      }
+      return response.data;
+    },
+    onSuccess: () => {
+      // Invalidate and refetch recipes after successful deletion
+      queryClient.invalidateQueries({ queryKey: ['recipes'] });
+      setSnackbarMessage('Recipe deleted successfully');
+    },
+    onError: (error) => {
+      setSnackbarMessage(error.message || 'Failed to delete recipe');
+    },
+  });
+
   const handleRecipeDelete = useCallback((recipe: RecipeResponseDto) => {
-    console.log('Delete recipe:', recipe);
-    // TODO: Implement delete confirmation and API call
-    setRecipes(prev => prev.filter(r => r.id !== recipe.id));
-  }, []);
+    Alert.alert(
+      'Delete Recipe',
+      `Are you sure you want to delete "${recipe.title}"?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => deleteMutation.mutate(recipe.id),
+        },
+      ],
+    );
+  }, [deleteMutation]);
 
   const handleAddRecipe = useCallback(() => {
-    // Navigate to Add tab
+    // Navigate to the Add tab
     navigation.navigate('Add');
   }, [navigation]);
 
-  const handleRefresh = useCallback(async () => {
-    setIsRefreshing(true);
-    // TODO: Fetch recipes from API
-    setTimeout(() => {
-      setIsRefreshing(false);
-    }, 1000);
-  }, []);
+  const handleRefresh = useCallback(() => {
+    refetch();
+  }, [refetch]);
 
   const handleSearchClear = useCallback(() => {
     setSearchQuery('');
   }, []);
 
+  // Dynamic styles using theme
+  const styles = StyleSheet.create({
+    searchContainer: {
+      backgroundColor: theme.colors.surface,
+      paddingTop: 8,
+      paddingHorizontal: 16,
+      paddingBottom: 8,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.outline,
+    },
+    fab: {
+      position: 'absolute',
+      margin: 16,
+      right: 0,
+      bottom: 0,
+      backgroundColor: theme.colors.primary,
+    },
+    centerContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: theme.colors.background,
+    },
+  });
+
   return (
     <>
-      <Appbar.Header>
-        <Appbar.Content title="My Recipes" />
+      <Appbar.Header style={{ backgroundColor: theme.colors.surface }}>
+        <Appbar.Content
+          title="My Recipes"
+          titleStyle={{ color: theme.colors.onSurface }}
+        />
         <Menu
           visible={menuVisible}
           onDismiss={() => setMenuVisible(false)}
+          contentStyle={{ backgroundColor: theme.colors.surface }}
           anchor={
             <IconButton
               icon={viewMode === 'list' ? 'view-grid' : 'view-list'}
+              iconColor={theme.colors.onSurface}
               onPress={() => setMenuVisible(true)}
               testID="view-mode-menu"
             />
@@ -103,6 +202,7 @@ const RecipeListScreen: React.FC<RecipeListScreenProps> = ({ navigation }) => {
             }}
             title="List View"
             leadingIcon="view-list"
+            titleStyle={{ color: theme.colors.onSurface }}
           />
           <Menu.Item
             onPress={() => {
@@ -112,6 +212,7 @@ const RecipeListScreen: React.FC<RecipeListScreenProps> = ({ navigation }) => {
             }}
             title="Grid (2 columns)"
             leadingIcon="view-grid"
+            titleStyle={{ color: theme.colors.onSurface }}
           />
           <Menu.Item
             onPress={() => {
@@ -121,6 +222,7 @@ const RecipeListScreen: React.FC<RecipeListScreenProps> = ({ navigation }) => {
             }}
             title="Grid (3 columns)"
             leadingIcon="view-grid-outline"
+            titleStyle={{ color: theme.colors.onSurface }}
           />
           <Menu.Item
             onPress={() => {
@@ -130,6 +232,7 @@ const RecipeListScreen: React.FC<RecipeListScreenProps> = ({ navigation }) => {
             }}
             title="Grid (4 columns)"
             leadingIcon="view-grid-plus-outline"
+            titleStyle={{ color: theme.colors.onSurface }}
           />
         </Menu>
       </Appbar.Header>
@@ -150,7 +253,14 @@ const RecipeListScreen: React.FC<RecipeListScreenProps> = ({ navigation }) => {
           />
         </View>
 
-        {viewMode === 'list' ? (
+        {isLoading ? (
+          <View style={styles.centerContainer}>
+            <ActivityIndicator
+              size="large"
+              color={theme.colors.primary}
+            />
+          </View>
+        ) : viewMode === 'list' ? (
           <RecipeList
             recipes={filteredRecipes}
             onRecipePress={handleRecipePress}
@@ -158,7 +268,7 @@ const RecipeListScreen: React.FC<RecipeListScreenProps> = ({ navigation }) => {
             onRecipeDelete={handleRecipeDelete}
             onAddRecipe={handleAddRecipe}
             onRefresh={handleRefresh}
-            isRefreshing={isRefreshing}
+            isRefreshing={isRefetching}
             emptyTitle={searchQuery || selectedFilter !== 'All' ? 'No results found' : 'No recipes yet'}
             emptyMessage={
               searchQuery || selectedFilter !== 'All'
@@ -173,7 +283,7 @@ const RecipeListScreen: React.FC<RecipeListScreenProps> = ({ navigation }) => {
             onRecipeEdit={handleRecipeEdit}
             onRecipeDelete={handleRecipeDelete}
             onRefresh={handleRefresh}
-            isRefreshing={isRefreshing}
+            isRefreshing={isRefetching}
             columns={gridColumns}
             emptyTitle={searchQuery || selectedFilter !== 'All' ? 'No results found' : 'No recipes yet'}
             emptyMessage={
@@ -191,22 +301,23 @@ const RecipeListScreen: React.FC<RecipeListScreenProps> = ({ navigation }) => {
           onPress={handleAddRecipe}
           testID="fab-add-recipe"
         />
+
+        <Snackbar
+          visible={!!snackbarMessage}
+          onDismiss={() => setSnackbarMessage(null)}
+          duration={3000}
+          style={{ backgroundColor: theme.colors.inverseSurface }}
+          action={{
+            label: 'Dismiss',
+            labelStyle: { color: theme.colors.inverseOnSurface },
+            onPress: () => setSnackbarMessage(null),
+          }}
+        >
+          {snackbarMessage}
+        </Snackbar>
       </Container>
     </>
   );
 };
-
-const styles = StyleSheet.create({
-  searchContainer: {
-    backgroundColor: 'transparent',
-    paddingTop: 8,
-  },
-  fab: {
-    position: 'absolute',
-    margin: 16,
-    right: 0,
-    bottom: 0,
-  },
-});
 
 export default RecipeListScreen;

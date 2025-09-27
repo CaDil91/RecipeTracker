@@ -6,11 +6,14 @@ const customColors = {
   light: {
     // Main background - very light warm gray
     background: '#FAFBFC',
+
     // Card surfaces - light chromatic gray with subtle blue undertones
     surface: '#F4F6F8',
     surfaceVariant: '#E8EAED',
+
     // Keep MD3 primary for consistency
     primary: MD3LightTheme.colors.primary,
+
     // Elevation levels for consistent depth
     elevation: {
       level0: 'transparent',
@@ -22,13 +25,17 @@ const customColors = {
     },
   },
   dark: {
+
     // Main background - deep cool gray
     background: '#0F1013',
+
     // Card surfaces - medium chromatic gray with warm undertones
     surface: '#1A1C20',
     surfaceVariant: '#252830',
+
     // Keep MD3 primary for consistency
     primary: MD3DarkTheme.colors.primary,
+
     // Elevation levels for consistent depth
     elevation: {
       level0: 'transparent',
@@ -41,7 +48,7 @@ const customColors = {
   },
 };
 
-// Create custom light theme
+// Create a custom light theme
 export const customLightTheme: MD3Theme = {
   ...MD3LightTheme,
   colors: {
@@ -54,7 +61,7 @@ export const customLightTheme: MD3Theme = {
   },
 };
 
-// Create custom dark theme
+// Create a custom dark theme
 export const customDarkTheme: MD3Theme = {
   ...MD3DarkTheme,
   colors: {
@@ -67,7 +74,7 @@ export const customDarkTheme: MD3Theme = {
   },
 };
 
-// Helper function to get the appropriate theme based on color scheme
+// Helper function to get the appropriate theme based on a color scheme
 export const getCustomTheme = (colorScheme: 'light' | 'dark' | null | undefined): MD3Theme => {
   return colorScheme === 'dark' ? customDarkTheme : customLightTheme;
 };

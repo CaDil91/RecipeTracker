@@ -3,7 +3,7 @@
  */
 
 export const API_CONFIG = {
-  // Default to localhost for development
+  // TODO: Update to correct API URL
   // In production, this should be set via environment variables
   BASE_URL: process.env.EXPO_PUBLIC_API_URL || 'https://localhost:7117',
   

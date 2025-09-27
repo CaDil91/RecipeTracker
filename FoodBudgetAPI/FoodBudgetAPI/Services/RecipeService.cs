@@ -96,6 +96,8 @@ public class RecipeService(IRecipeRepository recipeRepository, ILogger<RecipeSer
         existingRecipe.Title = recipe.Title;
         existingRecipe.Instructions = recipe.Instructions;
         existingRecipe.Servings = recipe.Servings;
+        existingRecipe.Category = recipe.Category;
+        existingRecipe.ImageUrl = recipe.ImageUrl;
         existingRecipe.UserId = recipe.UserId;
 
         _logger.LogInformation("Updating recipe - ID: {RecipeId}, Title: {Title}", id, recipe.Title);

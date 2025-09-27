@@ -45,6 +45,8 @@ public class RecipeMappingProfileTests
             Title = "Test Recipe",
             Instructions = "Test instructions for cooking",
             Servings = 4,
+            Category = "Main Course",
+            ImageUrl = "https://example.com/recipe.jpg",
             UserId = Guid.NewGuid(),
             CreatedAt = DateTime.UtcNow
         };
@@ -57,6 +59,8 @@ public class RecipeMappingProfileTests
         dto.Title.Should().Be(recipe.Title);
         dto.Instructions.Should().Be(recipe.Instructions);
         dto.Servings.Should().Be(recipe.Servings);
+        dto.Category.Should().Be(recipe.Category);
+        dto.ImageUrl.Should().Be(recipe.ImageUrl);
         dto.UserId.Should().Be(recipe.UserId);
         dto.CreatedAt.Should().Be(recipe.CreatedAt);
     }
@@ -71,6 +75,8 @@ public class RecipeMappingProfileTests
             Title = "Minimal Recipe",
             Instructions = null, // Nullable property
             Servings = 1,
+            Category = null, // Nullable property
+            ImageUrl = null, // Nullable property
             UserId = null, // Nullable property
             CreatedAt = DateTime.UtcNow
         };
@@ -83,6 +89,8 @@ public class RecipeMappingProfileTests
         dto.Title.Should().Be(recipe.Title);
         dto.Instructions.Should().BeNull();
         dto.Servings.Should().Be(recipe.Servings);
+        dto.Category.Should().BeNull();
+        dto.ImageUrl.Should().BeNull();
         dto.UserId.Should().BeNull();
         dto.CreatedAt.Should().Be(recipe.CreatedAt);
     }
@@ -93,8 +101,8 @@ public class RecipeMappingProfileTests
         // Arrange
         var recipes = new List<Recipe>
         {
-            new() { Id = Guid.NewGuid(), Title = "Recipe 1", Servings = 2, CreatedAt = DateTime.UtcNow },
-            new() { Id = Guid.NewGuid(), Title = "Recipe 2", Servings = 4, CreatedAt = DateTime.UtcNow.AddHours(-1) }
+            new() { Id = Guid.NewGuid(), Title = "Recipe 1", Servings = 2, Category = "Appetizer", ImageUrl = "https://example.com/recipe1.jpg", CreatedAt = DateTime.UtcNow },
+            new() { Id = Guid.NewGuid(), Title = "Recipe 2", Servings = 4, Category = "Dessert", ImageUrl = "https://example.com/recipe2.jpg", CreatedAt = DateTime.UtcNow.AddHours(-1) }
         };
 
         // Act
@@ -108,10 +116,14 @@ public class RecipeMappingProfileTests
         dtoList[0].Id.Should().Be(recipes[0].Id);
         dtoList[0].Title.Should().Be(recipes[0].Title);
         dtoList[0].Servings.Should().Be(recipes[0].Servings);
-        
+        dtoList[0].Category.Should().Be(recipes[0].Category);
+        dtoList[0].ImageUrl.Should().Be(recipes[0].ImageUrl);
+
         dtoList[1].Id.Should().Be(recipes[1].Id);
         dtoList[1].Title.Should().Be(recipes[1].Title);
         dtoList[1].Servings.Should().Be(recipes[1].Servings);
+        dtoList[1].Category.Should().Be(recipes[1].Category);
+        dtoList[1].ImageUrl.Should().Be(recipes[1].ImageUrl);
     }
 
     #endregion
@@ -127,6 +139,8 @@ public class RecipeMappingProfileTests
             Title = "New Recipe",
             Instructions = "Mix ingredients and cook",
             Servings = 6,
+            Category = "Main Course",
+            ImageUrl = "https://example.com/new-recipe.jpg",
             UserId = Guid.NewGuid()
         };
 
@@ -137,6 +151,8 @@ public class RecipeMappingProfileTests
         recipe.Title.Should().Be(dto.Title);
         recipe.Instructions.Should().Be(dto.Instructions);
         recipe.Servings.Should().Be(dto.Servings);
+        recipe.Category.Should().Be(dto.Category);
+        recipe.ImageUrl.Should().Be(dto.ImageUrl);
         recipe.UserId.Should().Be(dto.UserId);
     }
 
@@ -149,6 +165,8 @@ public class RecipeMappingProfileTests
             Title = "Test Recipe",
             Instructions = "Test instructions",
             Servings = 4,
+            Category = "Test Category",
+            ImageUrl = "https://example.com/test.jpg",
             UserId = Guid.NewGuid()
         };
 
@@ -168,6 +186,8 @@ public class RecipeMappingProfileTests
             Title = "Test Recipe",
             Instructions = "Test instructions",
             Servings = 4,
+            Category = "Test Category",
+            ImageUrl = "https://example.com/test.jpg",
             UserId = Guid.NewGuid()
         };
 
@@ -186,7 +206,7 @@ public class RecipeMappingProfileTests
         {
             Title = "Minimal Recipe",
             Servings = 1
-            // Instructions and UserId are null
+            // Instructions, Category, ImageUrl and UserId are null
         };
 
         // Act
@@ -196,6 +216,8 @@ public class RecipeMappingProfileTests
         recipe.Title.Should().Be(dto.Title);
         recipe.Instructions.Should().BeNull();
         recipe.Servings.Should().Be(dto.Servings);
+        recipe.Category.Should().BeNull();
+        recipe.ImageUrl.Should().BeNull();
         recipe.UserId.Should().BeNull();
         recipe.Id.Should().Be(Guid.Empty);
         recipe.CreatedAt.Should().Be(default(DateTime));
@@ -207,8 +229,8 @@ public class RecipeMappingProfileTests
         // Arrange
         var dtos = new List<RecipeRequestDto>
         {
-            new() { Title = "Recipe 1", Servings = 2, UserId = Guid.NewGuid() },
-            new() { Title = "Recipe 2", Servings = 4, UserId = Guid.NewGuid() }
+            new() { Title = "Recipe 1", Servings = 2, Category = "Appetizer", ImageUrl = "https://example.com/recipe1.jpg", UserId = Guid.NewGuid() },
+            new() { Title = "Recipe 2", Servings = 4, Category = "Main Course", ImageUrl = "https://example.com/recipe2.jpg", UserId = Guid.NewGuid() }
         };
 
         // Act

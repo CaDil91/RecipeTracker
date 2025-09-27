@@ -86,8 +86,8 @@ public class RecipeControllerTests
         // Arrange
         var recipes = new List<Recipe>
         {
-            new() { Id = Guid.NewGuid(), Title = "Recipe 1", Servings = 4 },
-            new() { Id = Guid.NewGuid(), Title = "Recipe 2", Servings = 2 }
+            new() { Id = Guid.NewGuid(), Title = "Recipe 1", Servings = 4, Category = "Main Course", ImageUrl = "https://example.com/recipe1.jpg" },
+            new() { Id = Guid.NewGuid(), Title = "Recipe 2", Servings = 2, Category = "Appetizer", ImageUrl = "https://example.com/recipe2.jpg" }
         };
         _mockRecipeService.Setup(x => x.GetAllRecipesAsync(null, null)).ReturnsAsync(recipes);
 

@@ -26,6 +26,16 @@ public class Recipe
     public int Servings { get; set; }
     
     /// <summary>
+    /// Category of the recipe (e.g., Dessert, Main Course) (optional)
+    /// </summary>
+    public string? Category { get; set; }
+    
+    /// <summary>
+    /// URL to an image of the prepared dish (optional, must be a valid URL if provided)
+    /// </summary>
+    public string? ImageUrl { get; set; }
+    
+    /// <summary>
     /// Date and time when the recipe was created (automatically set)
     /// </summary>
     public DateTime CreatedAt { get; set; }

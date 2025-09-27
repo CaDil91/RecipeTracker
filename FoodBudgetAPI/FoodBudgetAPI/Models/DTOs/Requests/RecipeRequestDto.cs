@@ -15,5 +15,12 @@ public class RecipeRequestDto
     [Range(1, 100, ErrorMessage = "Servings must be between 1 and 100")]
     public int Servings { get; set; }
     
+    [StringLength(100, ErrorMessage = "Category cannot exceed 100 characters")]
+    public string? Category { get; set; }
+    
+    [Url(ErrorMessage = "ImageUrl must be a valid URL")]
+    [StringLength(2000, ErrorMessage = "ImageUrl cannot exceed 2000 characters")]
+    public string? ImageUrl { get; set; }
+    
     public Guid? UserId { get; set; }
 }

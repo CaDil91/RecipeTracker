@@ -35,6 +35,16 @@ public class RecipeConfiguration : IEntityTypeConfiguration<Recipe>
         builder.Property(e => e.Servings)
             .IsRequired();
         
+        // Category is optional with max length
+        builder.Property(e => e.Category)
+            .IsRequired(false)
+            .HasMaxLength(100); // Note: Enforced by SQL Server, not SQLite in tests
+        
+        // ImageUrl is optional with max length
+        builder.Property(e => e.ImageUrl)
+            .IsRequired(false)
+            .HasMaxLength(2000); // Note: Enforced by SQL Server, not SQLite in tests
+        
         // CreatedAt is required
         builder.Property(e => e.CreatedAt)
             .IsRequired();

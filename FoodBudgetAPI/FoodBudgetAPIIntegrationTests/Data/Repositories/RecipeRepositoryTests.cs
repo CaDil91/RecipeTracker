@@ -40,23 +40,29 @@ public class RecipeRepositoryTests(DbTestFactory<FoodBudgetAPI.Program> factory)
         await using FoodBudgetDbContext context = factory.CreateContext();
         RecipeRepository repository = CreateRepository(context);
         
-        var oldRecipe = new Recipe 
-        { 
-            Title = "Old Recipe", 
-            Servings = 4, 
-            CreatedAt = DateTime.UtcNow.AddDays(-2) 
+        var oldRecipe = new Recipe
+        {
+            Title = "Old Recipe",
+            Servings = 4,
+            Category = "Main Course",
+            ImageUrl = "https://example.com/old-recipe.jpg",
+            CreatedAt = DateTime.UtcNow.AddDays(-2)
         };
-        var newRecipe = new Recipe 
-        { 
-            Title = "New Recipe", 
-            Servings = 2, 
-            CreatedAt = DateTime.UtcNow 
+        var newRecipe = new Recipe
+        {
+            Title = "New Recipe",
+            Servings = 2,
+            Category = "Dessert",
+            ImageUrl = "https://example.com/new-recipe.jpg",
+            CreatedAt = DateTime.UtcNow
         };
-        var middleRecipe = new Recipe 
-        { 
-            Title = "Middle Recipe", 
-            Servings = 6, 
-            CreatedAt = DateTime.UtcNow.AddDays(-1) 
+        var middleRecipe = new Recipe
+        {
+            Title = "Middle Recipe",
+            Servings = 6,
+            Category = "Appetizer",
+            ImageUrl = "https://example.com/middle-recipe.jpg",
+            CreatedAt = DateTime.UtcNow.AddDays(-1)
         };
 
         await repository.AddAsync(oldRecipe);
@@ -85,11 +91,13 @@ public class RecipeRepositoryTests(DbTestFactory<FoodBudgetAPI.Program> factory)
         await using FoodBudgetDbContext context = factory.CreateContext();
         RecipeRepository repository = CreateRepository(context);
         
-        var recipe = new Recipe 
-        { 
-            Title = "Test Recipe", 
-            Servings = 4, 
-            CreatedAt = DateTime.UtcNow 
+        var recipe = new Recipe
+        {
+            Title = "Test Recipe",
+            Servings = 4,
+            Category = "Main Course",
+            ImageUrl = "https://example.com/test-recipe.jpg",
+            CreatedAt = DateTime.UtcNow
         };
         await repository.AddAsync(recipe);
         await repository.SaveChangesAsync();

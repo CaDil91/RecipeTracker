@@ -57,8 +57,8 @@ public class RecipeServiceTests
         // Arrange
         var expectedRecipes = new List<Recipe>
         {
-            new() { Id = Guid.NewGuid(), Title = "Recipe 1", Servings = 4 },
-            new() { Id = Guid.NewGuid(), Title = "Recipe 2", Servings = 2 }
+            new() { Id = Guid.NewGuid(), Title = "Recipe 1", Servings = 4, Category = "Main Course", ImageUrl = "https://example.com/recipe1.jpg" },
+            new() { Id = Guid.NewGuid(), Title = "Recipe 2", Servings = 2, Category = "Appetizer", ImageUrl = "https://example.com/recipe2.jpg" }
         };
         _mockRepository.Setup(x => x.GetAllAsync()).ReturnsAsync(expectedRecipes);
 
@@ -78,8 +78,8 @@ public class RecipeServiceTests
         var userId = Guid.NewGuid();
         var expectedRecipes = new List<Recipe>
         {
-            new() { Id = Guid.NewGuid(), Title = "User Recipe 1", UserId = userId, Servings = 3 },
-            new() { Id = Guid.NewGuid(), Title = "User Recipe 2", UserId = userId, Servings = 4 }
+            new() { Id = Guid.NewGuid(), Title = "User Recipe 1", UserId = userId, Servings = 3, Category = "Breakfast", ImageUrl = "https://example.com/user-recipe1.jpg" },
+            new() { Id = Guid.NewGuid(), Title = "User Recipe 2", UserId = userId, Servings = 4, Category = "Lunch", ImageUrl = "https://example.com/user-recipe2.jpg" }
         };
         _mockRepository.Setup(x => x.GetByUserIdAsync(userId)).ReturnsAsync(expectedRecipes);
 

@@ -55,12 +55,10 @@ export class RecipeService {
       }
 
       const data = await response.json();
-      
-      // Validate each recipe in the array
-      const validatedRecipes = data.map((recipe: unknown) => 
+      const validatedRecipes = data.map((recipe: unknown) =>
         parseRecipeResponse(recipe)
       );
-      
+
       return { success: true, data: validatedRecipes };
     } catch (error) {
       return this.handleException(error);

@@ -6,7 +6,7 @@ import { RecipeGridCard } from './RecipeGridCard';
 import { EmptyState } from '../feedback/EmptyState';
 
 export interface RecipeGridProps {
-  recipes: (RecipeResponseDto & { imageUrl?: string; category?: string })[];
+  recipes: RecipeResponseDto[];
   onRecipePress?: (recipe: RecipeResponseDto) => void;
   onRecipeEdit?: (recipe: RecipeResponseDto) => void;
   onRecipeDelete?: (recipe: RecipeResponseDto) => void;
@@ -32,7 +32,7 @@ export const RecipeGrid: React.FC<RecipeGridProps> = ({
 }) => {
   const theme = useTheme();
 
-  const renderRecipe = ({ item, index }: { item: RecipeResponseDto & { imageUrl?: string; category?: string }; index: number }) => (
+  const renderRecipe = ({ item, index }: { item: RecipeResponseDto; index: number }) => (
     <RecipeGridCard
       recipe={item}
       onPress={() => onRecipePress?.(item)}

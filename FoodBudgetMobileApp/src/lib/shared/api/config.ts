@@ -3,12 +3,11 @@
  */
 
 export const API_CONFIG = {
-  // TODO: Update to correct API URL
   // In production, this should be set via environment variables
-  BASE_URL: process.env.EXPO_PUBLIC_API_URL || 'https://localhost:7117',
+  BASE_URL: process.env.EXPO_PUBLIC_API_URL || 'https://localhost:44322',
   
   ENDPOINTS: {
-    RECIPES: '/api/recipes',
+    RECIPES: '/api/Recipe',
   },
   
   HEADERS: {

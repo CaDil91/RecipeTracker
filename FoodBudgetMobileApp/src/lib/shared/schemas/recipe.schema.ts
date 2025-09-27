@@ -10,19 +10,31 @@ export const RecipeRequestSchema = z.object({
     .string()
     .min(1, 'Title is required')
     .max(200, 'Title cannot exceed 200 characters'),
-    
+
   instructions: z
     .string()
     .max(5000, 'Instructions cannot exceed 5000 characters')
     .nullable()
     .optional(),
-    
+
   servings: z
     .number()
     .int('Servings must be a whole number')
     .min(1, 'Servings must be between 1 and 100')
     .max(100, 'Servings must be between 1 and 100'),
-    
+
+  category: z
+    .string()
+    .max(100, 'Category cannot exceed 100 characters')
+    .nullable()
+    .optional(),
+
+  imageUrl: z
+    .string()
+    .url('Invalid image URL format')
+    .nullable()
+    .optional(),
+
   userId: z
     .string()
     .uuid('Invalid user ID format')
@@ -35,15 +47,19 @@ export const RecipeRequestSchema = z.object({
  */
 export const RecipeResponseSchema = z.object({
   id: z.string().uuid('Invalid recipe ID format'),
-  
+
   title: z.string().min(1).max(200),
-  
+
   instructions: z.string().max(5000).nullable().optional(),
-  
+
   servings: z.number().int().min(1).max(100),
-  
-  createdAt: z.string().datetime({ message: 'Invalid date format' }),
-  
+
+  category: z.string().max(100).nullable().optional(),
+
+  imageUrl: z.string().url('Invalid image URL format').nullable().optional(),
+
+  createdAt: z.string(),
+
   userId: z.string().uuid('Invalid user ID format').nullable().optional(),
 });
 

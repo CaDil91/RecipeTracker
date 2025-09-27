@@ -16,10 +16,10 @@ export interface RecipeRequestDto {
   servings: number;
 
   /** Recipe category (optional, max 100 characters) */
-  category?: string;
+  category?: string | null;
 
   /** Image URL for the recipe (optional, must be valid URL) */
-  imageUrl?: string;
+  imageUrl?: string | null;
 
   /** Optional user ID */
   userId?: string | null;
@@ -42,10 +42,10 @@ export interface RecipeResponseDto {
   servings: number;
 
   /** Recipe category */
-  category?: string;
+  category?: string | null;
 
   /** Image URL for the recipe */
-  imageUrl?: string;
+  imageUrl?: string | null;
 
   /** Creation timestamp */
   createdAt: string;

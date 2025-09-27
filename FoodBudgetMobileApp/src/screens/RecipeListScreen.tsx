@@ -48,19 +48,7 @@ const RecipeListScreen: React.FC<RecipeListScreenProps> = ({ navigation }) => {
             : response.error.title || 'Failed to fetch recipes'
         );
       }
-      // TODO: Remove this transformation once API supports imageUrl and category fields
-      // TODO: Backend API needs migration to add imageUrl and category fields to Recipe entity
-      // NOTE: We cast to 'any' first to preserve fields that aren't in RecipeResponseDto type
-      const rawData = response.data as any[];
-      const transformedData = rawData.map(recipe => ({
-        ...recipe,
-        // TODO: Remove - temporary for MSW mock data compatibility
-        category: recipe.category || 'All' as FilterType,
-        // TODO: Remove - temporary for MSW mock data compatibility
-        imageUrl: recipe.imageUrl || undefined,
-      }));
-
-      return transformedData;
+      return response.data;
     },
   });
 

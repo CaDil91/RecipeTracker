@@ -8,13 +8,19 @@
 export interface RecipeRequestDto {
   /** Recipe title (required, max 200 characters) */
   title: string;
-  
+
   /** Cooking instructions (optional, max 5000 characters) */
   instructions?: string | null;
-  
+
   /** Number of servings (required, 1-100 range) */
   servings: number;
-  
+
+  /** Recipe category (optional, max 100 characters) */
+  category?: string;
+
+  /** Image URL for the recipe (optional, must be valid URL) */
+  imageUrl?: string;
+
   /** Optional user ID */
   userId?: string | null;
 }
@@ -25,19 +31,25 @@ export interface RecipeRequestDto {
 export interface RecipeResponseDto {
   /** Unique identifier */
   id: string;
-  
+
   /** Recipe title */
   title: string;
-  
+
   /** Cooking instructions */
   instructions?: string | null;
-  
+
   /** Number of servings */
   servings: number;
-  
+
+  /** Recipe category */
+  category?: string;
+
+  /** Image URL for the recipe */
+  imageUrl?: string;
+
   /** Creation timestamp */
   createdAt: string;
-  
+
   /** User ID who created the recipe */
   userId?: string | null;
 }

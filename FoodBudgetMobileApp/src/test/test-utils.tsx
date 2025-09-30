@@ -58,8 +58,10 @@ export const renderWithProviders = (
   return render(component, { wrapper: AllProviders });
 };
 
-// Mock navigation object for tests
-export const createMockNavigation = (overrides: Partial<RecipeListScreenNavigationProp> = {}): RecipeListScreenNavigationProp => ({
+// Generic mock navigation object for tests
+export const createMockNavigation = <T extends Record<string, any> = RecipeListScreenNavigationProp>(
+  overrides: Partial<T> = {}
+): T => ({
   navigate: jest.fn(),
   goBack: jest.fn(),
   addListener: jest.fn(() => jest.fn()), // Returns unsubscribe function
@@ -69,7 +71,7 @@ export const createMockNavigation = (overrides: Partial<RecipeListScreenNavigati
   canGoBack: jest.fn(() => false),
   getId: jest.fn(() => 'test-screen'),
   getParent: jest.fn(),
-  getState: jest.fn(() => ({ key: 'test', index: 0, routeNames: [], routes: [] })),
+  getState: jest.fn(() => ({ key: 'test', index: 0, routeNames: [], routes: [], type: 'stack', stale: false })),
   dispatch: jest.fn(),
   setParams: jest.fn(),
   reset: jest.fn(),
@@ -79,6 +81,6 @@ export const createMockNavigation = (overrides: Partial<RecipeListScreenNavigati
   popToTop: jest.fn(),
   replace: jest.fn(),
   ...overrides,
-} as any);
+} as T);
 
 export default renderWithProviders;

@@ -1,8 +1,11 @@
 import React from 'react';
-import { render, fireEvent, RenderAPI } from '@testing-library/react-native';
+import { render, fireEvent, RenderAPI, waitFor } from '@testing-library/react-native';
+import { Alert } from 'react-native';
 import AddRecipeScreen from '../AddRecipeScreen';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../../types/navigation';
+import { renderWithProviders } from '../../test/test-utils';
+import { RecipeService } from '../../lib/shared';
 
 // Define the type for your mock navigation object
 type MockNavigation = Partial<StackNavigationProp<RootStackParamList, 'AddRecipe'>>;
@@ -310,16 +313,16 @@ describe('AddRecipeScreen', () => {
 
     it('form data structure matches API schema', () => {
       const { getByTestId } = setupComponent();
-      
+
       // Fill form with data that matches expected API schema
       fireEvent.changeText(getByTestId('add-recipe-form-title'), testRecipeData.title);
       fireEvent.changeText(getByTestId('add-recipe-form-servings'), testRecipeData.servings.toString());
       fireEvent.changeText(getByTestId('add-recipe-form-instructions'), testRecipeData.instructions);
-      
+
       // Verify data structure is correct for API
       const titleInput = getByTestId('add-recipe-form-title');
       expect(titleInput.props.value).toBe(testRecipeData.title);
-      
+
       // Future: This data can be easily transformed to match RecipeRequestDto
     });
   });

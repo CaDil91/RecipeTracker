@@ -5,6 +5,7 @@ import { Appbar } from 'react-native-paper';
 import { RootStackParamList } from '../types/navigation';
 import { Container, RecipeForm } from '../components/shared';
 import { RecipeRequestDto } from '../lib/shared/types/dto';
+import { RecipeService } from '../lib/shared';
 
 type AddRecipeScreenProps = {
   navigation: StackNavigationProp<RootStackParamList, 'AddRecipe'>;
@@ -22,15 +23,22 @@ const AddRecipeScreen: React.FC<AddRecipeScreenProps> = ({ navigation }) => {
 
   const handleSave = async (recipeData: RecipeRequestDto) => {
     setIsLoading(true);
-    
+
     try {
-      // TODO: Call API to save recipe
-      console.log('Saving recipe:', recipeData);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Show success message
+      // Call API to save a recipe
+      const response = await RecipeService.createRecipe(recipeData);
+
+      if (!response.success) {
+        // Handle API error response
+        const errorMessage = typeof response.error === 'string'
+          ? response.error
+          : response.error.detail || response.error.title || 'Failed to save recipe. Please try again.';
+
+        Alert.alert('Error', errorMessage);
+        return;
+      }
+
+      // Show a success message
       Alert.alert(
         'Success',
         'Recipe saved successfully!',
@@ -42,6 +50,7 @@ const AddRecipeScreen: React.FC<AddRecipeScreenProps> = ({ navigation }) => {
         ],
       );
     } catch (error) {
+      // Handle unexpected errors
       Alert.alert(
         'Error',
         'Failed to save recipe. Please try again.',

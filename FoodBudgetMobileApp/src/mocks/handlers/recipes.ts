@@ -35,8 +35,8 @@ export const recipeHandlers = [
     });
   }),
 
-  // GET /api/recipes/:id - Get recipe by ID
-  http.get('*/api/recipes/:id', ({ params }) => {
+  // GET /api/Recipe/:id - Get recipe by ID
+  http.get('*/api/Recipe/:id', ({ params }) => {
     const { id } = params;
     const recipe = recipes.find(r => r.id === id);
 
@@ -84,8 +84,8 @@ export const recipeHandlers = [
     });
   }),
 
-  // POST /api/recipes - Create new recipe
-  http.post('*/api/recipes', async ({ request }) => {
+  // POST /api/Recipe - Create new recipe
+  http.post('*/api/Recipe', async ({ request }) => {
     try {
       const newRecipeData = await request.json() as RecipeRequestDto;
 
@@ -123,8 +123,8 @@ export const recipeHandlers = [
     }
   }),
 
-  // PUT /api/recipes/:id - Update existing recipe
-  http.put('*/api/recipes/:id', async ({ params, request }) => {
+  // PUT /api/Recipe/:id - Update existing recipe
+  http.put('*/api/Recipe/:id', async ({ params, request }) => {
     const { id } = params;
     const recipeIndex = recipes.findIndex(r => r.id === id);
 
@@ -177,8 +177,8 @@ export const recipeHandlers = [
     }
   }),
 
-  // DELETE /api/recipes/:id - Delete recipe
-  http.delete('*/api/recipes/:id', ({ params }) => {
+  // DELETE /api/Recipe/:id - Delete recipe
+  http.delete('*/api/Recipe/:id', ({ params }) => {
     const { id } = params;
     const recipeIndex = recipes.findIndex(r => r.id === id);
 

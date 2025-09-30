@@ -44,8 +44,8 @@ describe('RecipeListScreen Integration Tests', () => {
     // TODO: Re-enable when RecipeDetail screen is implemented
     test.skip('Should complete full recipe viewing workflow from list to detail with real navigation', async () => {
       // Arrange: Set up navigation mock and render screen with MSW data
-      const mockNavigate = jest.fn();
-      const mockNavigation = createMockNavigation({ navigate: mockNavigate });
+      const mockNavigation = createMockNavigation();
+      const mockNavigate = jest.spyOn(mockNavigation, 'navigate');
       const { getByText } = renderWithProviders(
         <RecipeListScreen navigation={mockNavigation} />
       );
@@ -131,8 +131,8 @@ describe('RecipeListScreen Integration Tests', () => {
     // TODO: Re-enable when RecipeDetail screen is implemented
     test.skip('Should navigate to RecipeDetailScreen passing correct params through navigation', async () => {
       // Arrange: Set up a navigation mock and render a recipe list
-      const mockNavigate = jest.fn();
-      const mockNavigation = createMockNavigation({ navigate: mockNavigate });
+      const mockNavigation = createMockNavigation();
+      const mockNavigate = jest.spyOn(mockNavigation, 'navigate');
       const { getByText } = renderWithProviders(
         <RecipeListScreen navigation={mockNavigation} />
       );
@@ -156,8 +156,8 @@ describe('RecipeListScreen Integration Tests', () => {
      */
     test('Should navigate to AddRecipeScreen when FAB pressed with navigation state', async () => {
       // Arrange: Set up navigation mock and render a recipe list with FAB
-      const mockNavigate = jest.fn();
-      const mockNavigation = createMockNavigation({ navigate: mockNavigate });
+      const mockNavigation = createMockNavigation();
+      const mockNavigate = jest.spyOn(mockNavigation, 'navigate');
       const { getByTestId } = renderWithProviders(
         <RecipeListScreen navigation={mockNavigation} />
       );
@@ -534,7 +534,7 @@ describe('RecipeListScreen Integration Tests', () => {
 
       // Then: Component remains stable (doesn't crash)
       await waitFor(() => {
-        // Component should either show data or be in loading/error state
+        // Component should either show data or be in the loading / error state
         const componentRendered = true; // If we get here, it didn't crash
         expect(componentRendered).toBe(true);
       }, { timeout: 5000 });
@@ -561,7 +561,7 @@ describe('RecipeListScreen Integration Tests', () => {
               title: 'Future Recipe',
               servings: 4,
               createdAt: '2024-01-15T10:30:00.000Z',
-              // New fields from future API version
+              // New fields from a future API version
               preparationTime: 30,
               cookingTime: 45,
               difficulty: 'Medium',

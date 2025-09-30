@@ -11,8 +11,8 @@ let nextId = 6; // Start after existing IDs
  * Intercepts network requests and returns mock data
  */
 export const recipeHandlers = [
-  // GET /api/recipes - Get all recipes
-  http.get('*/api/recipes', ({ request }) => {
+  // GET /api/Recipe - Get all recipes
+  http.get('*/api/Recipe', ({ request }) => {
     const url = new URL(request.url);
     const userId = url.searchParams.get('userId');
     const limit = url.searchParams.get('limit');
@@ -95,7 +95,6 @@ export const recipeHandlers = [
         instructions: newRecipeData.instructions,
         servings: newRecipeData.servings,
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
         category: 'All', // Default category for new recipes
         imageUrl: 'https://images.unsplash.com/photo-1547592180-85f173990554?w=400&h=500&fit=crop', // Default image
       };
@@ -153,7 +152,6 @@ export const recipeHandlers = [
         title: updateData.title,
         instructions: updateData.instructions,
         servings: updateData.servings,
-        updatedAt: new Date().toISOString(),
       };
 
       recipes[recipeIndex] = updatedRecipe;

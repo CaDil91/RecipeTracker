@@ -9,7 +9,7 @@
 
 import React from 'react';
 import { Alert } from 'react-native';
-import { waitFor } from '@testing-library/react-native';
+import { waitFor, fireEvent } from '@testing-library/react-native';
 import { renderWithProviders, createMockNavigation } from '../../test/test-utils';
 import RecipeListScreen from '../RecipeListScreen';
 import { RecipeService } from '../../lib/shared';
@@ -51,10 +51,171 @@ describe('RecipeListScreen Comprehensive Unit Tests - Sociable Testing', () => {
    * ============================================
    * SECTION 1: RISK-BASED PRIORITY TESTS
    * Critical workflows and frequently changing code
+   * Complex business logic: Search, Filter, Combined
    * ============================================
    */
 
   describe('1. Risk-Based Priority Tests', () => {
+    /**
+     * COMPLEX BUSINESS LOGIC: Combined search and filter
+     * This is the most complex and high-risk business logic
+     */
+    it('Given search and filter applied When both active Then applies both filters correctly', async () => {
+      // Arrange
+      const recipes = [
+        { id: '1', title: 'Pasta Carbonara', instructions: 'Cook pasta', category: 'Dinner', servings: 4, createdAt: '2024-01-01' },
+        { id: '2', title: 'Pasta Salad', instructions: 'Mix ingredients', category: 'Lunch', servings: 2, createdAt: '2024-01-02' },
+        { id: '3', title: 'Chicken Dinner', instructions: 'Grill chicken', category: 'Dinner', servings: 4, createdAt: '2024-01-03' },
+        { id: '4', title: 'Pancakes', instructions: 'Mix batter', category: 'Breakfast', servings: 4, createdAt: '2024-01-04' },
+      ];
+
+      (RecipeService.getAllRecipes as jest.Mock).mockResolvedValue({
+        success: true,
+        data: recipes,
+      });
+
+      // Act
+      const { getByTestId, getByText, queryByText } = renderWithProviders(
+        <RecipeListScreen navigation={mockNavigation} />
+      );
+
+      // Wait for initial load
+      await waitFor(() => {
+        expect(getByText('Pasta Carbonara')).toBeTruthy();
+      });
+
+      // Apply search: "pasta"
+      const searchBar = getByTestId('recipe-search-bar');
+      fireEvent.changeText(searchBar, 'pasta');
+
+      // Verify search works
+      await waitFor(() => {
+        expect(getByText('Pasta Carbonara')).toBeTruthy();
+        expect(getByText('Pasta Salad')).toBeTruthy();
+        expect(queryByText('Chicken Dinner')).toBeNull();
+      });
+
+      // Apply filter: Dinner
+      const dinnerChip = getByTestId('recipe-filter-chips-dinner');
+      fireEvent.press(dinnerChip);
+
+      // Assert: Only "Pasta Carbonara" matches both search AND filter
+      await waitFor(() => {
+        expect(getByText('Pasta Carbonara')).toBeTruthy();
+        expect(queryByText('Pasta Salad')).toBeNull(); // Filtered out (not Dinner)
+        expect(queryByText('Chicken Dinner')).toBeNull(); // Filtered out (no "pasta")
+        expect(queryByText('Pancakes')).toBeNull();
+      });
+    });
+
+    /**
+     * COMPLEX BUSINESS LOGIC: Case-insensitive search with instructions
+     */
+    it('Given recipes with mixed case When searching Then performs case-insensitive search in title and instructions', async () => {
+      // Arrange
+      const recipes = [
+        { id: '1', title: 'PASTA Carbonara', instructions: 'boil water', category: 'Dinner', servings: 4, createdAt: '2024-01-01' },
+        { id: '2', title: 'Pizza', instructions: 'BOIL tomato sauce', category: 'Dinner', servings: 4, createdAt: '2024-01-02' },
+        { id: '3', title: 'Salad', instructions: 'chop vegetables', category: 'Lunch', servings: 2, createdAt: '2024-01-03' },
+      ];
+
+      (RecipeService.getAllRecipes as jest.Mock).mockResolvedValue({
+        success: true,
+        data: recipes,
+      });
+
+      // Act
+      const { getByTestId, getByText, queryByText } = renderWithProviders(
+        <RecipeListScreen navigation={mockNavigation} />
+      );
+
+      await waitFor(() => {
+        expect(getByText('PASTA Carbonara')).toBeTruthy();
+      });
+
+      // Search with mixed case
+      const searchBar = getByTestId('recipe-search-bar');
+      fireEvent.changeText(searchBar, 'BoIl');
+
+      // Assert: Should find in both title and instructions (case-insensitive)
+      await waitFor(() => {
+        expect(getByText('PASTA Carbonara')).toBeTruthy(); // has "boil" in instructions
+        expect(getByText('Pizza')).toBeTruthy(); // has "BOIL" in instructions
+        expect(queryByText('Salad')).toBeNull();
+      });
+    });
+
+    /**
+     * COMPLEX BUSINESS LOGIC: Whitespace handling in search
+     */
+    it('Given search with leading/trailing whitespace When filtering Then handles whitespace correctly', async () => {
+      // Arrange
+      const recipes = [
+        { id: '1', title: 'Pasta', instructions: 'Cook pasta', category: 'Dinner', servings: 4, createdAt: '2024-01-01' },
+        { id: '2', title: 'Pizza', instructions: 'Bake pizza', category: 'Dinner', servings: 4, createdAt: '2024-01-02' },
+      ];
+
+      (RecipeService.getAllRecipes as jest.Mock).mockResolvedValue({
+        success: true,
+        data: recipes,
+      });
+
+      // Act
+      const { getByTestId, getByText, queryByText } = renderWithProviders(
+        <RecipeListScreen navigation={mockNavigation} />
+      );
+
+      await waitFor(() => {
+        expect(getByText('Pasta')).toBeTruthy();
+      });
+
+      // Search with leading/trailing whitespace - substring match handles it naturally
+      const searchBar = getByTestId('recipe-search-bar');
+      fireEvent.changeText(searchBar, '   pasta   ');
+
+      // Assert: Should still find "Pasta" because includes() matches substring regardless of surrounding spaces
+      await waitFor(() => {
+        expect(getByText('Pasta')).toBeTruthy();
+        expect(queryByText('Pizza')).toBeNull();
+      });
+    });
+
+    /**
+     * COMPLEX BUSINESS LOGIC: Null instructions handling in search
+     */
+    it('Given recipe with null instructions When searching Then handles gracefully without crashing', async () => {
+      // Arrange
+      const recipes = [
+        { id: '1', title: 'Pasta', instructions: null, category: 'Dinner', servings: 4, createdAt: '2024-01-01' },
+        { id: '2', title: 'Pizza', instructions: undefined, category: 'Dinner', servings: 4, createdAt: '2024-01-02' },
+        { id: '3', title: 'Salad', instructions: 'Fresh greens', category: 'Lunch', servings: 2, createdAt: '2024-01-03' },
+      ];
+
+      (RecipeService.getAllRecipes as jest.Mock).mockResolvedValue({
+        success: true,
+        data: recipes,
+      });
+
+      // Act
+      const { getByTestId, queryByText } = renderWithProviders(
+        <RecipeListScreen navigation={mockNavigation} />
+      );
+
+      await waitFor(() => {
+        expect(queryByText('Pasta')).toBeTruthy();
+      });
+
+      // Search in instructions
+      const searchBar = getByTestId('recipe-search-bar');
+      fireEvent.changeText(searchBar, 'fresh');
+
+      // Assert: Should not crash and find recipe with instructions
+      await waitFor(() => {
+        expect(queryByText('Salad')).toBeTruthy();
+        expect(queryByText('Pasta')).toBeNull();
+        expect(queryByText('Pizza')).toBeNull();
+      });
+    });
     /**
      * Test 1: Delete operation with real React Query cache invalidation
      * Risk: Data inconsistency after deletion
@@ -86,7 +247,7 @@ describe('RecipeListScreen Comprehensive Unit Tests - Sociable Testing', () => {
       // Verify initial API call
       expect(RecipeService.getAllRecipes).toHaveBeenCalledTimes(1);
 
-      // Act - trigger delete by getting text that should contain delete button
+      // Act - trigger delete by getting text that should contain the delete button
       const firstRecipe = getByText('Chicken Pasta');
 
       // In a real app, we'd need to find and click the delete button

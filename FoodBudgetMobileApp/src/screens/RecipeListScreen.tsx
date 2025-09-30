@@ -66,7 +66,7 @@ const RecipeListScreen: React.FC<RecipeListScreenProps> = ({ navigation }) => {
 
     // Apply search filter
     if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
+      const query = searchQuery.trim().toLowerCase();
       filtered = filtered.filter(recipe =>
         recipe.title.toLowerCase().includes(query) ||
         recipe.instructions?.toLowerCase().includes(query)
@@ -78,8 +78,9 @@ const RecipeListScreen: React.FC<RecipeListScreenProps> = ({ navigation }) => {
 
   const handleRecipePress = useCallback((recipe: RecipeResponseDto) => {
     console.log('View recipe:', recipe);
-    // TODO: Navigate to recipe detail screen
-  }, []);
+    // TODO: Navigate to recipe detail screen when RecipeDetail screen is implemented
+    // navigation.navigate('RecipeDetail', { recipeId: recipe.id });
+  }, [navigation]);
 
   const handleRecipeEdit = useCallback((recipe: RecipeResponseDto) => {
     console.log('Edit recipe:', recipe);
@@ -257,7 +258,7 @@ const RecipeListScreen: React.FC<RecipeListScreenProps> = ({ navigation }) => {
             onAddRecipe={handleAddRecipe}
             onRefresh={handleRefresh}
             isRefreshing={isRefetching}
-            emptyTitle={searchQuery || selectedFilter !== 'All' ? 'No results found' : 'No recipes yet'}
+            emptyTitle={searchQuery || selectedFilter !== 'All' ? 'No results found' : 'We'}
             emptyMessage={
               searchQuery || selectedFilter !== 'All'
                 ? 'Try adjusting your search or filters'

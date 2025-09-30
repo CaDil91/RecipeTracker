@@ -1,6 +1,8 @@
 import {QueryClient} from '@tanstack/react-query';
 
-// Simple hook mocking approach for mobile app testing
+// MSW React Native polyfills (official approach)
+import 'react-native-url-polyfill/auto';
+import 'fast-text-encoding';
 
 // Global test query client - shared across all tests
 const createTestQueryClient = () => new QueryClient({
@@ -17,10 +19,6 @@ const createTestQueryClient = () => new QueryClient({
 
 // Create a global instance
 (global as any).testQueryClient = createTestQueryClient();
-
-// Note: We're NOT mocking react-native-paper anymore
-// Using real Paper components follows a "sociable unit test" approach
-// Only mock true external boundaries like API services
 
 // Mock react-native-safe-area-context using official built-in mock
 // This is an external boundary (platform safe area APIs), so mocking is appropriate
@@ -51,8 +49,3 @@ beforeAll(() => {
 afterAll(() => {
   console.warn = originalWarn;
 });
-
-// Note: We're NOT mocking React Query globally anymore
-// Tests should use real React Query with test QueryClient
-// This follows the "sociable unit test" pattern - testing with real collaborators
-// Only mock external boundaries like API services

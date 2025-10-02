@@ -61,26 +61,30 @@ export const renderWithProviders = (
 // Generic mock navigation object for tests
 export const createMockNavigation = <T extends Record<string, any> = RecipeListScreenNavigationProp>(
   overrides: Partial<T> = {}
-): T => ({
-  navigate: jest.fn(),
-  goBack: jest.fn(),
-  addListener: jest.fn(() => jest.fn()), // Returns unsubscribe function
-  removeListener: jest.fn(),
-  setOptions: jest.fn(),
-  isFocused: jest.fn(() => true),
-  canGoBack: jest.fn(() => false),
-  getId: jest.fn(() => 'test-screen'),
-  getParent: jest.fn(),
-  getState: jest.fn(() => ({ key: 'test', index: 0, routeNames: [], routes: [], type: 'stack', stale: false })),
-  dispatch: jest.fn(),
-  setParams: jest.fn(),
-  reset: jest.fn(),
-  push: jest.fn(),
-  pop: jest.fn(),
-  popTo: jest.fn(),
-  popToTop: jest.fn(),
-  replace: jest.fn(),
-  ...overrides,
-} as T);
+): T => {
+  const baseNavigation = {
+    navigate: jest.fn(),
+    goBack: jest.fn(),
+    addListener: jest.fn(() => jest.fn()), // Returns unsubscribe function
+    removeListener: jest.fn(),
+    setOptions: jest.fn(),
+    isFocused: jest.fn(() => true),
+    canGoBack: jest.fn(() => false),
+    getId: jest.fn(() => 'test-screen'),
+    getParent: jest.fn(),
+    getState: jest.fn(() => ({ key: 'test', index: 0, routeNames: [], routes: [], type: 'stack', stale: false })),
+    dispatch: jest.fn(),
+    setParams: jest.fn(),
+    reset: jest.fn(),
+    push: jest.fn(),
+    pop: jest.fn(),
+    popTo: jest.fn(),
+    popToTop: jest.fn(),
+    replace: jest.fn(),
+    ...overrides,
+  };
+
+  return baseNavigation as unknown as T;
+};
 
 export default renderWithProviders;

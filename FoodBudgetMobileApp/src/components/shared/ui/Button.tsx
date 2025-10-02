@@ -17,6 +17,8 @@ export const Button: React.FC<ButtonProps> = ({
   buttonColor,
   textColor,
   style,
+  disabled,
+  loading,
   ...props
 }) => {
   const getVariantProps = () => {
@@ -48,11 +50,15 @@ export const Button: React.FC<ButtonProps> = ({
 
   const variantProps = getVariantProps();
 
+  const isDisabled = Boolean(disabled || loading);
+  const isBusy = Boolean(loading);
+
   return (
     <PaperButton
       {...variantProps}
       {...props}
-      disabled={props.disabled || props.loading}
+      disabled={isDisabled}
+      loading={loading}
       textColor={textColor}
       style={[
         fullWidth && { width: '100%' },
@@ -60,8 +66,8 @@ export const Button: React.FC<ButtonProps> = ({
       ]}
       accessibilityRole="button"
       accessibilityState={{
-        disabled: props.disabled || props.loading,
-        busy: props.loading,
+        disabled: isDisabled,
+        ...(isBusy && { busy: true }),
       }}
     >
       {title}

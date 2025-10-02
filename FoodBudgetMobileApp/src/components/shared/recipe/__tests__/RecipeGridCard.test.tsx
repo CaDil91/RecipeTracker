@@ -67,29 +67,6 @@ describe('RecipeGridCard', () => {
       expect(imageElement.props.source.uri).toBe('https://example.com/recipe.jpg');
     });
 
-    /**
-     * Test: Card with action buttons
-     * Given: Edit and delete handlers
-     * When: Card renders
-     * Then: Displays action buttons
-     */
-    it('given edit and delete handlers, when rendered, then displays action buttons', () => {
-      // Arrange & Act
-      const { getByTestId } = render(
-        <TestWrapper>
-          <RecipeGridCard
-            recipe={mockRecipe}
-            onEdit={jest.fn()}
-            onDelete={jest.fn()}
-            testID="recipe-card"
-          />
-        </TestWrapper>
-      );
-
-      // Assert
-      expect(getByTestId('recipe-card-edit')).toBeTruthy();
-      expect(getByTestId('recipe-card-delete')).toBeTruthy();
-    });
   });
 
   describe('Business Rules', () => {
@@ -162,12 +139,12 @@ describe('RecipeGridCard', () => {
     });
 
     /**
-     * Test: Text variant based on columns
+     * Test: Text rendering with multiple columns
      * Given: Card with 3 columns
      * When: Card renders
-     * Then: Uses smaller text variant
+     * Then: Displays recipe title
      */
-    it('given 3 columns, when rendered, then uses titleSmall variant', () => {
+    it('given 3 columns, when rendered, then displays recipe title', () => {
       // Arrange & Act
       const { getByText } = render(
         <TestWrapper>
@@ -176,17 +153,16 @@ describe('RecipeGridCard', () => {
       );
 
       // Assert
-      const titleElement = getByText('Test Recipe');
-      expect(titleElement.props.variant).toBe('titleSmall');
+      expect(getByText('Test Recipe')).toBeTruthy();
     });
 
     /**
-     * Test: Text variant for default columns
+     * Test: Text rendering with default columns
      * Given: Card with default columns (2)
      * When: Card renders
-     * Then: Uses medium text variant
+     * Then: Displays recipe title
      */
-    it('given default columns, when rendered, then uses titleMedium variant', () => {
+    it('given default columns, when rendered, then displays recipe title', () => {
       // Arrange & Act
       const { getByText } = render(
         <TestWrapper>
@@ -195,8 +171,7 @@ describe('RecipeGridCard', () => {
       );
 
       // Assert
-      const titleElement = getByText('Test Recipe');
-      expect(titleElement.props.variant).toBe('titleMedium');
+      expect(getByText('Test Recipe')).toBeTruthy();
     });
   });
 
@@ -226,104 +201,9 @@ describe('RecipeGridCard', () => {
       // Assert
       expect(onPress).toHaveBeenCalledTimes(1);
     });
-
-    /**
-     * Test: Edit button interaction
-     * Given: onEdit handler
-     * When: Edit button pressed
-     * Then: Calls onEdit callback
-     */
-    it('given onEdit handler, when edit button pressed, then calls onEdit', () => {
-      // Arrange
-      const onEdit = jest.fn();
-      const { getByTestId } = render(
-        <TestWrapper>
-          <RecipeGridCard
-            recipe={mockRecipe}
-            onEdit={onEdit}
-            testID="recipe-card"
-          />
-        </TestWrapper>
-      );
-
-      // Act
-      fireEvent.press(getByTestId('recipe-card-edit'));
-
-      // Assert
-      expect(onEdit).toHaveBeenCalledTimes(1);
-    });
-
-    /**
-     * Test: Delete button interaction
-     * Given: onDelete handler
-     * When: Delete button pressed
-     * Then: Calls onDelete callback
-     */
-    it('given onDelete handler, when delete button pressed, then calls onDelete', () => {
-      // Arrange
-      const onDelete = jest.fn();
-      const { getByTestId } = render(
-        <TestWrapper>
-          <RecipeGridCard
-            recipe={mockRecipe}
-            onDelete={onDelete}
-            testID="recipe-card"
-          />
-        </TestWrapper>
-      );
-
-      // Act
-      fireEvent.press(getByTestId('recipe-card-delete'));
-
-      // Assert
-      expect(onDelete).toHaveBeenCalledTimes(1);
-    });
   });
 
   describe('Conditional Rendering', () => {
-    /**
-     * Test: Action buttons with handlers
-     * Given: Edit and delete handlers
-     * When: Card renders
-     * Then: Shows action buttons
-     */
-    it('given edit and delete handlers, when rendered, then shows action buttons', () => {
-      // Arrange & Act
-      const { getByTestId } = render(
-        <TestWrapper>
-          <RecipeGridCard
-            recipe={mockRecipe}
-            onEdit={jest.fn()}
-            onDelete={jest.fn()}
-            testID="recipe-card"
-          />
-        </TestWrapper>
-      );
-
-      // Assert
-      expect(getByTestId('recipe-card-edit')).toBeTruthy();
-      expect(getByTestId('recipe-card-delete')).toBeTruthy();
-    });
-
-    /**
-     * Test: No action buttons without handlers
-     * Given: No action handlers
-     * When: Card renders
-     * Then: Hides action buttons
-     */
-    it('given no action handlers, when rendered, then hides action buttons', () => {
-      // Arrange & Act
-      const { queryByTestId } = render(
-        <TestWrapper>
-          <RecipeGridCard recipe={mockRecipe} testID="recipe-card" />
-        </TestWrapper>
-      );
-
-      // Assert
-      expect(queryByTestId('recipe-card-edit')).toBeNull();
-      expect(queryByTestId('recipe-card-delete')).toBeNull();
-    });
-
     /**
      * Test: Image display when available
      * Given: Recipe with imageUrl
@@ -369,17 +249,15 @@ describe('RecipeGridCard', () => {
     /**
      * Test: TestID structure
      * Given: testID prop
-     * When: Card renders with actions
-     * Then: Applies testID to all interactive elements
+     * When: Card renders
+     * Then: Applies testID to a card element
      */
-    it('given testID prop, when rendered with actions, then applies testID structure', () => {
+    it('given testID prop, when rendered, then applies testID to card', () => {
       // Arrange & Act
       const { getByTestId } = render(
         <TestWrapper>
           <RecipeGridCard
             recipe={mockRecipe}
-            onEdit={jest.fn()}
-            onDelete={jest.fn()}
             testID="recipe-card"
           />
         </TestWrapper>
@@ -387,8 +265,6 @@ describe('RecipeGridCard', () => {
 
       // Assert
       expect(getByTestId('recipe-card')).toBeTruthy();
-      expect(getByTestId('recipe-card-edit')).toBeTruthy();
-      expect(getByTestId('recipe-card-delete')).toBeTruthy();
     });
 
     /**

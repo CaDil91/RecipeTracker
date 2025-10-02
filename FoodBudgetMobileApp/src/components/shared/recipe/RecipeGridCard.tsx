@@ -21,7 +21,7 @@ const useWindowDimensions = () => {
 };
 
 export interface RecipeGridCardProps {
-  recipe: RecipeResponseDto & { imageUrl?: string; category?: string };
+  recipe: RecipeResponseDto;
   onPress?: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
@@ -32,8 +32,6 @@ export interface RecipeGridCardProps {
 export const RecipeGridCard: React.FC<RecipeGridCardProps> = ({
   recipe,
   onPress,
-  onEdit,
-  onDelete,
   columns = 2,
   testID,
 }) => {
@@ -52,7 +50,6 @@ export const RecipeGridCard: React.FC<RecipeGridCardProps> = ({
   }, [screenWidth, columns]);
 
   const showImage = recipe.imageUrl && !imageError;
-  const hasActions = onEdit || onDelete;
 
   return (
     <TouchableOpacity
@@ -66,7 +63,7 @@ export const RecipeGridCard: React.FC<RecipeGridCardProps> = ({
       >
         {showImage ? (
           <Image
-            source={{ uri: recipe.imageUrl }}
+            source={{ uri: recipe.imageUrl ?? undefined }}
             style={styles.image}
             onError={() => setImageError(true)}
             resizeMode="cover"
@@ -108,31 +105,6 @@ export const RecipeGridCard: React.FC<RecipeGridCardProps> = ({
             </View>
           </View>
         </View>
-
-        {hasActions && (
-          <View style={styles.actions}>
-            {onEdit && (
-              <IconButton
-                icon="pencil"
-                size={20}
-                iconColor={theme.colors.onSurface}
-                containerColor={theme.colors.surface}
-                onPress={onEdit}
-                testID={`${testID}-edit`}
-              />
-            )}
-            {onDelete && (
-              <IconButton
-                icon="delete"
-                size={20}
-                iconColor={theme.colors.error}
-                containerColor={theme.colors.surface}
-                onPress={onDelete}
-                testID={`${testID}-delete`}
-              />
-            )}
-          </View>
-        )}
       </Surface>
     </TouchableOpacity>
   );
@@ -176,13 +148,4 @@ const styles = StyleSheet.create({
   chipText: {
     fontSize: 11,
   },
-  actions: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    flexDirection: 'row',
-    gap: 4,
-  },
 });
-
-export default RecipeGridCard;

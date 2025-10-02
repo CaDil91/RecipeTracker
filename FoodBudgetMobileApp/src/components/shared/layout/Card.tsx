@@ -52,5 +52,3 @@ Card.Title = PaperCard.Title;
 Card.Content = PaperCard.Content;
 Card.Cover = PaperCard.Cover;
 Card.Actions = PaperCard.Actions;
-
-export default Card;

@@ -86,5 +86,3 @@ export const createMockNavigation = <T extends Record<string, any> = RecipeListS
 
   return baseNavigation as unknown as T;
 };
-
-export default renderWithProviders;

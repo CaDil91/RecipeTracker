@@ -68,5 +68,3 @@ export const Button: React.FC<ButtonProps> = ({
     </PaperButton>
   );
 };
-
-export default Button;

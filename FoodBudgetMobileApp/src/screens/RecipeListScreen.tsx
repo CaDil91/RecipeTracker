@@ -3,14 +3,13 @@ import { View, StyleSheet, Alert } from 'react-native';
 import { Appbar, FAB, IconButton, Menu, useTheme, Snackbar, ActivityIndicator } from 'react-native-paper';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { RecipeListScreenNavigationProp } from '../types/navigation';
-import { Container, RecipeList } from '../components/shared';
+import { Container } from '../components/shared';
 import { RecipeResponseDto } from '../lib/shared';
 import SearchBar from '../components/SearchBar';
 import FilterChips, { FilterType } from '../components/FilterChips';
 import { RecipeGrid } from '../components/shared/recipe/RecipeGrid';
 import { RecipeService } from '../lib/shared';
 
-type ViewMode = 'list' | 'grid';
 type GridColumns = 2 | 3 | 4;
 
 type RecipeListScreenProps = {
@@ -25,7 +24,6 @@ const RecipeListScreen: React.FC<RecipeListScreenProps> = ({ navigation }) => {
   // UI state
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState<FilterType>('All');
-  const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [gridColumns, setGridColumns] = useState<GridColumns>(2);
   const [menuVisible, setMenuVisible] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
@@ -177,49 +175,37 @@ const RecipeListScreen: React.FC<RecipeListScreenProps> = ({ navigation }) => {
           contentStyle={{ backgroundColor: theme.colors.surface }}
           anchor={
             <IconButton
-              icon={viewMode === 'list' ? 'view-grid' : 'view-list'}
+              icon="view-grid-outline"
               iconColor={theme.colors.onSurface}
               onPress={() => setMenuVisible(true)}
-              testID="view-mode-menu"
+              testID="grid-columns-menu"
             />
           }
         >
           <Menu.Item
             onPress={() => {
-              setViewMode('list');
-              setMenuVisible(false);
-            }}
-            title="List View"
-            leadingIcon="view-list"
-            titleStyle={{ color: theme.colors.onSurface }}
-          />
-          <Menu.Item
-            onPress={() => {
-              setViewMode('grid');
               setGridColumns(2);
               setMenuVisible(false);
             }}
-            title="Grid (2 columns)"
+            title="2 columns"
             leadingIcon="view-grid"
             titleStyle={{ color: theme.colors.onSurface }}
           />
           <Menu.Item
             onPress={() => {
-              setViewMode('grid');
               setGridColumns(3);
               setMenuVisible(false);
             }}
-            title="Grid (3 columns)"
+            title="3 columns"
             leadingIcon="view-grid-outline"
             titleStyle={{ color: theme.colors.onSurface }}
           />
           <Menu.Item
             onPress={() => {
-              setViewMode('grid');
               setGridColumns(4);
               setMenuVisible(false);
             }}
-            title="Grid (4 columns)"
+            title="4 columns"
             leadingIcon="view-grid-plus-outline"
             titleStyle={{ color: theme.colors.onSurface }}
           />
@@ -249,22 +235,6 @@ const RecipeListScreen: React.FC<RecipeListScreenProps> = ({ navigation }) => {
               color={theme.colors.primary}
             />
           </View>
-        ) : viewMode === 'list' ? (
-          <RecipeList
-            recipes={filteredRecipes}
-            onRecipePress={handleRecipePress}
-            onRecipeEdit={handleRecipeEdit}
-            onRecipeDelete={handleRecipeDelete}
-            onAddRecipe={handleAddRecipe}
-            onRefresh={handleRefresh}
-            isRefreshing={isRefetching}
-            emptyTitle={searchQuery || selectedFilter !== 'All' ? 'No results found' : 'We'}
-            emptyMessage={
-              searchQuery || selectedFilter !== 'All'
-                ? 'Try adjusting your search or filters'
-                : 'Start by adding your first recipe!'
-            }
-          />
         ) : (
           <RecipeGrid
             recipes={filteredRecipes}

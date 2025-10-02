@@ -61,5 +61,3 @@ export const NumberInput: React.FC<NumberInputProps> = ({
     />
   );
 };
-
-export default NumberInput;

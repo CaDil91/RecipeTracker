@@ -141,5 +141,3 @@ const styles = StyleSheet.create({
     bottom: 16,
   },
 });
-
-export default RecipeList;

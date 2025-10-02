@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   row: {
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
     paddingHorizontal: 0,
   },
   emptyContainer: {
@@ -95,5 +95,3 @@ const styles = StyleSheet.create({
     paddingTop: 100,
   },
 });
-
-export default RecipeGrid;

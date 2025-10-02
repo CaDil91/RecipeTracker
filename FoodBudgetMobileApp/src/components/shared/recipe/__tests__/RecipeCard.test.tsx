@@ -37,31 +37,6 @@ describe('RecipeCard', () => {
     });
 
     /**
-     * Test: Full interactive card
-     * Given: Recipe with all handlers
-     * When: Card renders
-     * Then: Displays all interactive elements
-     */
-    it('given recipe with all handlers, when rendered, then displays all interactive elements', () => {
-      // Arrange & Act
-      const { getByText, getByTestId } = render(
-        <RecipeCard
-          recipe={mockRecipe}
-          onPress={jest.fn()}
-          onEdit={jest.fn()}
-          onDelete={jest.fn()}
-          testID="recipe-card"
-        />
-      );
-
-      // Assert
-      expect(getByText('Test Recipe')).toBeTruthy();
-      expect(getByTestId('recipe-card-edit')).toBeTruthy();
-      expect(getByTestId('recipe-card-delete')).toBeTruthy();
-      expect(getByText('View Details')).toBeTruthy();
-    });
-
-    /**
      * Test: Instructions display
      * Given: Recipe with instructions
      * When: Card renders
@@ -169,46 +144,6 @@ describe('RecipeCard', () => {
     });
 
     /**
-     * Test: Edit button interaction
-     * Given: onEdit handler
-     * When: Edit button pressed
-     * Then: Calls onEdit callback
-     */
-    it('given onEdit handler, when edit button pressed, then calls onEdit', () => {
-      // Arrange
-      const onEdit = jest.fn();
-      const { getByTestId } = render(
-        <RecipeCard recipe={mockRecipe} onEdit={onEdit} testID="recipe-card" />
-      );
-
-      // Act
-      fireEvent.press(getByTestId('recipe-card-edit'));
-
-      // Assert
-      expect(onEdit).toHaveBeenCalledTimes(1);
-    });
-
-    /**
-     * Test: Delete button interaction
-     * Given: onDelete handler
-     * When: Delete button pressed
-     * Then: Calls onDelete callback
-     */
-    it('given onDelete handler, when delete button pressed, then calls onDelete', () => {
-      // Arrange
-      const onDelete = jest.fn();
-      const { getByTestId } = render(
-        <RecipeCard recipe={mockRecipe} onDelete={onDelete} testID="recipe-card" />
-      );
-
-      // Act
-      fireEvent.press(getByTestId('recipe-card-delete'));
-
-      // Assert
-      expect(onDelete).toHaveBeenCalledTimes(1);
-    });
-
-    /**
      * Test: View Details button interaction
      * Given: onPress handler
      * When: View Details button pressed
@@ -230,38 +165,6 @@ describe('RecipeCard', () => {
   });
 
   describe('Conditional Rendering', () => {
-    /**
-     * Test: No edit button without handler
-     * Given: No onEdit handler
-     * When: Card renders
-     * Then: No edit button shown
-     */
-    it('given no onEdit handler, when rendered, then no edit button shown', () => {
-      // Arrange & Act
-      const { queryByTestId } = render(
-        <RecipeCard recipe={mockRecipe} testID="recipe-card" />
-      );
-
-      // Assert
-      expect(queryByTestId('recipe-card-edit')).toBeNull();
-    });
-
-    /**
-     * Test: No delete button without handler
-     * Given: No onDelete handler
-     * When: Card renders
-     * Then: No delete button shown
-     */
-    it('given no onDelete handler, when rendered, then no delete button shown', () => {
-      // Arrange & Act
-      const { queryByTestId } = render(
-        <RecipeCard recipe={mockRecipe} testID="recipe-card" />
-      );
-
-      // Assert
-      expect(queryByTestId('recipe-card-delete')).toBeNull();
-    });
-
     /**
      * Test: No actions section without onPress
      * Given: No onPress handler
@@ -305,8 +208,6 @@ describe('RecipeCard', () => {
       const { getByTestId } = render(
         <RecipeCard
           recipe={mockRecipe}
-          onEdit={jest.fn()}
-          onDelete={jest.fn()}
           onPress={jest.fn()}
           testID="recipe-card"
         />
@@ -314,8 +215,6 @@ describe('RecipeCard', () => {
 
       // Assert
       expect(getByTestId('recipe-card')).toBeTruthy();
-      expect(getByTestId('recipe-card-edit')).toBeTruthy();
-      expect(getByTestId('recipe-card-delete')).toBeTruthy();
       expect(getByTestId('recipe-card-view')).toBeTruthy();
     });
   });

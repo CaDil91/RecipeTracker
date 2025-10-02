@@ -62,5 +62,3 @@ const styles = StyleSheet.create({
     marginTop: 24,
   },
 });
-
-export default EmptyState;

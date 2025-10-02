@@ -75,5 +75,3 @@ export const TextInput: React.FC<TextInputProps> = ({
     </View>
   );
 };
-
-export default TextInput;

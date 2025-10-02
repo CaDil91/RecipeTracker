@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import { Card, Text, Chip, IconButton } from 'react-native-paper';
+import { Card, Text, Chip } from 'react-native-paper';
 import { RecipeResponseDto } from '../../../lib/shared/types/dto';
 import { Button } from '../ui/Button';
 
@@ -38,26 +38,6 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({
       <Card.Title
         title={recipe.title}
         subtitle={`Created ${formatDate(recipe.createdAt)}`}
-        right={(props) => (
-          <View style={styles.actions}>
-            {onEdit && (
-              <IconButton
-                {...props}
-                icon="pencil"
-                onPress={onEdit}
-                testID={`${testID}-edit`}
-              />
-            )}
-            {onDelete && (
-              <IconButton
-                {...props}
-                icon="delete"
-                onPress={onDelete}
-                testID={`${testID}-delete`}
-              />
-            )}
-          </View>
-        )}
       />
       
       <Card.Content>
@@ -97,9 +77,6 @@ const styles = StyleSheet.create({
     marginVertical: 8,
     marginHorizontal: 4,
   },
-  actions: {
-    flexDirection: 'row',
-  },
   chipContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -114,5 +91,3 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
 });
-
-export default RecipeCard;

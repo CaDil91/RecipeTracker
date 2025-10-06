@@ -1,4 +1,4 @@
-﻿using Asp.Versioning.ApiExplorer;
+using Asp.Versioning.ApiExplorer;
 using FoodBudgetAPI.Middleware;
 
 namespace FoodBudgetAPI.Utility.Setup;
@@ -20,22 +20,19 @@ public static class ApplicationConfiguration
         // 2. Request/response logging early in the pipeline
         app.UseRequestResponseLogging();
         
-        // 3. Development-specific middleware
-        if (app.Environment.IsDevelopment())
+        // 3. Swagger middleware (enabled for demo purposes)
+        app.UseSwagger();
+        app.UseSwaggerUI(options =>
         {
-            app.UseSwagger();
-            app.UseSwaggerUI(options =>
+            var provider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
+
+            foreach (ApiVersionDescription description in provider.ApiVersionDescriptions)
             {
-                var provider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
-            
-                foreach (ApiVersionDescription description in provider.ApiVersionDescriptions)
-                {
-                    options.SwaggerEndpoint(
-                        $"/swagger/{description.GroupName}/swagger.json",
-                        $"Food Budget API {description.GroupName}");
-                }
-            });
-        }
+                options.SwaggerEndpoint(
+                    $"/swagger/{description.GroupName}/swagger.json",
+                    $"Food Budget API {description.GroupName}");
+            }
+        });
 
         // 4. Security and routing middleware
         app.UseHttpsRedirection();

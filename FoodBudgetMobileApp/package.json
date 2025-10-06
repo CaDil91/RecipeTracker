@@ -15,7 +15,7 @@
     "test": "jest",
     "test:coverage": "jest --coverage --coverageDirectory=coverage",
     "predeploy": "npx expo export --platform web",
-    "deploy": "gh-pages -d dist"
+    "deploy": "cd .. && gh-pages -d FoodBudgetMobileApp/dist"
   },
   "dependencies": {
     "@expo/metro-runtime": "~5.0.4",

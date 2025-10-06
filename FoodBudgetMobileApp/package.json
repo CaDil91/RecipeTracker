@@ -14,7 +14,7 @@
     "msw:init": "npx msw init public/ --save",
     "test": "jest",
     "test:coverage": "jest --coverage --coverageDirectory=coverage",
-    "predeploy": "npx expo export --platform web",
+    "predeploy": "npx expo export --platform web && touch dist/.nojekyll",
     "deploy": "gh-pages -d dist"
   },
   "dependencies": {

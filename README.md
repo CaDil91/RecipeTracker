@@ -1,6 +1,12 @@
 ## Project Overview
 
-Node.js TypeScript API for a FoodBudget application built with Express v5. This is a TypeScript learning project that duplicates the functionality of the C# ASP.NET API. Part of a larger system including a React Native mobile app.
+FoodBudget is a recipe tracking application with a C# ASP.NET API backend and a React Native mobile app. This project includes both a production C# API and a TypeScript Node.js API learning implementation.
+
+## 🚀 Live Demo
+
+**Try the app now:** [https://cadil91.github.io/RecipeTracker/](https://cadil91.github.io/RecipeTracker/)
+
+The web demo runs with mock data - no backend required. Browse recipes, add new ones, and explore the full functionality directly in your browser.
 
 ## Development Commands
 

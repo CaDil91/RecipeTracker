@@ -28,6 +28,9 @@
     },
     "experiments": {
       "baseUrl": "/RecipeTracker"
-    }
+    },
+    "plugins": [
+      "expo-font"
+    ]
   }
 }

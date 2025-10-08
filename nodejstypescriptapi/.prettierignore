@@ -1,0 +1,9 @@
+node_modules/
+dist/
+coverage/
+logs/
+*.log
+*.min.js
+*.map
+package-lock.json
+.env*

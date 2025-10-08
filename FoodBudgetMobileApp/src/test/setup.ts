@@ -25,12 +25,14 @@ const createTestQueryClient = () => new QueryClient({
 import mockSafeAreaContext from 'react-native-safe-area-context/jest/mock';
 jest.mock('react-native-safe-area-context', () => mockSafeAreaContext);
 
-// Mock vector icons
-jest.mock('react-native-vector-icons/MaterialCommunityIcons', () => {
-  const React = require('react');
-  const { Text } = require('react-native');
-  return ({ name, ...props }: any) => React.createElement(Text, props, name);
-});
+// Mock @expo/vector-icons for tests
+jest.mock('@expo/vector-icons', () => ({
+  MaterialCommunityIcons: function MockIcon({ name, ...props }: any) {
+    const React = require('react');
+    const { Text } = require('react-native');
+    return React.createElement(Text, props, name);
+  },
+}));
 
 // Silence console warnings about missing icons in tests
 const originalWarn = console.warn;

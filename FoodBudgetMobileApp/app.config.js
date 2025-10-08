@@ -27,7 +27,7 @@ module.exports = {
       bundler: 'metro',
     },
     experiments: {
-      baseUrl: process.env.EXPO_PUBLIC_BASE_URL || '/RecipeTracker',
+      baseUrl: process.env.EXPO_PUBLIC_BASE_URL || '/',
     },
     plugins: ['expo-font'],
   },

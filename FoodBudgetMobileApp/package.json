@@ -11,13 +11,13 @@
     "ios:mock": "cross-env EXPO_PUBLIC_USE_MSW=true expo start --ios",
     "web": "expo start --web",
     "web:mock": "cross-env EXPO_PUBLIC_USE_MSW=true expo start --web",
-    "build:web": "expo export -p web",
-    "build:web:prod": "cross-env NODE_ENV=production expo export -p web",
+    "build:web": "expo export:web",
+    "build:web:prod": "cross-env NODE_ENV=production expo export:web",
     "msw:init": "npx msw init public/ --save",
     "test": "jest",
     "test:coverage": "jest --coverage --coverageDirectory=coverage",
-    "predeploy": "npm run build:web:prod && touch dist/.nojekyll",
-    "deploy": "gh-pages -d dist --dotfiles"
+    "predeploy": "npm run build:web:prod && node -e \"require('fs').writeFileSync('dist/.nojekyll', '')\"",
+    "deploy": "gh-pages -d dist --dotfiles -f"
   },
   "dependencies": {
     "@expo/metro-runtime": "~5.0.4",

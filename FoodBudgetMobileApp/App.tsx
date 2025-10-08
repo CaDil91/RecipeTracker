@@ -2,12 +2,20 @@ import React from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { PaperProvider } from 'react-native-paper';
-import { useColorScheme, View, ActivityIndicator } from 'react-native';
+import { useColorScheme, View, ActivityIndicator, Platform } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AppNavigator from './src/navigation/AppNavigator';
 import { getCustomTheme } from './src/theme/customTheme';
+
+// Load Material Design Icons for web as fallback
+if (Platform.OS === 'web' && typeof document !== 'undefined') {
+  const link = document.createElement('link');
+  link.href = 'https://cdn.jsdelivr.net/npm/@mdi/font@latest/css/materialdesignicons.min.css';
+  link.rel = 'stylesheet';
+  document.head.appendChild(link);
+}
 
 // Initialize MSW for development if enabled
 if (__DEV__ && process.env.EXPO_PUBLIC_USE_MSW === 'true') {

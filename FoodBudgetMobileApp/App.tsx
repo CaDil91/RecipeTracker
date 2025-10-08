@@ -42,13 +42,16 @@ export default function App() {
   const colorScheme = useColorScheme();
   const theme = getCustomTheme(colorScheme);
 
-  // Load Material Community Icons font for react-native-paper
-  const [fontsLoaded] = useFonts({
-    ...MaterialCommunityIcons.font,
-  });
+  // Load Material Community Icons font for native platforms only
+  // Web uses CDN fallback loaded above
+  const [fontsLoaded] = useFonts(
+    Platform.OS === 'web'
+      ? {} // Skip font loading on web, use CDN
+      : { ...MaterialCommunityIcons.font }
+  );
 
-  // Show loading indicator while fonts are loading
-  if (!fontsLoaded) {
+  // Show loading indicator while fonts are loading (native only)
+  if (!fontsLoaded && Platform.OS !== 'web') {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" />

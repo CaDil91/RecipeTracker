@@ -16,8 +16,8 @@
     "msw:init": "npx msw init public/ --save",
     "test": "jest",
     "test:coverage": "jest --coverage --coverageDirectory=coverage",
-    "predeploy": "npm run build:web:prod && node -e \"require('fs').writeFileSync('dist/.nojekyll', '')\"",
-    "deploy": "gh-pages -d dist --dotfiles -f"
+    "predeploy": "npx dotenv-cli -e .env.production -- cross-env NODE_ENV=production expo export -p web",
+    "deploy": "gh-pages --nojekyll -d dist"
   },
   "dependencies": {
     "@expo/metro-runtime": "~5.0.4",

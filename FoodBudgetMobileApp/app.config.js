@@ -25,7 +25,6 @@ module.exports = {
     web: {
       favicon: './assets/favicon.png',
       bundler: 'metro',
-      publicPath: process.env.EXPO_PUBLIC_BASE_URL || '/RecipeTracker/',
     },
     experiments: {
       baseUrl: process.env.EXPO_PUBLIC_BASE_URL || '/RecipeTracker',

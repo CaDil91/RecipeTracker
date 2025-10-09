@@ -86,7 +86,7 @@ const BottomTabs = () => {
           borderTopWidth: 0,
           elevation: 8,
           height: 80,
-          paddingBottom: 12,
+          paddingBottom: 8,
           paddingTop: 8,
         },
         tabBarLabelStyle: {

@@ -144,8 +144,6 @@ const RecipeListScreen: React.FC<RecipeListScreenProps> = ({ navigation }) => {
       paddingTop: 8,
       paddingHorizontal: 16,
       paddingBottom: 8,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.colors.outline,
     },
     fab: {
       position: 'absolute',

@@ -61,6 +61,8 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
     gap: 8,
+    flexGrow: 1,
+    justifyContent: 'center',
   },
   chip: {
     marginHorizontal: 4,

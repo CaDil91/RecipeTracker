@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { View, StyleSheet, Alert } from 'react-native';
-import { Appbar, FAB, IconButton, Menu, useTheme, Snackbar, ActivityIndicator } from 'react-native-paper';
+import { FAB, useTheme, Snackbar, ActivityIndicator } from 'react-native-paper';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { RecipeListScreenNavigationProp } from '../types/navigation';
 import { Container } from '../components/shared';
@@ -10,6 +10,7 @@ import FilterChips, { FilterType } from '../components/FilterChips';
 import { RecipeGrid } from '../components/shared/recipe/RecipeGrid';
 import { RecipeService } from '../lib/shared';
 
+// TODO: Move grid column selection (2/3/4) to a Settings menu/screen
 type GridColumns = 2 | 3 | 4;
 
 type RecipeListScreenProps = {
@@ -25,7 +26,6 @@ const RecipeListScreen: React.FC<RecipeListScreenProps> = ({ navigation }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState<FilterType>('All');
   const [gridColumns, setGridColumns] = useState<GridColumns>(2);
-  const [menuVisible, setMenuVisible] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
 
   // Fetch recipes using TanStack Query
@@ -164,54 +164,6 @@ const RecipeListScreen: React.FC<RecipeListScreenProps> = ({ navigation }) => {
 
   return (
     <>
-      <Appbar.Header style={{ backgroundColor: theme.colors.surface }}>
-        <Appbar.Content
-          title="My Recipes"
-          titleStyle={{ color: theme.colors.onSurface }}
-        />
-        <Menu
-          visible={menuVisible}
-          onDismiss={() => setMenuVisible(false)}
-          contentStyle={{ backgroundColor: theme.colors.surface }}
-          anchor={
-            <IconButton
-              icon="view-grid-outline"
-              iconColor={theme.colors.onSurface}
-              onPress={() => setMenuVisible(true)}
-              testID="grid-columns-menu"
-            />
-          }
-        >
-          <Menu.Item
-            onPress={() => {
-              setGridColumns(2);
-              setMenuVisible(false);
-            }}
-            title="2 columns"
-            leadingIcon="view-grid"
-            titleStyle={{ color: theme.colors.onSurface }}
-          />
-          <Menu.Item
-            onPress={() => {
-              setGridColumns(3);
-              setMenuVisible(false);
-            }}
-            title="3 columns"
-            leadingIcon="view-grid-outline"
-            titleStyle={{ color: theme.colors.onSurface }}
-          />
-          <Menu.Item
-            onPress={() => {
-              setGridColumns(4);
-              setMenuVisible(false);
-            }}
-            title="4 columns"
-            leadingIcon="view-grid-plus-outline"
-            titleStyle={{ color: theme.colors.onSurface }}
-          />
-        </Menu>
-      </Appbar.Header>
-
       <Container padded={false} useSafeArea={false}>
         <View style={styles.searchContainer}>
           <SearchBar

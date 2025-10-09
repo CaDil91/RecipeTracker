@@ -46,23 +46,11 @@ const HomeStack = () => {
         name="RecipeList"
         component={RecipeListScreen}
       />
-      {/* Recipe detail and other home-related screens will go here */}
-    </Stack.Navigator>
-  );
-};
-
-// Add Recipe Stack (for add flow)
-const AddStack = () => {
-  return (
-    <Stack.Navigator
-      screenOptions={{
-        headerShown: false,
-      }}
-    >
       <Stack.Screen
         name="AddRecipe"
         component={AddRecipeScreen}
       />
+      {/* Recipe detail and other home-related screens will go here */}
     </Stack.Navigator>
   );
 };
@@ -80,9 +68,6 @@ const BottomTabs = () => {
           switch (route.name) {
             case 'Home':
               iconName = 'home';
-              break;
-            case 'Add':
-              iconName = 'plus-circle';
               break;
             case 'MealPlan':
               iconName = 'calendar';
@@ -117,20 +102,6 @@ const BottomTabs = () => {
         component={HomeStack}
         options={{
           tabBarLabel: 'Recipes',
-        }}
-      />
-      <Tab.Screen
-        name="Add"
-        component={AddStack}
-        options={{
-          tabBarLabel: 'Add',
-          tabBarIcon: ({ focused }) => (
-            <Icon
-              source="plus-circle"
-              size={32}
-              color={focused ? theme.colors.primary : theme.colors.onSurfaceVariant}
-            />
-          ),
         }}
       />
       <Tab.Screen

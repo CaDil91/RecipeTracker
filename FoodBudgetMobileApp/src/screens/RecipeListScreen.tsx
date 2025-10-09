@@ -82,8 +82,8 @@ const RecipeListScreen: React.FC<RecipeListScreenProps> = ({ navigation }) => {
 
   const handleRecipeEdit = useCallback((recipe: RecipeResponseDto) => {
     console.log('Edit recipe:', recipe);
-    // Navigate to Add tab for editing
-    navigation.navigate('Add');
+    // Navigate to AddRecipe screen for editing
+    navigation.navigate('AddRecipe');
   }, [navigation]);
 
   // Delete mutation using TanStack Query
@@ -125,8 +125,8 @@ const RecipeListScreen: React.FC<RecipeListScreenProps> = ({ navigation }) => {
   }, [deleteMutation]);
 
   const handleAddRecipe = useCallback(() => {
-    // Navigate to the Add tab
-    navigation.navigate('Add');
+    // Navigate to the AddRecipe screen
+    navigation.navigate('AddRecipe');
   }, [navigation]);
 
   const handleRefresh = useCallback(() => {

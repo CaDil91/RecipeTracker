@@ -38,15 +38,6 @@ jest.mock('@react-navigation/bottom-tabs', () => ({
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              testID="tab-add"
-              onPress={() => handleTabPress('Add')}
-              style={{ opacity: activeTab === 'Add' ? 1 : 0.6 }}
-            >
-              <Text style={{ color: activeTab === 'Add' ? '#6200EE' : '#49454F' }}>
-                Add
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
               testID="tab-meal-plan"
               onPress={() => handleTabPress('MealPlan')}
               style={{ opacity: activeTab === 'MealPlan' ? 1 : 0.6 }}
@@ -169,15 +160,15 @@ describe('AppNavigator - Integration Tests', () => {
     const { getByTestId } = renderNavigationWithTheme(<AppNavigator />);
 
     const homeTab = getByTestId('tab-home');
-    const addTab = getByTestId('tab-add');
+    const mealPlanTab = getByTestId('tab-meal-plan');
 
     // Test initial state - Home should be selected (opacity 1)
     expect(homeTab.props.style.opacity).toBe(1);
-    expect(addTab.props.style.opacity).toBe(0.6);
+    expect(mealPlanTab.props.style.opacity).toBe(0.6);
 
     // Test that interactions work - press triggers handler
     expect(() => {
-      fireEvent.press(addTab);
+      fireEvent.press(mealPlanTab);
     }).not.toThrow();
   });
 
@@ -252,18 +243,18 @@ describe('AppNavigator - Integration Tests', () => {
     const { getByTestId } = renderNavigationWithTheme(<AppNavigator />);
 
     const homeTab = getByTestId('tab-home');
-    const addTab = getByTestId('tab-add');
+    const mealPlanTab = getByTestId('tab-meal-plan');
 
     // Verify initial theme integration (Home tab should use primary color)
     const homeTabText = homeTab.findByType('Text');
     expect(homeTabText.props.style.color).toBe('#6200EE'); // primary color
 
-    const addTabText = addTab.findByType('Text');
-    expect(addTabText.props.style.color).toBe('#49454F'); // onSurfaceVariant color
+    const mealPlanTabText = mealPlanTab.findByType('Text');
+    expect(mealPlanTabText.props.style.color).toBe('#49454F'); // onSurfaceVariant color
 
     // Test that theme integration works with interactions
     expect(() => {
-      fireEvent.press(addTab);
+      fireEvent.press(mealPlanTab);
     }).not.toThrow();
   });
 });

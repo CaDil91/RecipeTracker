@@ -11,7 +11,7 @@ export type RootStackParamList = {
 export type BottomTabParamList = {
     Home: undefined;
     MealPlan: undefined;
-    Profile: undefined;
+    Settings: undefined;
 };
 
 // Composite navigation type for screens that need to navigate between tabs

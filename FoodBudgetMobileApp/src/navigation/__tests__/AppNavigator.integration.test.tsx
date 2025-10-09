@@ -1,6 +1,5 @@
 import React from 'react';
-import { fireEvent, waitFor } from '@testing-library/react-native';
-import { renderWithProviders } from '../../test/test-utils';
+import { fireEvent } from '@testing-library/react-native';
 import AppNavigator from '../AppNavigator';
 
 // Integration tests focus on component integration without full navigation complexity
@@ -15,7 +14,7 @@ jest.mock('@react-navigation/native', () => ({
 
 jest.mock('@react-navigation/bottom-tabs', () => ({
   createBottomTabNavigator: () => ({
-    Navigator: function MockTabNavigator({ children, screenOptions }: { children: React.ReactNode, screenOptions: any }) {
+    Navigator: function MockTabNavigator({ children}: { children: React.ReactNode, screenOptions: any }) {
       const React = require('react');
       const { View, Text, TouchableOpacity } = require('react-native');
       const [activeTab, setActiveTab] = React.useState('Home');
@@ -47,12 +46,12 @@ jest.mock('@react-navigation/bottom-tabs', () => ({
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              testID="tab-profile"
-              onPress={() => handleTabPress('Profile')}
-              style={{ opacity: activeTab === 'Profile' ? 1 : 0.6 }}
+              testID="tab-settings"
+              onPress={() => handleTabPress('Settings')}
+              style={{ opacity: activeTab === 'Settings' ? 1 : 0.6 }}
             >
-              <Text style={{ color: activeTab === 'Profile' ? '#6200EE' : '#49454F' }}>
-                Profile
+              <Text style={{ color: activeTab === 'Settings' ? '#6200EE' : '#49454F' }}>
+                Settings
               </Text>
             </TouchableOpacity>
           </View>
@@ -117,7 +116,7 @@ jest.mock('react-native-paper', () => ({
 }));
 
 const renderNavigationWithTheme = (component: React.ReactElement) => {
-  // Use simple render to avoid SafeAreaProvider context issues
+  // Use a simple render to avoid SafeAreaProvider context issues
   const { render } = require('@testing-library/react-native');
   return render(component);
 };
@@ -129,7 +128,7 @@ describe('AppNavigator - Integration Tests', () => {
 
   /**
    * INTEGRATION TEST 1: Theme Provider Integration
-   * Tests: useTheme hook is called and theme values are used
+   * Tests: useTheme hook is called, and theme values are used
    */
   it('integrates theme values throughout navigation structure', () => {
     const { useTheme } = require('react-native-paper');
@@ -142,7 +141,7 @@ describe('AppNavigator - Integration Tests', () => {
 
   /**
    * INTEGRATION TEST 2: Screen-Navigation Integration
-   * Tests: Screens render within navigation context
+   * Tests: Screens render within a navigation context
    */
   it('integrates screen components within navigation context', () => {
     const { getByTestId, getAllByTestId } = renderNavigationWithTheme(<AppNavigator />);
@@ -181,19 +180,19 @@ describe('AppNavigator - Integration Tests', () => {
 
     const homeTab = getByTestId('tab-home');
     const mealPlanTab = getByTestId('tab-meal-plan');
-    const profileTab = getByTestId('tab-profile');
+    const settingsTab = getByTestId('tab-settings');
 
     // Test that all tab interactions work
     expect(() => {
       fireEvent.press(mealPlanTab);
-      fireEvent.press(profileTab);
+      fireEvent.press(settingsTab);
       fireEvent.press(homeTab);
     }).not.toThrow();
   });
 
   /**
    * INTEGRATION TEST 5: Stack-Tab Integration
-   * Tests: Stack navigators are properly nested within tab structure
+   * Tests: Stack navigators are properly nested within the tab structure
    */
   it('integrates stack navigators within tab structure', () => {
     const { getByTestId, getAllByTestId } = renderNavigationWithTheme(<AppNavigator />);
@@ -237,7 +236,7 @@ describe('AppNavigator - Integration Tests', () => {
 
   /**
    * INTEGRATION TEST 8: Theme-State Integration
-   * Tests: Theme colors are properly integrated with tab state
+   * Tests: Theme colors are properly integrated with the tab state
    */
   it('integrates theme colors with tab selection state', () => {
     const { getByTestId } = renderNavigationWithTheme(<AppNavigator />);
@@ -258,27 +257,3 @@ describe('AppNavigator - Integration Tests', () => {
     }).not.toThrow();
   });
 });
-
-/**
- * INTEGRATION TEST SUMMARY:
- *
- * These tests verify component integration points:
- * - Navigation structure composition
- * - Component integration with mocked navigation
- * - Theme integration points
- * - Error handling during integration
- *
- * KNOWN TECHNICAL DEBT:
- * Integration tests with real React Navigation require complex context setup
- * for SafeAreaProvider, PaperProvider, and NavigationContainer that causes
- * "Cannot read properties of undefined (reading 'Consumer')" errors.
- *
- * Current approach uses mocked navigation to test integration points without
- * the full navigation complexity. For true E2E navigation testing, consider:
- * - Detox for real device testing
- * - React Navigation testing utilities
- * - Custom test harness with full context setup
- *
- * The unit tests provide excellent coverage for AppNavigator structure,
- * and manual testing confirms real navigation works properly.
- */

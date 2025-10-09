@@ -25,10 +25,10 @@ const MealPlanScreen = () => {
   );
 };
 
-const ProfileScreen = () => {
+const SettingsScreen = () => {
   return (
     <View style={styles.placeholderContainer}>
-      <Text style={styles.placeholderTitle}>Profile</Text>
+      <Text style={styles.placeholderTitle}>Settings</Text>
       <Text style={styles.placeholderText}>Coming Soon</Text>
     </View>
   );
@@ -72,8 +72,8 @@ const BottomTabs = () => {
             case 'MealPlan':
               iconName = 'calendar';
               break;
-            case 'Profile':
-              iconName = 'account';
+            case 'Settings':
+              iconName = 'cog';
               break;
           }
 
@@ -112,10 +112,10 @@ const BottomTabs = () => {
         }}
       />
       <Tab.Screen
-        name="Profile"
-        component={ProfileScreen}
+        name="Settings"
+        component={SettingsScreen}
         options={{
-          tabBarLabel: 'Profile',
+          tabBarLabel: 'Settings',
         }}
       />
     </Tab.Navigator>

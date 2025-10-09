@@ -67,27 +67,56 @@ Build a complete vertical slice demonstrating full CRUD functionality for recipe
 - Query invalidation and cache management
 - User feedback via snackbar
 
-#### 🔄 Story 7: Unified Recipe Detail Screen
-**User Story:** As a user, I want a unified interface to view, edit, and create recipes with clear mode transitions.
+#### 🔄 Story 7: Enhanced Recipe Data Model (Category + Image)
+**User Story:** As a developer, I need the recipe data model to support category and image fields so users can better organize and visualize their recipes.
 
-**Features:** (In Progress)
-- VIEW mode: Read-only recipe display
-- EDIT mode: Pre-populated form for updates
-- CREATE mode: Empty form for new recipes
-- Seamless mode transitions
+**Features:** (Not Started)
+- Category field with dropdown picker (Breakfast, Lunch, Dinner, Dessert)
+- Image URL field (optional string)
+- CategoryPicker component
+- ImagePicker component (gallery selection, extensible for camera/URL)
+- Updated DTOs, schemas, and validation
 
-#### 🔄 Story 5.1: Enhanced Recipe Form
-**User Story:** As a user, I want to add category and image fields when creating/editing recipes so my recipes are complete and organized.
+#### 🔄 Story 8: RecipeDetailScreen - VIEW Mode
+**User Story:** As a user, I want to tap a recipe card and see all recipe details in a beautiful, read-only view.
 
-**Features:** (Planned)
-- Category picker (Breakfast, Lunch, Dinner, Dessert, etc.)
-- Image URL input with preview
-- Backend API support completed
+**Features:** (Not Started)
+- RecipeDetailScreen structure with mode state
+- VIEW mode with Material Design 3 styling
+- Navigation from RecipeListScreen
+- Display all fields including category and image
 
-#### 🔄 Story 9: Optimistic Updates
+#### 🔄 Story 9: RecipeDetailScreen - CREATE Mode
+**User Story:** As a user, I want to create new recipes with all fields through an intuitive form.
+
+**Features:** (Not Started)
+- CREATE mode with empty form
+- All fields editable (including category and image)
+- Create mutation with TanStack Query
+- Navigate from FAB
+
+#### 🔄 Story 10: RecipeDetailScreen - EDIT Mode & Transitions
+**User Story:** As a user, I want to edit existing recipes and have smooth transitions between viewing and editing.
+
+**Features:** (Not Started)
+- EDIT mode with pre-populated form
+- Edit FAB in VIEW mode
+- Update mutation with TanStack Query
+- Smooth VIEW ↔ EDIT transitions
+
+#### 🔄 Story 11: Delete Functionality & MD3 Polish
+**User Story:** As a user, I want to delete recipes from the detail screen and have a polished, professional-looking interface.
+
+**Features:** (Not Started)
+- Delete button in header with confirmation
+- Material Design 3 refinement
+- Smooth animations
+- Remove old AddRecipeScreen
+
+#### 🔄 Story 12: Optimistic Updates
 **User Story:** As a user, I want instant feedback when I create, update, or delete recipes so the app feels fast and responsive.
 
-**Features:** (Planned)
+**Features:** (Not Started)
 - Instant UI updates before API confirmation
 - Automatic rollback on errors
 - Background synchronization

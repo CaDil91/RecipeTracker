@@ -198,159 +198,281 @@ As a developer, I need the API to support category and image fields so the front
 
 ## Phase 3: Unified Recipe Detail Screen (CURRENT FOCUS)
 
-### Story 7: Unified RecipeDetail Screen (View/Edit/Create)
+### Story 7: Enhanced Recipe Data Model (Category + Image)
 **Status:** 🔴 NOT STARTED
-**Priority:** CRITICAL
-**Type:** Core Feature
-**Dependencies:** Stories 4–6 (completed)
+**Priority:** HIGH
+**Type:** Foundation
+**Estimated Effort:** Small
 
 **User Story:**
-As a user, I want a unified interface to view, edit, and create recipes with clear mode transitions.
+As a developer, I need the recipe data model to support category and image fields so users can better organize and visualize their recipes.
 
-**Requirements:**
+**Scope:**
+- Add `category` field (enum: Breakfast, Lunch, Dinner, Dessert)
+- Add `imageUrl` field (optional string)
+- Update DTOs, schemas, and validation
+- Create CategoryPicker component (dropdown)
+- Create ImagePicker component (gallery + extensible UI for future camera/URL)
 
-**Three Modes:**
-1. **CREATE mode** (from FAB/Add tab):
-   - Form is shown immediately in the edit state
-   - Empty fields ready for input
-   - "Save Recipe" button
-   - No Edit button needed
+**Tasks:**
+- [ ] Update `RecipeRequestDto` and `RecipeResponseDto` with category and imageUrl
+- [ ] Update `RecipeRequestSchema` and `RecipeResponseSchema` validation
+- [ ] Create `CategoryPicker` component with 4 options
+- [ ] Create `ImagePicker` component (select from gallery)
+- [ ] Update `RecipeForm` to include new fields
+- [ ] Add image preview in form
+- [ ] Update MSW handlers to support new fields
 
-2. **VIEW mode** (from tapping recipe card):
-   - Read-only display of recipe details
-   - Show: title, category, servings, instructions, image
-   - Floating Edit FAB or header Edit button
-   - Delete button in header menu
-   - No form inputs are visible
-
-3. **EDIT mode** (from the Edit button in VIEW mode):
-   - Same form as CREATE but pre-populated
-   - "Update Recipe" button
-   - Cancel button returns to VIEW mode
-   - Save triggers API update
-
-**Navigation Routes:**
-```
-/recipes/new → CREATE mode
-/recipes/:id → VIEW mode (read-only)
-/recipes/:id?mode=edit → EDIT mode (form enabled)
-```
-
-**Implementation Tasks:**
-- [ ] Create a RecipeDetailScreen component with a mode state
-- [ ] Implement mode detection from route params
-- [ ] CREATE mode: Form visible, no recipe data fetch
-- [ ] VIEW mode: Fetch a recipe by ID, display read-only
-- [ ] EDIT mode: Fetch recipe, populate form, enable editing
-- [ ] Add Edit FAB/button in VIEW mode
-- [ ] Add the Delete button in the header (VIEW and EDIT modes)
-- [ ] Mode transition: VIEW → EDIT → VIEW after save
-- [ ] Update mutation with TanStack Query
-- [ ] Navigate from RecipeListScreen card tap to VIEW mode
-- [ ] Navigate from FAB/Add tab to CREATE mode
-- [ ] Update navigation types for new routes
-- [ ] **Remove AddRecipeScreen** (replaced by CREATE mode)
-- [ ] Update Adds tab to navigate to CREATE mode
-- [ ] Add comprehensive tests (unit + integration)
+**Testing** (included in this story):
+- [ ] Unit tests for CategoryPicker
+- [ ] Unit tests for ImagePicker
+- [ ] Schema validation tests for new fields
+- [ ] RecipeForm tests with new fields
 
 **Files to Create:**
-- `screens/RecipeDetailScreen.tsx` - Main unified screen
-- `screens/__tests__/RecipeDetailScreen.test.tsx` - Unit tests
-- `screens/__tests__/RecipeDetailScreen.integration.test.tsx` - Integration tests
+- `components/shared/forms/CategoryPicker.tsx`
+- `components/shared/forms/ImagePicker.tsx`
+- `components/shared/forms/__tests__/CategoryPicker.test.tsx`
+- `components/shared/forms/__tests__/ImagePicker.test.tsx`
 
 **Files to Modify:**
-- `navigation/AppNavigator.tsx` - Add RecipeDetail route to HomeStack, update Add tab navigation
-- `types/navigation.ts` - Add RecipeDetail route params
-- `screens/RecipeListScreen.tsx:77-81` - Navigate to VIEW mode on card tap
-- `components/shared/recipe/RecipeForm.tsx` - Support mode prop for UI adjustments
+- `lib/shared/types/dto/recipe.dto.ts`
+- `lib/shared/schemas/recipe.schema.ts`
+- `components/shared/recipe/RecipeForm.tsx`
+
+**Acceptance Criteria:**
+- ✅ Category can be selected from dropdown
+- ✅ Image can be picked from gallery
+- ✅ Image preview shows in form
+- ✅ Validation enforces category enum
+- ✅ All tests pass
+
+---
+
+### Story 8: RecipeDetailScreen - VIEW Mode
+**Status:** 🔴 NOT STARTED
+**Priority:** HIGH
+**Type:** Core Feature
+**Dependencies:** Story 7
+**Estimated Effort:** Medium
+
+**User Story:**
+As a user, I want to tap a recipe card and see all recipe details in a beautiful, read-only view.
+
+**Scope:**
+- Create RecipeDetailScreen structure
+- Implement VIEW mode (read-only display)
+- Add navigation from RecipeListScreen
+- Material Design 3 styling
+- Show all fields including category and image
+
+**Tasks:**
+- [ ] Create `RecipeDetailScreen.tsx` with mode state
+- [ ] Implement VIEW mode layout (read-only)
+- [ ] Add TanStack Query hook for fetching recipe by ID
+- [ ] Display all recipe fields beautifully (MD3 styling)
+- [ ] Show recipe image (if present)
+- [ ] Add loading state
+- [ ] Add error handling
+- [ ] Update navigation types for RecipeDetail route
+- [ ] Add RecipeDetail to AppNavigator HomeStack
+- [ ] Update RecipeListScreen to navigate to VIEW mode
+
+**Testing** (included in this story):
+- [ ] Unit tests for RecipeDetailScreen VIEW mode
+- [ ] Integration tests for VIEW mode with API
+- [ ] Navigation tests (card tap → VIEW mode)
+- [ ] Loading state tests
+- [ ] Error state tests
+
+**Files to Create:**
+- `screens/RecipeDetailScreen.tsx`
+- `screens/__tests__/RecipeDetailScreen.test.tsx`
+- `screens/__tests__/RecipeDetailScreen.integration.test.tsx`
+
+**Files to Modify:**
+- `navigation/AppNavigator.tsx`
+- `types/navigation.ts`
+- `screens/RecipeListScreen.tsx`
+
+**Acceptance Criteria:**
+- ✅ Tapping recipe card opens VIEW mode
+- ✅ All recipe data displayed (title, category, servings, instructions, image)
+- ✅ Material Design 3 styling applied
+- ✅ Loading state shown while fetching
+- ✅ Error handling for failed fetches
+- ✅ Back navigation works
+- ✅ All tests pass
+
+---
+
+### Story 9: RecipeDetailScreen - CREATE Mode
+**Status:** 🔴 NOT STARTED
+**Priority:** HIGH
+**Type:** Core Feature
+**Dependencies:** Story 8
+**Estimated Effort:** Medium
+
+**User Story:**
+As a user, I want to create new recipes with all fields through an intuitive form.
+
+**Scope:**
+- Implement CREATE mode in RecipeDetailScreen
+- Empty form with all fields (including category and image)
+- Save functionality with TanStack Query mutation
+- Navigate from FAB to CREATE mode
+
+**Tasks:**
+- [ ] Add CREATE mode to RecipeDetailScreen
+- [ ] Detect CREATE mode from route params (no ID)
+- [ ] Show RecipeForm with empty fields
+- [ ] Implement create mutation with TanStack Query
+- [ ] Handle success (navigate back to list)
+- [ ] Handle errors (show snackbar)
+- [ ] Update FAB in RecipeListScreen to navigate to CREATE
+- [ ] Update navigation params
+
+**Testing** (included in this story):
+- [ ] Unit tests for CREATE mode
+- [ ] Integration tests for creating recipes with API
+- [ ] Form validation tests
+- [ ] Success navigation tests
+- [ ] Error handling tests
+- [ ] Test all fields including category and image
+
+**Files to Modify:**
+- `screens/RecipeDetailScreen.tsx`
+- `screens/RecipeListScreen.tsx`
+- `types/navigation.ts`
+- `screens/__tests__/RecipeDetailScreen.test.tsx`
+- `screens/__tests__/RecipeDetailScreen.integration.test.tsx`
+
+**Acceptance Criteria:**
+- ✅ FAB opens CREATE mode with empty form
+- ✅ All fields editable (including category picker and image picker)
+- ✅ Form validation works
+- ✅ Save creates recipe via API
+- ✅ Success navigates back to list
+- ✅ New recipe appears in list
+- ✅ Errors shown to user
+- ✅ All tests pass
+
+---
+
+### Story 10: RecipeDetailScreen - EDIT Mode & Transitions
+**Status:** 🔴 NOT STARTED
+**Priority:** HIGH
+**Type:** Core Feature
+**Dependencies:** Story 9
+**Estimated Effort:** Medium
+
+**User Story:**
+As a user, I want to edit existing recipes and have smooth transitions between viewing and editing.
+
+**Scope:**
+- Implement EDIT mode in RecipeDetailScreen
+- Add Edit FAB/button in VIEW mode
+- Pre-populate form with existing data
+- Update functionality with TanStack Query mutation
+- Cancel returns to VIEW mode
+
+**Tasks:**
+- [ ] Add EDIT mode to RecipeDetailScreen
+- [ ] Add Edit FAB in VIEW mode
+- [ ] Mode transition: VIEW → EDIT
+- [ ] Pre-populate RecipeForm with recipe data
+- [ ] Implement update mutation with TanStack Query
+- [ ] Handle success (return to VIEW mode)
+- [ ] Handle cancel (return to VIEW mode without changes)
+- [ ] Handle errors (show snackbar)
+- [ ] Smooth animations between modes
+
+**Testing** (included in this story):
+- [ ] Unit tests for EDIT mode
+- [ ] Integration tests for updating recipes
+- [ ] Mode transition tests (VIEW ↔ EDIT)
+- [ ] Pre-population tests
+- [ ] Cancel behavior tests
+- [ ] Success/error handling tests
+
+**Files to Modify:**
+- `screens/RecipeDetailScreen.tsx`
+- `screens/__tests__/RecipeDetailScreen.test.tsx`
+- `screens/__tests__/RecipeDetailScreen.integration.test.tsx`
+
+**Acceptance Criteria:**
+- ✅ Edit button visible in VIEW mode
+- ✅ Tapping Edit enters EDIT mode
+- ✅ Form pre-populated with current data
+- ✅ All fields editable (including category and image)
+- ✅ Save updates recipe via API
+- ✅ Success returns to VIEW mode with updated data
+- ✅ Cancel returns to VIEW mode without changes
+- ✅ Smooth transitions between modes
+- ✅ All tests pass
+
+---
+
+### Story 11: Delete Functionality & MD3 Polish
+**Status:** 🔴 NOT STARTED
+**Priority:** MEDIUM
+**Type:** Enhancement
+**Dependencies:** Story 10
+**Estimated Effort:** Small
+
+**User Story:**
+As a user, I want to delete recipes from the detail screen and have a polished, professional-looking interface.
+
+**Scope:**
+- Add Delete functionality in header menu
+- Material Design 3 polish and refinement
+- Smooth animations and transitions
+- Cleanup old AddRecipeScreen
+
+**Tasks:**
+- [ ] Add Delete button in header (VIEW and EDIT modes)
+- [ ] Implement delete mutation with TanStack Query
+- [ ] Confirmation dialog before delete
+- [ ] Navigate back to list after delete
+- [ ] Refine MD3 styling (spacing, elevation, shadows)
+- [ ] Add smooth transitions/animations
+- [ ] Refine typography hierarchy
+- [ ] Ensure consistent Surface/Card usage
+- [ ] Delete old AddRecipeScreen files
+
+**Testing** (included in this story):
+- [ ] Unit tests for Delete functionality
+- [ ] Integration tests for delete with API
+- [ ] Confirmation dialog tests
+- [ ] Navigation after delete tests
+- [ ] UI/styling regression tests
+- [ ] Update affected tests (remove AddRecipeScreen references)
+
+**Files to Modify:**
+- `screens/RecipeDetailScreen.tsx`
+- `screens/__tests__/RecipeDetailScreen.test.tsx`
+- `screens/__tests__/RecipeDetailScreen.integration.test.tsx`
+- Various test files referencing AddRecipeScreen
 
 **Files to Delete:**
-- ❌ `screens/AddRecipeScreen.tsx` - Replaced by RecipeDetailScreen CREATE mode
+- ❌ `screens/AddRecipeScreen.tsx`
 - ❌ `screens/__tests__/AddRecipeScreen.test.tsx`
 - ❌ `screens/__tests__/AddRecipeScreen.integration.test.tsx`
 
 **Acceptance Criteria:**
-- [ ] Tapping the recipe card opens VIEW mode (read-only)
-- [ ] VIEW mode shows all recipe data clearly
-- [ ] Edit button in VIEW mode switches to EDIT mode
-- [ ] EDIT mode pre-populates a form with current data
-- [ ] Saving in EDIT mode updates recipe and returns to VIEW mode
-- [ ] Cancel in EDIT mode returns to VIEW mode without changes
-- [ ] FAB/Add tab opens CREATE mode with empty form
-- [ ] CREATE mode saves new recipe and navigates back to list
-- [ ] Delete works from VIEW and EDIT modes
-- [ ] All modes have proper loading states
-- [ ] Error handling for API failures
-- [ ] Optimistic updates (Story 9) work seamlessly
-
-**Technical Notes:**
-- Use single RecipeDetailScreen with `mode` state
-- Mode determined by route params on mount
-- Reuse RecipeForm component for both CREATE and EDIT
-- VIEW mode uses custom read-only layout (not RecipeForm)
-- TanStack Query for fetching individual recipe
-- Mutation hooks for update operation
+- ✅ Delete button in header (VIEW and EDIT)
+- ✅ Confirmation dialog shown before delete
+- ✅ Delete removes recipe via API
+- ✅ Navigates back to list after delete
+- ✅ Material Design 3 styling polished throughout
+- ✅ Smooth animations between states
+- ✅ Old AddRecipeScreen removed
+- ✅ All tests pass
+- ✅ No references to AddRecipeScreen remain
 
 ---
 
-### Story 5.1: Enhanced Recipe Form (Category & Image Fields)
-**Status:** 🔴 NOT STARTED
-**Priority:** HIGH
-**Type:** UI Enhancement
-**Dependencies:** Story 7
-
-**User Story:**
-As a user, I want to add category and image fields when creating/editing recipes so my recipes are complete and organized.
-
-**Implementation Tasks:**
-- [ ] Add Category picker to RecipeForm
-  - Options: Breakfast, Lunch, Dinner, Dessert, Snack, Beverage, Other
-  - Match filter chips on RecipeListScreen
-  - Default to "Other" or null
-- [ ] Add Image URL input field
-  - Text input with URL validation
-  - Optional field
-  - Placeholder: "https://example.com/image.jpg"
-- [ ] Add image preview component
-  - Show preview when imageUrl is valid
-  - Handle loading states
-  - Handle broken images gracefully
-- [ ] Update RecipeForm validation
-  - Category optional, max 100 chars
-  - ImageUrl optional, must be valid URL
-- [ ] Update form layout for new fields
-- [ ] Update integration tests
-
-**Files to Modify:**
-- `components/shared/recipe/RecipeForm.tsx` - Add category and imageUrl fields
-- `screens/RecipeDetailScreen.tsx` - Ensure new fields work in all modes
-- `screens/__tests__/RecipeDetailScreen.integration.test.tsx` - Test new fields
-
-**Files to Create:**
-- `components/shared/forms/CategoryPicker.tsx` - Category selection component
-- `components/shared/forms/ImagePreview.tsx` - Image preview component
-- `components/shared/forms/__tests__/CategoryPicker.test.tsx`
-- `components/shared/forms/__tests__/ImagePreview.test.tsx`
-
-**Technical Notes:**
-- Backend already supports these fields (Story A completed)
-- Schema validation already exists (recipe.schema.ts:26-36)
-- Start with simple text input for imageUrl
-- Future: Implement actual file upload to Azure Blob Storage
-
-**Acceptance Criteria:**
-- [ ] Category picker displays all options
-- [ ] Selected category saves to database
-- [ ] Category filter chips work with saved categories
-- [ ] Image URL input validates format
-- [ ] Valid image URLs display preview
-- [ ] Invalid URLs show helpful error message
-- [ ] Recipe cards show category badges
-- [ ] Recipe cards show images when available
-
----
-
-### Story 9: Optimistic Updates with TanStack Query
+### Story 12: Optimistic Updates with TanStack Query
 **Status:** 🔴 NOT STARTED
 **Priority:** HIGH
 **Type:** UX Enhancement
@@ -447,7 +569,7 @@ const createMutation = useMutation({
 
 ## Phase 4: Authentication (POST-DEMO)
 
-### Story 10: User Registration & Login API
+### Story 13: User Registration & Login API
 **Status:** 🔵 POST-DEMO
 **Priority:** MEDIUM
 **Type:** Backend Authentication
@@ -478,11 +600,11 @@ As a user, I want to create an account and log in so my recipes are private and 
 
 ---
 
-### Story 11: User-Scoped Recipe Security
+### Story 14: User-Scoped Recipe Security
 **Status:** 🔵 POST-DEMO
 **Priority:** MEDIUM
 **Type:** Backend Security
-**Dependencies:** Story 10
+**Dependencies:** Story 13
 
 **User Story:**
 As a user, I want only my recipes visible to me so my data stays private.
@@ -504,11 +626,11 @@ As a user, I want only my recipes visible to me so my data stays private.
 
 ---
 
-### Story 12: Frontend Authentication State
+### Story 15: Frontend Authentication State
 **Status:** 🔵 POST-DEMO
 **Priority:** MEDIUM
 **Type:** Frontend Authentication
-**Dependencies:** Story 10
+**Dependencies:** Story 13
 
 **User Story:**
 As a user, I want to stay logged in across sessions so I don't have to log in repeatedly.

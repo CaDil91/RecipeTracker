@@ -170,8 +170,8 @@ describe('RecipeListScreen Integration Tests', () => {
       // Act: User presses the FAB button
       fireEvent.press(getByTestId('fab-add-recipe'));
 
-      // Assert: Navigation called with the correct Add route
-      expect(mockNavigate).toHaveBeenCalledWith('Add');
+      // Assert: Navigation called with the correct AddRecipe route
+      expect(mockNavigate).toHaveBeenCalledWith('AddRecipe');
     });
 
     /**

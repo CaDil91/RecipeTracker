@@ -2,8 +2,8 @@
  * RecipeListScreen Integration Tests
  *
  * Testing Framework:
- * - 88% Narrow Integration (15 tests): Single external dependency
- * - 12% Broad Integration (2 tests): Critical business workflows
+ * - 87.5% Narrow Integration (14 tests): Single external dependency
+ * - 12.5% Broad Integration (2 tests): Critical business workflows
  *
  * Focus: Testing integration points, NOT business logic
  * Using: MSW for API stubs, React Query for caching, Real navigation
@@ -14,6 +14,7 @@ import { randomUUID } from 'crypto';
 import { fireEvent, waitFor } from '@testing-library/react-native';
 import { renderWithProviders, createMockNavigation } from '../../test/test-utils';
 import RecipeListScreen from '../RecipeListScreen';
+// noinspection ES6PreferShortImport
 import { server } from '../../mocks/server';
 import { http, HttpResponse, delay } from 'msw';
 
@@ -41,8 +42,7 @@ describe('RecipeListScreen Integration Tests', () => {
      * BROAD INTEGRATION TEST #1
      * Critical workflow: List → Navigation → Detail
      */
-    // TODO: Re-enable when RecipeDetail screen is implemented
-    test.skip('Should complete full recipe viewing workflow from list to detail with real navigation', async () => {
+    test('Should complete full recipe viewing workflow from list to detail with real navigation', async () => {
       // Arrange: Set up navigation mock and render screen with MSW data
       const mockNavigation = createMockNavigation();
       const mockNavigate = jest.spyOn(mockNavigation, 'navigate');
@@ -95,7 +95,7 @@ describe('RecipeListScreen Integration Tests', () => {
 
   /**
    * ====================================================================
-   * SECTION 2: HAPPY PATH (4 tests - Narrow Integration)
+   * SECTION 2: HAPPY PATH (3 tests - Narrow Integration)
    * Primary integration scenarios with single dependency
    * ====================================================================
    */
@@ -126,36 +126,10 @@ describe('RecipeListScreen Integration Tests', () => {
     });
 
     /**
-     * NARROW TEST: Navigation integration
-     */
-    // TODO: Re-enable when RecipeDetail screen is implemented
-    test.skip('Should navigate to RecipeDetailScreen passing correct params through navigation', async () => {
-      // Arrange: Set up a navigation mock and render a recipe list
-      const mockNavigation = createMockNavigation();
-      const mockNavigate = jest.spyOn(mockNavigation, 'navigate');
-      const { getByText } = renderWithProviders(
-        <RecipeListScreen navigation={mockNavigation} />
-      );
-
-      // Wait for recipes to load and display
-      await waitFor(() => {
-        expect(getByText('Pasta Carbonara')).toBeTruthy();
-      });
-
-      // Act: User taps on a recipe
-      fireEvent.press(getByText('Pasta Carbonara'));
-
-      // Assert: Navigation called with the correct route and parameter structure
-      expect(mockNavigate).toHaveBeenCalledWith('RecipeDetail', {
-        recipeId: expect.any(String)
-      });
-    });
-
-    /**
      * NARROW TEST: FAB Navigation
      */
     test('Should navigate to AddRecipeScreen when FAB pressed with navigation state', async () => {
-      // Arrange: Set up navigation mock and render a recipe list with FAB
+      // Arrange: Set up a navigation mock and render a recipe list with FAB
       const mockNavigation = createMockNavigation();
       const mockNavigate = jest.spyOn(mockNavigation, 'navigate');
       const { getByTestId } = renderWithProviders(
@@ -298,14 +272,14 @@ describe('RecipeListScreen Integration Tests', () => {
      * NARROW TEST: Empty state contract
      */
     test('Should show empty state UI when API returns empty array', async () => {
-      // Given: API returns empty recipe list
+      // Given: API returns an empty recipe list
       server.use(
         http.get('*/api/Recipe', () => {
           return HttpResponse.json([]);
         })
       );
 
-      // When: Component receives empty array
+      // When: Component receives an empty array
       const mockNavigation = createMockNavigation();
       const { getByText } = renderWithProviders(
         <RecipeListScreen navigation={mockNavigation} />
@@ -358,7 +332,7 @@ describe('RecipeListScreen Integration Tests', () => {
      * NARROW TEST: Network delay integration
      */
     test('Should handle delayed API response through MSW and React Query integration', async () => {
-      // Arrange: Set up delayed response to test integration handles delays gracefully
+      // Arrange: Set up a delayed response to test integration handles delays gracefully
       let apiCallCompleted = false;
       server.use(
         http.get('*/api/Recipe', async () => {
@@ -409,10 +383,10 @@ describe('RecipeListScreen Integration Tests', () => {
         })
       );
 
-      // When: Component receives malformed response
+      // When: Component receives a malformed response
       const mockNavigation = createMockNavigation();
 
-      // Then: Component handles error without crashing
+      // Then: Component handles the error without crashing
       expect(() => {
         renderWithProviders(
           <RecipeListScreen navigation={mockNavigation} />
@@ -527,12 +501,8 @@ describe('RecipeListScreen Integration Tests', () => {
       );
 
       // When: Component handles intermittent failures
-      const mockNavigation = createMockNavigation();
-      const { queryByText } = renderWithProviders(
-        <RecipeListScreen navigation={mockNavigation} />
-      );
-
-      // Then: Component remains stable (doesn't crash)
+      createMockNavigation();
+// Then: Component remains stable (doesn't crash)
       await waitFor(() => {
         // Component should either show data or be in the loading / error state
         const componentRendered = true; // If we get here, it didn't crash

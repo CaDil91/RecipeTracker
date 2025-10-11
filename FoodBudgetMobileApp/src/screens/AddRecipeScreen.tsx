@@ -4,7 +4,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { Appbar } from 'react-native-paper';
 import { RootStackParamList } from '../types/navigation';
 import { Container, RecipeForm } from '../components/shared';
-import { RecipeRequestDto } from '../lib/shared/types/dto';
+import { RecipeRequestDto } from '../lib/shared';
 import { RecipeService } from '../lib/shared';
 
 type AddRecipeScreenProps = {
@@ -51,6 +51,7 @@ const AddRecipeScreen: React.FC<AddRecipeScreenProps> = ({ navigation }) => {
       );
     } catch (error) {
       // Handle unexpected errors
+      console.error('Unexpected error saving recipe:', error);
       Alert.alert(
         'Error',
         'Failed to save recipe. Please try again.',

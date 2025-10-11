@@ -16,6 +16,9 @@ Build a complete vertical slice demonstrating full CRUD functionality for recipe
 - ✅ Recipe list connected to API with TanStack Query
 - ✅ Recipe creation with API integration
 - ✅ Recipe deletion with confirmation and API integration
+- ✅ Error handling with user-friendly error states and retry functionality
+- ✅ TypeScript type safety in test utilities
+- ✅ Proper Promise handling in TanStack Query mutations
 - ✅ MSW mock service for development without a backend
 - ✅ Azure API deployed with automated CI/CD
 - ✅ GitHub Pages deployment configured
@@ -196,7 +199,141 @@ As a developer, I need the API to support category and image fields so the front
 
 ---
 
+## Phase 2.1: Error Handling & Type Safety Improvements ✅ COMPLETED
+
+### Technical Improvements (October 2025)
+**Status:** ✅ COMPLETED
+**Priority:** HIGH
+**Type:** Quality & Reliability
+
+**Completed:**
+- Added comprehensive error handling to RecipeListScreen
+  - Error state UI with user-friendly messages
+  - Retry button for failed API requests
+  - Follows same pattern as RecipeDetailScreen
+- Fixed TypeScript type safety in test utilities
+  - Added explicit generic type parameters to `createMockNavigation<T>()`
+  - Resolved type compatibility issues in RecipeDetailScreen tests
+- Improved debugging capabilities
+  - Added console.error logging in AddRecipeScreen catch blocks
+  - Better error visibility for developers
+- Fixed Promise handling in TanStack Query
+  - Properly awaited `queryClient.invalidateQueries()` in delete mutation
+  - Prevents race conditions and ensures cache consistency
+
+**Benefits:**
+- Better user experience during network failures
+- Clear error messages with recovery options
+- Improved type safety across test suite
+- Better debugging information for developers
+- Eliminated linter warnings and TypeScript errors
+
+**Files Modified:**
+- `screens/RecipeListScreen.tsx:88-109, 175-197` - Error state UI and async cache invalidation
+- `screens/AddRecipeScreen.tsx:52-58` - Error logging
+- `screens/__tests__/RecipeDetailScreen.unit.test.tsx:16,27-28` - Type safety
+- `screens/__tests__/RecipeDetailScreen.integration.test.tsx:20,34` - Type safety
+
+**Testing:**
+- All existing tests passing
+- Error state properly tested with testID attributes
+- Type safety verified by TypeScript compiler
+
+---
+
 ## Phase 3: Unified Recipe Detail Screen (CURRENT FOCUS)
+
+### Navigation Architecture (RecipeDetailScreen)
+
+**Decision:** Implemented using **2025 React Navigation Best Practices** (minimal params + local state)
+
+#### Route Parameter Design
+```typescript
+RecipeDetail: {
+    recipeId?: string;  // Only pass the ID (undefined for CREATE mode)
+}
+```
+
+#### Mode Management Pattern
+- **Mode stored in local component state** (not navigation params)
+- Uses React `useState` for mode transitions
+- Follows React Navigation 2025 guidance: "Pass minimal data in params"
+
+#### Navigation Flow
+
+**VIEW Mode (Story 8):**
+- **Entry:** User taps recipe card from RecipeListScreen
+- **Params:** `{ recipeId: '123' }`
+- **Initial Mode:** `'view'` (read-only)
+- **Actions:**
+  - Back button → RecipeListScreen
+  - Edit FAB → Internal state change to `'edit'` (no navigation)
+
+**CREATE Mode (Story 9):**
+- **Entry:** User taps FAB from RecipeListScreen
+- **Params:** `{}` or `{ recipeId: undefined }`
+- **Initial Mode:** `'create'`
+- **Actions:**
+  - Save → Navigate back to RecipeListScreen
+  - Cancel → Navigate back to RecipeListScreen
+
+**EDIT Mode (Story 10):**
+- **Entry:** User taps Edit FAB while in VIEW mode
+- **Transition:** Internal state change (`setCurrentMode('edit')`) - **NO navigation**
+- **Actions:**
+  - Save → Internal state change back to `'view'` + API update
+  - Cancel → Internal state change back to `'view'` (no changes)
+
+#### Implementation Example
+
+```typescript
+// Inside RecipeDetailScreen.tsx
+const { recipeId } = route.params || {};
+
+// Local state for mode (2025 best practice)
+const [currentMode, setCurrentMode] = useState<'view' | 'edit' | 'create'>(() =>
+    recipeId ? 'view' : 'create'
+);
+
+// Fetch data using TanStack Query
+const { data: recipe, isLoading, error } = useQuery({
+    queryKey: ['recipe', recipeId],
+    queryFn: () => RecipeService.getRecipeById(recipeId!),
+    enabled: !!recipeId,  // Only fetch if ID exists (not CREATE mode)
+});
+```
+
+#### Navigation Calls
+
+```typescript
+// VIEW mode - from recipe card
+navigation.navigate('RecipeDetail', { recipeId: recipe.id });
+
+// CREATE mode - from FAB
+navigation.navigate('RecipeDetail', {});
+
+// EDIT mode - internal state change (no navigation)
+setCurrentMode('edit');
+```
+
+#### Rationale (2025 Best Practices)
+
+✅ **Minimal params** - Only pass IDs, not full objects or UI state
+✅ **Local state for UI modes** - useState for view/edit/create transitions
+✅ **Data fetching in component** - TanStack Query fetches by ID
+✅ **Deep linking ready** - URL pattern: `/recipe/:id` (no mode param)
+✅ **Better testability** - No navigation mock complexity for mode changes
+✅ **Cache-friendly** - Simple query keys: `['recipe', id]`
+
+**Sources:**
+- React Navigation Docs (2025): "Passing parameters to routes"
+- TanStack Query v5 Patterns: "Optimistic updates with cache manipulation"
+
+#### Route Changes
+- ❌ **REMOVED:** `AddRecipe` route (replaced by CREATE mode)
+- ✅ **ADDED:** `RecipeDetail` route with optional `recipeId`
+
+---
 
 ### Story 7: Enhanced Recipe Data Model (Category + Image)
 **Status:** 🔴 NOT STARTED

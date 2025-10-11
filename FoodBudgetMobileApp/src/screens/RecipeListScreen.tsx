@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { View, StyleSheet, Alert } from 'react-native';
-import { FAB, useTheme, Snackbar, ActivityIndicator } from 'react-native-paper';
+import { FAB, useTheme, Snackbar, ActivityIndicator, Button, Text } from 'react-native-paper';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { RecipeListScreenNavigationProp } from '../types/navigation';
 import { Container } from '../components/shared';
@@ -25,7 +25,7 @@ const RecipeListScreen: React.FC<RecipeListScreenProps> = ({ navigation }) => {
   // UI state
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState<FilterType>('All');
-  const [gridColumns, setGridColumns] = useState<GridColumns>(2);
+  const [gridColumns] = useState<GridColumns>(2);
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
 
   // Fetch recipes using TanStack Query
@@ -75,9 +75,8 @@ const RecipeListScreen: React.FC<RecipeListScreenProps> = ({ navigation }) => {
   }, [recipes, searchQuery, selectedFilter]);
 
   const handleRecipePress = useCallback((recipe: RecipeResponseDto) => {
-    console.log('View recipe:', recipe);
-    // TODO: Navigate to recipe detail screen when RecipeDetail screen is implemented
-    // navigation.navigate('RecipeDetail', { recipeId: recipe.id });
+    // Navigate to RecipeDetail screen in VIEW mode
+    navigation.navigate('RecipeDetail', { recipeId: recipe.id });
   }, [navigation]);
 
   const handleRecipeEdit = useCallback((recipe: RecipeResponseDto) => {
@@ -99,9 +98,9 @@ const RecipeListScreen: React.FC<RecipeListScreenProps> = ({ navigation }) => {
       }
       return response.data;
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       // Invalidate and refetch recipes after successful deletion
-      queryClient.invalidateQueries({ queryKey: ['recipes'] });
+      await queryClient.invalidateQueries({ queryKey: ['recipes'] });
       setSnackbarMessage('Recipe deleted successfully');
     },
     onError: (error) => {
@@ -158,7 +157,44 @@ const RecipeListScreen: React.FC<RecipeListScreenProps> = ({ navigation }) => {
       alignItems: 'center',
       backgroundColor: theme.colors.background,
     },
+    errorContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: theme.colors.background,
+      padding: 24,
+    },
+    errorText: {
+      fontSize: 16,
+      color: theme.colors.error,
+      textAlign: 'center',
+      marginBottom: 16,
+    },
   });
+
+  // Error state
+  if (error) {
+    const errorMessage = error.message;
+    return (
+      <Container padded={false} useSafeArea={false}>
+        <View style={styles.errorContainer}>
+          <Text
+            style={styles.errorText}
+            testID="recipe-list-error"
+          >
+            {errorMessage}
+          </Text>
+          <Button
+            mode="contained"
+            onPress={() => refetch()}
+            testID="recipe-list-retry-button"
+          >
+            Retry
+          </Button>
+        </View>
+      </Container>
+    );
+  }
 
   return (
     <>
@@ -183,6 +219,7 @@ const RecipeListScreen: React.FC<RecipeListScreenProps> = ({ navigation }) => {
             <ActivityIndicator
               size="large"
               color={theme.colors.primary}
+              testID="recipe-list-loading"
             />
           </View>
         ) : (

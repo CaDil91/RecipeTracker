@@ -86,15 +86,17 @@ Build a complete vertical slice demonstrating full CRUD functionality for recipe
   - Prevents race conditions
   - Ensures cache consistency
 
-#### 🔄 Story 7: Enhanced Recipe Data Model (Category + Image)
+#### ✅ Story 7: Enhanced Recipe Data Model (Category + Image)
 **User Story:** As a developer, I need the recipe data model to support category and image fields so users can better organize and visualize their recipes.
 
-**Features:** (Not Started)
-- Category field with dropdown picker (Breakfast, Lunch, Dinner, Dessert)
-- Image URL field (optional string)
-- CategoryPicker component
-- ImagePicker component (gallery selection, extensible for camera/URL)
-- Updated DTOs, schemas, and validation
+**Features:** (Completed October 13, 2025)
+- Category field with dropdown picker (Breakfast, Lunch, Dinner, Dessert) - 19 tests passing
+- Image URL field with gallery selection and preview - 19 tests passing
+- CategoryPicker component with extensible architecture for Sprint 4
+- ImagePicker component (gallery selection via expo-image-picker)
+- Updated DTOs, schemas, and validation (category nullable/optional per backend API)
+- RecipeForm integration with both pickers - 31 tests passing
+- **Total: 69 tests passing across all components**
 
 #### 🔄 Story 8: RecipeDetailScreen - VIEW Mode
 **User Story:** As a user, I want to tap a recipe card and see all recipe details in a beautiful, read-only view.

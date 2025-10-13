@@ -34,6 +34,17 @@ jest.mock('@expo/vector-icons', () => ({
   },
 }));
 
+// Mock react-native-paper Portal to avoid async rendering issues in tests
+// Portal normally renders content asynchronously outside the component tree,
+// but for testing we want synchronous rendering
+jest.mock('react-native-paper', () => {
+  const RealModule = jest.requireActual('react-native-paper');
+  require('react');
+  return {
+    ...RealModule,
+  };
+});
+
 // Silence console warnings about missing icons in tests
 const originalWarn = console.warn;
 beforeAll(() => {

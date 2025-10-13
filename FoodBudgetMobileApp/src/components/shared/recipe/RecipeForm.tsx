@@ -1,10 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, StyleSheet } from 'react-native';
-import { RecipeRequestDto, RecipeResponseDto } from '../../../lib/shared/types/dto';
-import { RecipeRequestSchema } from '../../../lib/shared/schemas/recipe.schema';
+import { HelperText } from 'react-native-paper';
+import { RecipeRequestDto, RecipeResponseDto } from '../../../lib/shared';
+import { RecipeRequestSchema } from '../../../lib/shared';
 import { TextInput } from '../forms/TextInput';
 import { TextArea } from '../forms/TextArea';
 import { NumberInput } from '../forms/NumberInput';
+import { CategoryPicker } from '../forms/CategoryPicker';
+import { ImagePicker } from '../forms/ImagePicker';
 import { Button } from '../ui/Button';
 import { Card } from '../layout/Card';
 import { ZodError } from 'zod';
@@ -22,6 +25,8 @@ interface FormErrors {
   title?: string;
   instructions?: string;
   servings?: string;
+  category?: string;
+  imageUrl?: string;
 }
 
 export const RecipeForm: React.FC<RecipeFormProps> = ({
@@ -35,18 +40,19 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({
   const [title, setTitle] = useState(initialValues?.title || '');
   const [instructions, setInstructions] = useState(initialValues?.instructions || '');
   const [servings, setServings] = useState<number | undefined>(initialValues?.servings || 1);
+  const [category, setCategory] = useState<string | null>(initialValues?.category || null);
+  const [imageUrl, setImageUrl] = useState<string | null>(initialValues?.imageUrl || null);
   const [errors, setErrors] = useState<FormErrors>({});
-  const [touched, setTouched] = useState<Set<string>>(new Set());
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [internalLoading, setInternalLoading] = useState(false);
   const isMountedRef = useRef(true);
 
   useEffect(() => {
-    // Progressive validation: Only validate if user has attempted submit
+    // Progressive validation: Only validate if the user has attempted to submit
     if (hasAttemptedSubmit) {
       validateForm();
     }
-  }, [title, instructions, servings, hasAttemptedSubmit]);
+  }, [title, instructions, servings, category, imageUrl, hasAttemptedSubmit]);
 
   useEffect(() => {
     return () => {
@@ -60,8 +66,10 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({
         title,
         instructions: instructions || null,
         servings: servings || 1,
+        category: category || '',
+        imageUrl: imageUrl || null,
       };
-      
+
       RecipeRequestSchema.parse(formData);
       setErrors({});
       return true;
@@ -80,20 +88,12 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({
     }
   };
 
-  const handleFieldTouch = (field: string) => {
-    setTouched(prev => new Set(prev).add(field));
-  };
-
   const handleSubmit = async () => {
     // Prevent duplicate submissions
     if (internalLoading || isLoading) return;
 
-    // Mark that user has attempted to submit (enables progressive validation)
+    // Mark that the user has attempted to submit (enables progressive validation)
     setHasAttemptedSubmit(true);
-
-    // Mark all fields as touched to show all errors
-    const allFields = new Set(['title', 'instructions', 'servings']);
-    setTouched(allFields);
 
     // Validate form data
     try {
@@ -101,6 +101,8 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({
         title,
         instructions: instructions || null,
         servings: servings || 1,
+        category: category || '',
+        imageUrl: imageUrl || null,
       };
 
       RecipeRequestSchema.parse(formData);
@@ -143,7 +145,6 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({
           label="Recipe Title"
           value={title}
           onChangeText={setTitle}
-          onBlur={() => handleFieldTouch('title')}
           error={getFieldError('title')}
           placeholder="Enter recipe name"
           maxLength={200}
@@ -155,7 +156,6 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({
           label="Servings"
           value={servings || ''}
           onChangeValue={setServings}
-          onBlur={() => handleFieldTouch('servings')}
           error={getFieldError('servings')}
           min={1}
           max={100}
@@ -165,11 +165,33 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({
           style={styles.input}
         />
 
+        <View style={styles.input} testID={`${testID}-category-picker`}>
+          <CategoryPicker
+            value={category}
+            onChange={setCategory}
+            disabled={isLoading || internalLoading}
+            testID={`${testID}-category-picker`}
+          />
+          {getFieldError('category') && (
+            <HelperText type="error" visible={true}>
+              {getFieldError('category')}
+            </HelperText>
+          )}
+        </View>
+
+        <View style={styles.input} testID={`${testID}-image-picker`}>
+          <ImagePicker
+            value={imageUrl}
+            onChange={setImageUrl}
+            disabled={isLoading || internalLoading}
+            testID={`${testID}-image-picker`}
+          />
+        </View>
+
         <TextArea
           label="Instructions"
           value={instructions}
           onChangeText={setInstructions}
-          onBlur={() => handleFieldTouch('instructions')}
           error={getFieldError('instructions')}
           placeholder="Enter cooking instructions (optional)"
           rows={8}

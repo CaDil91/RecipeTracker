@@ -58,11 +58,20 @@ export const RecipeResponseSchema = z.object({
 
   imageUrl: z.string().url('Invalid image URL format').nullable().optional(),
 
-  createdAt: z.string().transform((val) => {
-    // Accept various date formats from the API
-    const date = new Date(val);
-    return date.toISOString();
-  }),
+  createdAt: z
+    .string()
+    .refine(
+      (val) => {
+        const date = new Date(val);
+        return !isNaN(date.getTime());
+      },
+      { message: 'Invalid datetime format' }
+    )
+    .transform((val) => {
+      // Accept various date formats from the API
+      const date = new Date(val);
+      return date.toISOString();
+    }),
 
   userId: z.string().uuid('Invalid user ID format').nullable().optional(),
 });

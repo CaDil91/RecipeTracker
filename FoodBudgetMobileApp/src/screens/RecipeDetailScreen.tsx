@@ -13,14 +13,15 @@
 
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Image } from 'react-native';
-import { useQuery } from '@tanstack/react-query';
-import { ActivityIndicator, useTheme, IconButton, Surface, Divider } from 'react-native-paper';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { ActivityIndicator, useTheme, IconButton, Surface, Divider, Snackbar } from 'react-native-paper';
 import { RecipeDetailScreenNavigationProp, RecipeDetailScreenRouteProp } from '../types/navigation';
-import { RecipeService } from '../lib/shared';
+import { RecipeService, RecipeRequestDto } from '../lib/shared';
+import { RecipeForm } from '../components/shared';
 
 type RecipeDetailScreenProps = {
   navigation: RecipeDetailScreenNavigationProp;
-  route: RecipeDetailScreenRouteProp;
+  route?: RecipeDetailScreenRouteProp; // Optional for test scenarios
 };
 
 /**
@@ -33,12 +34,18 @@ type RecipeDetailScreenProps = {
  */
 const RecipeDetailScreen: React.FC<RecipeDetailScreenProps> = ({ navigation, route }) => {
   // Extract recipeId from route params (2025 best practice: minimal params)
-  const { recipeId } = route.params || {};
+  // Defensive: handle undefined route/params for test scenarios
+  const routeParams = route?.params || {};
+  const { recipeId } = routeParams;
 
-  // Local state for mode management (not navigation params)
-  const [currentMode] = useState<'view' | 'edit' | 'create'>(() =>
-    recipeId ? 'view' : 'create'
-  );
+  // Track edit state for VIEW → EDIT transition (local state, not navigation)
+  const [isEditing] = useState(false);
+
+  // Derive mode from recipeId and edit state (React 19 best practice: derive from props)
+  const currentMode: 'view' | 'edit' | 'create' =
+    !recipeId ? 'create' :    // No ID = CREATE mode
+    isEditing ? 'edit' :       // Edit flag = EDIT mode
+    'view';                    // Default = VIEW mode
 
   // Fetch recipe data using TanStack Query (only when recipeId is present)
   const {
@@ -67,6 +74,47 @@ const RecipeDetailScreen: React.FC<RecipeDetailScreenProps> = ({ navigation, rou
   // Extract recipe data (undefined in CREATE mode or while loading)
   const recipe = recipeResponse;
   const theme = useTheme();
+  const queryClient = useQueryClient();
+
+  // Snackbar state for success/error messages
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [snackbarVisible, setSnackbarVisible] = useState(false);
+
+  // CREATE mode mutation
+  const createMutation = useMutation({
+    mutationFn: async (data: RecipeRequestDto) => {
+      const response = await RecipeService.createRecipe(data);
+      if (!response.success) {
+        throw new Error(
+          typeof response.error === 'string'
+            ? response.error
+            : response.error.title || 'Failed to create recipe'
+        );
+      }
+      return response.data;
+    },
+    onSuccess: (data) => {
+      // Show a success message
+      setSnackbarMessage('Recipe created successfully!');
+      setSnackbarVisible(true);
+
+      // Invalidate recipe list cache
+      void queryClient.invalidateQueries({ queryKey: ['recipes'] });
+
+      // Navigate to VIEW mode with a new recipe ID
+      navigation.navigate('RecipeDetail', { recipeId: data.id });
+    },
+    onError: (error: Error) => {
+      // Show error message
+      setSnackbarMessage(error.message || 'Failed to create recipe. Please try again.');
+      setSnackbarVisible(true);
+    },
+  });
+
+  // Handle form submission
+  const handleCreateSubmit = (data: RecipeRequestDto) => {
+    createMutation.mutate(data);
+  };
 
   // Dynamic styles using theme
   const dynamicStyles = StyleSheet.create({
@@ -240,10 +288,48 @@ const RecipeDetailScreen: React.FC<RecipeDetailScreenProps> = ({ navigation, rou
     );
   }
 
-  // CREATE mode (Story 9) - Not yet implemented
+  // CREATE mode (Story 9)
   return (
-    <View style={dynamicStyles.container}>
-      <Text style={dynamicStyles.errorText}>CREATE mode not yet implemented</Text>
+    <View style={dynamicStyles.container} testID="recipe-detail-create-mode">
+      {/* Header with the back button only (matches VIEW mode) */}
+      <Surface style={dynamicStyles.header}>
+        <IconButton
+          icon="arrow-left"
+          size={24}
+          onPress={() => navigation.goBack()}
+          testID="recipe-detail-back-button"
+          accessibilityLabel="Go back to recipe list"
+          accessibilityRole="button"
+        />
+      </Surface>
+
+      {/* Scrollable form content (matches VIEW mode scroll structure) */}
+      <ScrollView
+        style={dynamicStyles.container}
+        contentContainerStyle={dynamicStyles.contentContainer}
+        testID="recipe-detail-scroll-view"
+      >
+        <RecipeForm
+          onSubmit={handleCreateSubmit}
+          onCancel={() => navigation.goBack()}
+          submitLabel="Create Recipe"
+          isLoading={createMutation.isPending}
+          testID="recipe-detail-create-form"
+        />
+      </ScrollView>
+
+      {/* Snackbar for success/error messages */}
+      <Snackbar
+        visible={snackbarVisible}
+        onDismiss={() => setSnackbarVisible(false)}
+        duration={3000}
+        action={{
+          label: 'Dismiss',
+          onPress: () => setSnackbarVisible(false),
+        }}
+      >
+        {snackbarMessage}
+      </Snackbar>
     </View>
   );
 };

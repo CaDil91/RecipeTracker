@@ -38,7 +38,9 @@ The web demo is connected to a live Azure-hosted API with a SQL Server database.
 
 Build a complete vertical slice demonstrating full CRUD functionality for recipe management with a unified interface for viewing, editing, and creating recipes. Deploy a working demo for portfolio presentation.
 
-### Key User Stories
+📖 **Full Sprint Documentation:** [`docs/Sprint-3.md`](./docs/Sprint-3.md) - Complete user stories, technical details, and acceptance criteria
+
+### Key User Stories (Summary)
 
 #### ✅ Story 4: Recipe List Integration
 **User Story:** As a user, I want to see my actual recipes from the database when I open the app.
@@ -98,14 +100,21 @@ Build a complete vertical slice demonstrating full CRUD functionality for recipe
 - RecipeForm integration with both pickers - 31 tests passing
 - **Total: 69 tests passing across all components**
 
-#### 🔄 Story 8: RecipeDetailScreen - VIEW Mode
+#### ✅ Story 8: RecipeDetailScreen - VIEW Mode
 **User Story:** As a user, I want to tap a recipe card and see all recipe details in a beautiful, read-only view.
 
-**Features:** (Not Started)
-- RecipeDetailScreen structure with mode state
-- VIEW mode with Material Design 3 styling
-- Navigation from RecipeListScreen
+**Features:** (Completed October 15, 2025)
+- RecipeDetailScreen structure with mode state (view/edit/create)
+- VIEW mode with Material Design 3 styling (read-only display)
+- TanStack Query integration for data fetching by ID
+- Navigation from RecipeListScreen (tap recipe card)
 - Display all fields including category and image
+- Loading and error states with accessibility support
+- Scrollable content with responsive layout
+- Back navigation with IconButton
+- **Unit Tests: 26/26 passing**
+- **Integration Tests: 13/13 passing**
+- **Total: 39 tests passing with comprehensive coverage**
 
 #### 🔄 Story 9: RecipeDetailScreen - CREATE Mode
 **User Story:** As a user, I want to create new recipes with all fields through an intuitive form.

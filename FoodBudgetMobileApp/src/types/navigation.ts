@@ -5,7 +5,6 @@ import { StackNavigationProp } from '@react-navigation/stack';
 export type RootStackParamList = {
     Home: undefined;
     RecipeList: undefined;
-    AddRecipe: undefined;
     RecipeDetail: {
         recipeId?: string; // undefined for CREATE mode, present for VIEW mode
     };
@@ -23,7 +22,7 @@ export type RecipeListScreenNavigationProp = CompositeNavigationProp<
     BottomTabNavigationProp<BottomTabParamList>
 >;
 
-// Navigation and route types for RecipeDetailScreen
+// Navigation and route types for the RecipeDetailScreen
 export type RecipeDetailScreenNavigationProp = StackNavigationProp<
     RootStackParamList,
     'RecipeDetail'

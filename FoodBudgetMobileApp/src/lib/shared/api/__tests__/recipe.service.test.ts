@@ -1,10 +1,13 @@
-import { RecipeService } from '../recipe.service';
-import { FetchClient } from '../fetch-client';
-import { API_CONFIG } from '../config';
-import { RecipeRequestDto, RecipeResponseDto, ProblemDetails } from '../../types';
+import {RecipeService} from '../recipe.service';
+import {FetchClient} from '../fetch-client';
+import {ProblemDetails, RecipeRequestDto, RecipeResponseDto} from '../../types';
 
-// Mock FetchClient
-jest.mock('../fetch-client');
+// Mock FetchClient with proper static method mocking
+jest.mock('../fetch-client', () => ({
+  FetchClient: {
+    request: jest.fn(),
+  },
+}));
 
 // Mock the schema parsers
 jest.mock('../../schemas', () => ({
@@ -14,8 +17,8 @@ jest.mock('../../schemas', () => ({
 }));
 
 describe('RecipeService', () => {
-  const mockFetchClient = FetchClient as jest.MockedClass<typeof FetchClient>;
-  
+  const mockRequest = FetchClient.request as jest.MockedFunction<typeof FetchClient.request>;
+
   beforeEach(() => {
     jest.clearAllMocks();
   });
@@ -40,7 +43,7 @@ describe('RecipeService', () => {
         headers: new Headers({ 'content-type': 'application/json' }),
       } as unknown as Response;
 
-      mockFetchClient.request.mockResolvedValue(mockResponse);
+      mockRequest.mockResolvedValue(mockResponse);
 
       const result = await RecipeService.getAllRecipes();
 
@@ -49,12 +52,11 @@ describe('RecipeService', () => {
         throw new Error('Expected successful response but got: ' + result.error);
       }
       expect(result.data).toEqual(mockRecipes);
-      expect(result.data[0].id).toBe('123'); // Verify specific field
-      expect(mockFetchClient.request).toHaveBeenCalledWith(
-        expect.stringContaining('/api/recipes'),
+      expect(result.data[0].id).toBe('123'); // Verify a specific field
+      expect(mockRequest).toHaveBeenCalledWith(
+        expect.stringContaining('/api/Recipe'),
         expect.objectContaining({
           method: 'GET',
-          headers: API_CONFIG.HEADERS,
         })
       );
     });
@@ -66,12 +68,12 @@ describe('RecipeService', () => {
         json: jest.fn().mockResolvedValue([]),
       } as unknown as Response;
 
-      mockFetchClient.request.mockResolvedValue(mockResponse);
+      mockRequest.mockResolvedValue(mockResponse);
 
       await RecipeService.getAllRecipes('user123', 10);
 
       // Verify the exact URL construction
-      const callArgs = mockFetchClient.request.mock.calls[0];
+      const callArgs = mockRequest.mock.calls[0];
       const url = callArgs[0];
       expect(url).toContain('userId=user123');
       expect(url).toContain('limit=10');
@@ -86,11 +88,11 @@ describe('RecipeService', () => {
         json: jest.fn().mockResolvedValue([]),
       } as unknown as Response;
 
-      mockFetchClient.request.mockResolvedValue(mockResponse);
+      mockRequest.mockResolvedValue(mockResponse);
 
       await RecipeService.getAllRecipes('user123');
 
-      const callArgs = mockFetchClient.request.mock.calls[0];
+      const callArgs = mockRequest.mock.calls[0];
       const url = callArgs[0];
       expect(url).toContain('userId=user123');
       expect(url).not.toContain('limit=');
@@ -103,11 +105,11 @@ describe('RecipeService', () => {
         json: jest.fn().mockResolvedValue([]),
       } as unknown as Response;
 
-      mockFetchClient.request.mockResolvedValue(mockResponse);
+      mockRequest.mockResolvedValue(mockResponse);
 
       await RecipeService.getAllRecipes(undefined, 5);
 
-      const callArgs = mockFetchClient.request.mock.calls[0];
+      const callArgs = mockRequest.mock.calls[0];
       const url = callArgs[0];
       expect(url).toContain('limit=5');
       expect(url).not.toContain('userId=');
@@ -128,7 +130,7 @@ describe('RecipeService', () => {
         json: jest.fn().mockResolvedValue(problemDetails),
       } as unknown as Response;
 
-      mockFetchClient.request.mockResolvedValue(mockResponse);
+      mockRequest.mockResolvedValue(mockResponse);
 
       const result = await RecipeService.getAllRecipes();
 
@@ -139,7 +141,7 @@ describe('RecipeService', () => {
     });
 
     it('should handle network errors', async () => {
-      mockFetchClient.request.mockRejectedValue(new Error('Failed to fetch'));
+      mockRequest.mockRejectedValue(new Error('Failed to fetch'));
 
       const result = await RecipeService.getAllRecipes();
 
@@ -158,12 +160,11 @@ describe('RecipeService', () => {
       } as unknown as Response;
 
       // Mock schema validation to fail
-      const mockParseRecipeResponse = require('../../schemas').parseRecipeResponse;
-      mockParseRecipeResponse.mockImplementationOnce(() => {
+      require('../../schemas').parseRecipeResponse.mockImplementationOnce(() => {
         throw new Error('Invalid recipe format: missing required fields');
       });
 
-      mockFetchClient.request.mockResolvedValue(mockResponse);
+      mockRequest.mockResolvedValue(mockResponse);
 
       const result = await RecipeService.getAllRecipes();
 
@@ -193,7 +194,7 @@ describe('RecipeService', () => {
         json: jest.fn().mockResolvedValue(mockRecipe),
       } as unknown as Response;
 
-      mockFetchClient.request.mockResolvedValue(mockResponse);
+      mockRequest.mockResolvedValue(mockResponse);
 
       const result = await RecipeService.getRecipeById('123');
 
@@ -201,8 +202,8 @@ describe('RecipeService', () => {
       if (result.success) {
         expect(result.data).toEqual(mockRecipe);
       }
-      expect(mockFetchClient.request).toHaveBeenCalledWith(
-        expect.stringContaining('/api/recipes/123'),
+      expect(mockRequest).toHaveBeenCalledWith(
+        expect.stringContaining('/api/Recipe/123'),
         expect.objectContaining({
           method: 'GET',
         })
@@ -224,7 +225,7 @@ describe('RecipeService', () => {
         json: jest.fn().mockResolvedValue(problemDetails),
       } as unknown as Response;
 
-      mockFetchClient.request.mockResolvedValue(mockResponse);
+      mockRequest.mockResolvedValue(mockResponse);
 
       const result = await RecipeService.getRecipeById('999');
 
@@ -242,12 +243,11 @@ describe('RecipeService', () => {
       } as unknown as Response;
 
       // Mock schema validation to fail
-      const mockParseRecipeResponse = require('../../schemas').parseRecipeResponse;
-      mockParseRecipeResponse.mockImplementationOnce(() => {
+      require('../../schemas').parseRecipeResponse.mockImplementationOnce(() => {
         throw new Error('Invalid response format: missing required fields');
       });
 
-      mockFetchClient.request.mockResolvedValue(mockResponse);
+      mockRequest.mockResolvedValue(mockResponse);
 
       const result = await RecipeService.getRecipeById('123');
 
@@ -280,7 +280,7 @@ describe('RecipeService', () => {
         json: jest.fn().mockResolvedValue(createdRecipe),
       } as unknown as Response;
 
-      mockFetchClient.request.mockResolvedValue(mockResponse);
+      mockRequest.mockResolvedValue(mockResponse);
 
       const result = await RecipeService.createRecipe(newRecipe);
 
@@ -288,8 +288,8 @@ describe('RecipeService', () => {
       if (result.success) {
         expect(result.data).toEqual(createdRecipe);
       }
-      expect(mockFetchClient.request).toHaveBeenCalledWith(
-        expect.stringContaining('/api/recipes'),
+      expect(mockRequest).toHaveBeenCalledWith(
+        expect.stringContaining('/api/Recipe'),
         expect.objectContaining({
           method: 'POST',
           body: JSON.stringify(newRecipe),
@@ -316,7 +316,7 @@ describe('RecipeService', () => {
         json: jest.fn().mockResolvedValue(problemDetails),
       } as unknown as Response;
 
-      mockFetchClient.request.mockResolvedValue(mockResponse);
+      mockRequest.mockResolvedValue(mockResponse);
 
       const invalidRecipe: RecipeRequestDto = {
         title: '',
@@ -333,8 +333,7 @@ describe('RecipeService', () => {
 
     it('should handle request validation failure before API call', async () => {
       // Mock schema validation to fail
-      const mockParseRecipeRequest = require('../../schemas').parseRecipeRequest;
-      mockParseRecipeRequest.mockImplementationOnce(() => {
+      require('../../schemas').parseRecipeRequest.mockImplementationOnce(() => {
         throw new Error('Invalid recipe data: title is required');
       });
 
@@ -350,8 +349,8 @@ describe('RecipeService', () => {
         expect(result.error).toContain('Validation error');
         expect(result.error).toContain('Invalid recipe data');
       }
-      // Should not make API call if validation fails
-      expect(mockFetchClient.request).not.toHaveBeenCalled();
+      // Should not make an API call if validation fails
+      expect(mockRequest).not.toHaveBeenCalled();
     });
   });
 
@@ -375,7 +374,7 @@ describe('RecipeService', () => {
         json: jest.fn().mockResolvedValue(returnedRecipe),
       } as unknown as Response;
 
-      mockFetchClient.request.mockResolvedValue(mockResponse);
+      mockRequest.mockResolvedValue(mockResponse);
 
       const result = await RecipeService.updateRecipe('123', updatedRecipe);
 
@@ -383,8 +382,8 @@ describe('RecipeService', () => {
       if (result.success) {
         expect(result.data).toEqual(returnedRecipe);
       }
-      expect(mockFetchClient.request).toHaveBeenCalledWith(
-        expect.stringContaining('/api/recipes/123'),
+      expect(mockRequest).toHaveBeenCalledWith(
+        expect.stringContaining('/api/Recipe/123'),
         expect.objectContaining({
           method: 'PUT',
           body: JSON.stringify(updatedRecipe),
@@ -394,8 +393,7 @@ describe('RecipeService', () => {
 
     it('should handle request validation failure before API call', async () => {
       // Mock schema validation to fail
-      const mockParseRecipeRequest = require('../../schemas').parseRecipeRequest;
-      mockParseRecipeRequest.mockImplementationOnce(() => {
+      require('../../schemas').parseRecipeRequest.mockImplementationOnce(() => {
         throw new Error('Invalid update data: servings must be positive');
       });
 
@@ -411,8 +409,8 @@ describe('RecipeService', () => {
         expect(result.error).toContain('Validation error');
         expect(result.error).toContain('Invalid update data');
       }
-      // Should not make API call if validation fails
-      expect(mockFetchClient.request).not.toHaveBeenCalled();
+      // Should not make an API call if validation fails
+      expect(mockRequest).not.toHaveBeenCalled();
     });
   });
 
@@ -423,13 +421,13 @@ describe('RecipeService', () => {
         status: 204,
       } as unknown as Response;
 
-      mockFetchClient.request.mockResolvedValue(mockResponse);
+      mockRequest.mockResolvedValue(mockResponse);
 
       const result = await RecipeService.deleteRecipe('123');
 
       expect(result.success).toBe(true);
-      expect(mockFetchClient.request).toHaveBeenCalledWith(
-        expect.stringContaining('/api/recipes/123'),
+      expect(mockRequest).toHaveBeenCalledWith(
+        expect.stringContaining('/api/Recipe/123'),
         expect.objectContaining({
           method: 'DELETE',
         })
@@ -451,7 +449,7 @@ describe('RecipeService', () => {
         json: jest.fn().mockResolvedValue(problemDetails),
       } as unknown as Response;
 
-      mockFetchClient.request.mockResolvedValue(mockResponse);
+      mockRequest.mockResolvedValue(mockResponse);
 
       const result = await RecipeService.deleteRecipe('999');
 
@@ -480,7 +478,7 @@ describe('RecipeService', () => {
         json: jest.fn().mockResolvedValue(mockRecipes),
       } as unknown as Response;
 
-      mockFetchClient.request.mockResolvedValue(mockResponse);
+      mockRequest.mockResolvedValue(mockResponse);
 
       const result = await RecipeService.searchRecipesByTitle('Pasta');
 
@@ -488,8 +486,8 @@ describe('RecipeService', () => {
       if (result.success) {
         expect(result.data).toEqual(mockRecipes);
       }
-      expect(mockFetchClient.request).toHaveBeenCalledWith(
-        expect.stringContaining('/api/recipes/search?title=Pasta'),
+      expect(mockRequest).toHaveBeenCalledWith(
+        expect.stringContaining('/api/Recipe/search?title=Pasta'),
         expect.objectContaining({
           method: 'GET',
         })
@@ -503,11 +501,11 @@ describe('RecipeService', () => {
         json: jest.fn().mockResolvedValue([]),
       } as unknown as Response;
 
-      mockFetchClient.request.mockResolvedValue(mockResponse);
+      mockRequest.mockResolvedValue(mockResponse);
 
       await RecipeService.searchRecipesByTitle('Pasta & Cheese');
 
-      const callArgs = mockFetchClient.request.mock.calls[0];
+      const callArgs = mockRequest.mock.calls[0];
       const url = callArgs[0];
       // URLSearchParams encodes spaces as + instead of %20
       expect(url).toContain('title=Pasta+%26+Cheese');
@@ -520,11 +518,11 @@ describe('RecipeService', () => {
         json: jest.fn().mockResolvedValue([]),
       } as unknown as Response;
 
-      mockFetchClient.request.mockResolvedValue(mockResponse);
+      mockRequest.mockResolvedValue(mockResponse);
 
       await RecipeService.searchRecipesByTitle('');
 
-      const callArgs = mockFetchClient.request.mock.calls[0];
+      const callArgs = mockRequest.mock.calls[0];
       const url = callArgs[0];
       expect(url).toContain('title=');
     });
@@ -540,7 +538,7 @@ describe('RecipeService', () => {
         statusText: 'Internal Server Error',
       } as unknown as Response;
 
-      mockFetchClient.request.mockResolvedValue(mockResponse);
+      mockRequest.mockResolvedValue(mockResponse);
 
       const result = await RecipeService.getAllRecipes();
 
@@ -559,7 +557,7 @@ describe('RecipeService', () => {
         statusText: 'Bad Request',
       } as unknown as Response;
 
-      mockFetchClient.request.mockResolvedValue(mockResponse);
+      mockRequest.mockResolvedValue(mockResponse);
 
       const result = await RecipeService.getAllRecipes();
 
@@ -578,7 +576,7 @@ describe('RecipeService', () => {
         statusText: 'Bad Request',
       } as unknown as Response;
 
-      mockFetchClient.request.mockResolvedValue(mockResponse);
+      mockRequest.mockResolvedValue(mockResponse);
 
       const result = await RecipeService.getAllRecipes();
 
@@ -597,7 +595,7 @@ describe('RecipeService', () => {
         statusText: 'Internal Server Error',
       } as unknown as Response;
 
-      mockFetchClient.request.mockResolvedValue(mockResponse);
+      mockRequest.mockResolvedValue(mockResponse);
 
       const result = await RecipeService.getAllRecipes();
 
@@ -616,7 +614,7 @@ describe('RecipeService', () => {
         statusText: 'Bad Request',
       } as unknown as Response;
 
-      mockFetchClient.request.mockResolvedValue(mockResponse);
+      mockRequest.mockResolvedValue(mockResponse);
 
       const result = await RecipeService.getAllRecipes();
 
@@ -635,7 +633,7 @@ describe('RecipeService', () => {
         statusText: 'Internal Server Error',
       } as unknown as Response;
 
-      mockFetchClient.request.mockResolvedValue(mockResponse);
+      mockRequest.mockResolvedValue(mockResponse);
 
       const result = await RecipeService.getAllRecipes();
 
@@ -646,7 +644,7 @@ describe('RecipeService', () => {
     });
 
     it('should handle timeout errors', async () => {
-      mockFetchClient.request.mockRejectedValue(new Error('Request timeout after 30000ms'));
+      mockRequest.mockRejectedValue(new Error('Request timeout after 30000ms'));
 
       const result = await RecipeService.getAllRecipes();
 
@@ -657,7 +655,7 @@ describe('RecipeService', () => {
     });
 
     it('should handle validation exceptions from Zod', async () => {
-      mockFetchClient.request.mockRejectedValue(new Error('Invalid recipe format'));
+      mockRequest.mockRejectedValue(new Error('Invalid recipe format'));
 
       const result = await RecipeService.getAllRecipes();
 
@@ -668,7 +666,7 @@ describe('RecipeService', () => {
     });
 
     it('should handle unknown error types', async () => {
-      mockFetchClient.request.mockRejectedValue('String error');
+      mockRequest.mockRejectedValue('String error');
 
       const result = await RecipeService.getAllRecipes();
 

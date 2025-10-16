@@ -9,7 +9,7 @@
 
 import React from 'react';
 import { Alert } from 'react-native';
-import { waitFor, fireEvent } from '@testing-library/react-native';
+import { screen, waitFor, fireEvent } from '@testing-library/react-native';
 import { renderWithProviders, createMockNavigation } from '../../test/test-utils';
 import RecipeListScreen from '../RecipeListScreen';
 import { RecipeService } from '../../lib/shared';
@@ -28,7 +28,7 @@ jest.mock('../../lib/shared', () => ({
 
 // Mock navigation - External navigation system
 const mockNavigate = jest.fn();
-const mockNavigation = createMockNavigation({ navigate: mockNavigate });
+const mockNavigation = createMockNavigation({ navigate: mockNavigate }) as any;
 
 // Test data
 const mockRecipes = [
@@ -79,7 +79,7 @@ describe('RecipeListScreen Comprehensive Unit Tests - Sociable Testing', () => {
         <RecipeListScreen navigation={mockNavigation} />
       );
 
-      // Wait for initial load
+      // Wait for the initial load
       await waitFor(() => {
         expect(getByText('Pasta Carbonara')).toBeTruthy();
       });
@@ -228,7 +228,7 @@ describe('RecipeListScreen Comprehensive Unit Tests - Sociable Testing', () => {
         data: { message: 'Deleted' }
       });
 
-      mockAlert.mockImplementation((title, message, buttons) => {
+      mockAlert.mockImplementation((_title, _message, buttons) => {
         // Simulate user confirming deletion
         if (buttons && buttons[1]) {
           buttons[1].onPress?.();
@@ -248,9 +248,8 @@ describe('RecipeListScreen Comprehensive Unit Tests - Sociable Testing', () => {
       expect(RecipeService.getAllRecipes).toHaveBeenCalledTimes(1);
 
       // Act - trigger delete by getting text that should contain the delete button
-      const firstRecipe = getByText('Chicken Pasta');
-
-      // In a real app, we'd need to find and click the delete button
+      getByText('Chicken Pasta');
+// In a real app, we'd need to find and click the delete button
       // For now, simulate the delete flow directly
       await waitFor(() => {
         // Simulate delete button press - this would normally be through UI interaction
@@ -397,7 +396,7 @@ describe('RecipeListScreen Comprehensive Unit Tests - Sociable Testing', () => {
       });
 
       // Act - Simulate delete confirmation
-      mockAlert.mockImplementation((title, message, buttons) => {
+      mockAlert.mockImplementation((title, _message, buttons) => {
         expect(title).toBe('Delete Recipe');
         if (buttons?.[1]?.onPress) {
           buttons[1].onPress();
@@ -412,6 +411,29 @@ describe('RecipeListScreen Comprehensive Unit Tests - Sociable Testing', () => {
 
       // Assert
       expect(RecipeService.deleteRecipe).toHaveBeenCalledWith('1');
+    });
+
+    /**
+     * Test 8: FAB navigation to CREATE mode (Story 9 requirement)
+     * RISK: Critical user flow - users need to create new recipes
+     */
+    it('Given FAB button When user presses Then navigates to RecipeDetail in CREATE mode', async () => {
+      // Arrange
+      renderWithProviders(
+        <RecipeListScreen navigation={mockNavigation} />
+      );
+
+      // Wait for the component to load
+      await waitFor(() => {
+        expect(RecipeService.getAllRecipes).toHaveBeenCalledTimes(1);
+      });
+
+      // Act - User presses FAB to create a new recipe
+      const fabButton = screen.getByTestId('fab-add-recipe');
+      fireEvent.press(fabButton);
+
+      // Assert - Navigates to RecipeDetail without recipeId (CREATE mode)
+      expect(mockNavigate).toHaveBeenCalledWith('RecipeDetail', {});
     });
   });
 
@@ -438,7 +460,7 @@ describe('RecipeListScreen Comprehensive Unit Tests - Sociable Testing', () => {
         <RecipeListScreen navigation={mockNavigation} />
       );
 
-      // Assert - Should render without crashing and show empty state
+      // Assert - Should render without crashing and show an empty state
       expect(component).toBeTruthy();
     });
 
@@ -499,7 +521,7 @@ describe('RecipeListScreen Comprehensive Unit Tests - Sociable Testing', () => {
 
   describe('4. Boundaries Tests', () => {
     /**
-     * Test 12: Zero recipes boundary
+     * Test 12: Zero recipe boundary
      */
     it('Given 0 recipes When rendering Then shows appropriate state', async () => {
       // Arrange
@@ -539,7 +561,7 @@ describe('RecipeListScreen Comprehensive Unit Tests - Sociable Testing', () => {
      * Test 14: Large dataset handling
      */
     it('Given many recipes When rendered Then handles large datasets', async () => {
-      // Arrange - Create large dataset
+      // Arrange - Create a large dataset
       const largeDataset = Array.from({ length: 100 }, (_, i) => ({
         id: `${i + 1}`,
         title: `Recipe ${i + 1}`,
@@ -698,7 +720,7 @@ describe('RecipeListScreen Comprehensive Unit Tests - Sociable Testing', () => {
       });
 
       // Act - Simulate delete attempt
-      mockAlert.mockImplementation((title, message, buttons) => {
+      mockAlert.mockImplementation((_title, _message, buttons) => {
         buttons?.[1]?.onPress?.(); // Confirm delete
       });
 
@@ -741,7 +763,7 @@ describe('RecipeListScreen Comprehensive Unit Tests - Sociable Testing', () => {
       });
 
       // Act - Simulate cancel
-      mockAlert.mockImplementation((title, message, buttons) => {
+      mockAlert.mockImplementation((_title, _message, buttons) => {
         buttons?.[0]?.onPress?.(); // Cancel button
       });
 
@@ -784,7 +806,7 @@ describe('RecipeListScreen Comprehensive Unit Tests - Sociable Testing', () => {
       );
 
       // Assert - With real React Query, this would test actual caching behavior
-      // In this test, we verify the component can be mounted multiple times
+      // In this test; we verify the component can be mounted multiple times
       expect(RecipeService.getAllRecipes).toHaveBeenCalled();
     });
 

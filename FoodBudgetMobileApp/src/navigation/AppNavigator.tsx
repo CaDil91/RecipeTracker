@@ -7,7 +7,6 @@ import { useTheme, Icon } from 'react-native-paper';
 
 // Import screens
 import RecipeListScreen from '../screens/RecipeListScreen';
-import AddRecipeScreen from '../screens/AddRecipeScreen';
 import RecipeDetailScreen from '../screens/RecipeDetailScreen';
 
 // Create navigators
@@ -46,10 +45,6 @@ const HomeStack = () => {
       <Stack.Screen
         name="RecipeList"
         component={RecipeListScreen}
-      />
-      <Stack.Screen
-        name="AddRecipe"
-        component={AddRecipeScreen}
       />
       <Stack.Screen
         name="RecipeDetail"

@@ -4,7 +4,7 @@ describe('API Configuration', () => {
   describe('API_CONFIG', () => {
     it('should have correct default configuration', () => {
       expect(API_CONFIG.BASE_URL).toBeDefined();
-      expect(API_CONFIG.ENDPOINTS.RECIPES).toBe('/api/recipes');
+      expect(API_CONFIG.ENDPOINTS.RECIPES).toBe('/api/Recipe');
       expect(API_CONFIG.HEADERS['Content-Type']).toBe('application/json');
       expect(API_CONFIG.TIMEOUT).toBe(30000);
       expect(API_CONFIG.MAX_RETRIES).toBe(3);
@@ -17,7 +17,7 @@ describe('API Configuration', () => {
       // Mock environment variable
       process.env.EXPO_PUBLIC_API_URL = 'https://api.production.com';
       
-      // Re-import to get new value
+      // Re-import to get a new value
       jest.resetModules();
       const { API_CONFIG: config } = require('../config');
       
@@ -37,18 +37,18 @@ describe('API Configuration', () => {
     });
 
     it('should handle endpoints with query parameters', () => {
-      const endpoint = '/api/recipes?userId=123&limit=10';
+      const endpoint = '/api/Recipe?userId=123&limit=10';
       const url = getApiUrl(endpoint);
-      
+
       expect(url).toContain('userId=123');
       expect(url).toContain('limit=10');
     });
 
     it('should handle endpoints with path parameters', () => {
-      const endpoint = '/api/recipes/123';
+      const endpoint = '/api/Recipe/123';
       const url = getApiUrl(endpoint);
-      
-      expect(url).toContain('/api/recipes/123');
+
+      expect(url).toContain('/api/Recipe/123');
     });
   });
 });

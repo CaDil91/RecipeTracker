@@ -126,9 +126,9 @@ describe('RecipeListScreen Integration Tests', () => {
     });
 
     /**
-     * NARROW TEST: FAB Navigation
+     * NARROW TEST: FAB Navigation to CREATE mode
      */
-    test('Should navigate to AddRecipeScreen when FAB pressed with navigation state', async () => {
+    test('Should navigate to RecipeDetail CREATE mode when FAB pressed with navigation state', async () => {
       // Arrange: Set up a navigation mock and render a recipe list with FAB
       const mockNavigation = createMockNavigation();
       const mockNavigate = jest.spyOn(mockNavigation, 'navigate');
@@ -144,8 +144,8 @@ describe('RecipeListScreen Integration Tests', () => {
       // Act: User presses the FAB button
       fireEvent.press(getByTestId('fab-add-recipe'));
 
-      // Assert: Navigation called with the correct AddRecipe route
-      expect(mockNavigate).toHaveBeenCalledWith('AddRecipe');
+      // Assert: Navigation called with RecipeDetail in CREATE mode (no recipeId)
+      expect(mockNavigate).toHaveBeenCalledWith('RecipeDetail', {});
     });
 
     /**

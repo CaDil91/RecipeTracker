@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, RenderAPI } from '@testing-library/react-native';
+import { userEvent } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PaperProvider, MD3LightTheme, MD3DarkTheme } from 'react-native-paper';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -30,10 +31,15 @@ interface CustomRenderOptions {
   queryClient?: QueryClient;
 }
 
+// 2025 Pattern: Return both render results AND user event instance
+interface CustomRenderResult extends RenderAPI {
+  user: ReturnType<typeof userEvent.setup>;
+}
+
 export const renderWithProviders = (
   component: React.ReactElement,
   options: CustomRenderOptions = {}
-): RenderAPI => {
+): CustomRenderResult => {
   const {
     theme = 'light',
     initialSafeAreaInsets = { top: 0, bottom: 0, left: 0, right: 0 },
@@ -55,7 +61,13 @@ export const renderWithProviders = (
     </SafeAreaProvider>
   );
 
-  return render(component, { wrapper: AllProviders });
+  const renderResult = render(component, { wrapper: AllProviders });
+  const user = userEvent.setup();
+
+  return {
+    ...renderResult,
+    user,
+  };
 };
 
 // Generic mock navigation object for tests

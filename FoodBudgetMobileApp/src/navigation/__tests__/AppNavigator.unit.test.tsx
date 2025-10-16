@@ -39,7 +39,7 @@ jest.mock('../../screens/RecipeListScreen', () => function MockRecipeListScreen(
   return null;
 });
 
-jest.mock('../../screens/AddRecipeScreen', () => function MockAddRecipeScreen() {
+jest.mock('../../screens/RecipeDetailScreen', () => function MockRecipeDetailScreen() {
   return null;
 });
 
@@ -108,7 +108,7 @@ describe('AppNavigator - Unit Tests', () => {
 
   /**
    * UNIT TEST 5: Navigation Container Usage
-   * Tests: NavigationContainer is present in component tree
+   * Tests: NavigationContainer is present in the component tree
    */
   it('includes NavigationContainer in component tree', () => {
     const { getByTestId } = render(<AppNavigator />);
@@ -118,7 +118,7 @@ describe('AppNavigator - Unit Tests', () => {
 
   /**
    * UNIT TEST 6: Tab Navigator Usage
-   * Tests: Bottom tab navigator is present in component tree
+   * Tests: Bottom tab navigator is present in the component tree
    */
   it('includes bottom tab navigator in component tree', () => {
     const { getByTestId } = render(<AppNavigator />);

@@ -5,6 +5,21 @@ import AppNavigator from '../AppNavigator';
 // Integration tests focus on component integration without full navigation complexity
 // Mock React Navigation to avoid context issues while still testing integration points
 
+// Mock screen components FIRST before navigation mocks
+jest.mock('../../screens/RecipeListScreen', () => {
+  return function MockRecipeListScreen() {
+    const { Text } = require('react-native');
+    return <Text testID="recipe-list-screen">Recipe List Content</Text>;
+  };
+});
+
+jest.mock('../../screens/RecipeDetailScreen', () => {
+  return function MockRecipeDetailScreen() {
+    const { Text } = require('react-native');
+    return <Text testID="recipe-detail-screen">Recipe Detail Content</Text>;
+  };
+});
+
 jest.mock('@react-navigation/native', () => ({
   NavigationContainer: function MockNavigationContainer({ children }: { children: React.ReactNode }) {
     const { View } = require('react-native');
@@ -74,26 +89,22 @@ jest.mock('@react-navigation/native-stack', () => ({
       const { View } = require('react-native');
       return <View testID="stack-navigator">{children}</View>;
     },
-    Screen: function MockStackScreen({ component: Component }: { component: React.ComponentType }) {
-      return <Component />;
+    Screen: function MockStackScreen({ component: Component }: { component: React.ComponentType<any> }) {
+      // Provide mock navigation and route props to avoid errors
+      const mockNavigation = {
+        navigate: jest.fn(),
+        goBack: jest.fn(),
+        setOptions: jest.fn(),
+      };
+      const mockRoute = {
+        params: {},
+        key: 'mock-key',
+        name: 'MockScreen',
+      };
+      return <Component navigation={mockNavigation} route={mockRoute} />;
     },
   }),
 }));
-
-// Mock screen components
-jest.mock('../../screens/RecipeListScreen', () => {
-  return function MockRecipeListScreen() {
-    const { Text } = require('react-native');
-    return <Text testID="recipe-list-screen">Recipe List Content</Text>;
-  };
-});
-
-jest.mock('../../screens/AddRecipeScreen', () => {
-  return function MockAddRecipeScreen() {
-    const { Text } = require('react-native');
-    return <Text testID="add-recipe-screen">Add Recipe Content</Text>;
-  };
-});
 
 // Enhanced mock for theme integration testing
 jest.mock('react-native-paper', () => ({

@@ -75,14 +75,14 @@ const RecipeListScreen: React.FC<RecipeListScreenProps> = ({ navigation }) => {
   }, [recipes, searchQuery, selectedFilter]);
 
   const handleRecipePress = useCallback((recipe: RecipeResponseDto) => {
-    // Navigate to RecipeDetail screen in VIEW mode
+    // Navigate to the RecipeDetail screen in VIEW mode
     navigation.navigate('RecipeDetail', { recipeId: recipe.id });
   }, [navigation]);
 
   const handleRecipeEdit = useCallback((recipe: RecipeResponseDto) => {
     console.log('Edit recipe:', recipe);
-    // Navigate to AddRecipe screen for editing
-    navigation.navigate('AddRecipe');
+    // TODO: Story 10 - Navigate to RecipeDetail screen in EDIT mode
+    // navigation.navigate('RecipeDetail', { recipeId: recipe.id, mode: 'EDIT' });
   }, [navigation]);
 
   // Delete mutation using TanStack Query
@@ -98,9 +98,9 @@ const RecipeListScreen: React.FC<RecipeListScreenProps> = ({ navigation }) => {
       }
       return response.data;
     },
-    onSuccess: async () => {
+    onSuccess: () => {
       // Invalidate and refetch recipes after successful deletion
-      await queryClient.invalidateQueries({ queryKey: ['recipes'] });
+      void queryClient.invalidateQueries({ queryKey: ['recipes'] });
       setSnackbarMessage('Recipe deleted successfully');
     },
     onError: (error) => {
@@ -124,12 +124,12 @@ const RecipeListScreen: React.FC<RecipeListScreenProps> = ({ navigation }) => {
   }, [deleteMutation]);
 
   const handleAddRecipe = useCallback(() => {
-    // Navigate to the AddRecipe screen
-    navigation.navigate('AddRecipe');
+    // Navigate to the RecipeDetail screen in CREATE mode (no recipeId)
+    navigation.navigate('RecipeDetail', {});
   }, [navigation]);
 
   const handleRefresh = useCallback(() => {
-    refetch();
+    void refetch();
   }, [refetch]);
 
   const handleSearchClear = useCallback(() => {
@@ -186,7 +186,7 @@ const RecipeListScreen: React.FC<RecipeListScreenProps> = ({ navigation }) => {
           </Text>
           <Button
             mode="contained"
-            onPress={() => refetch()}
+            onPress={() => void refetch()}
             testID="recipe-list-retry-button"
           >
             Retry

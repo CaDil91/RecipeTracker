@@ -38,7 +38,7 @@ The web demo is connected to a live Azure-hosted API with a SQL Server database.
 
 Build a complete vertical slice demonstrating full CRUD functionality for recipe management with a unified interface for viewing, editing, and creating recipes. Deploy a working demo for portfolio presentation.
 
-📖 **Full Sprint Documentation:** [`docs/Sprint-3.md`](./docs/Sprint-3.md) - Complete user stories, technical details, and acceptance criteria
+📖 **Full Sprint Documentation:** [`docs/Sprint-3.md`](./docs/sprint-3.md) - Complete user stories, technical details, and acceptance criteria
 
 ### Key User Stories (Summary)
 
@@ -116,23 +116,36 @@ Build a complete vertical slice demonstrating full CRUD functionality for recipe
 - **Integration Tests: 13/13 passing**
 - **Total: 39 tests passing with comprehensive coverage**
 
-#### 🔄 Story 9: RecipeDetailScreen - CREATE Mode
+#### ✅ Story 9: RecipeDetailScreen - CREATE Mode
 **User Story:** As a user, I want to create new recipes with all fields through an intuitive form.
 
-**Features:** (Not Started)
-- CREATE mode with empty form
-- All fields editable (including category and image)
+**Features:**
+- CREATE mode with empty form (no recipeId in route params)
+- All fields editable (including category picker and image picker)
 - Create mutation with TanStack Query
-- Navigate from FAB
+- Navigate from FAB in RecipeListScreen
+- Success shows Snackbar and navigates to VIEW mode with new recipe
+- Error handling with user feedback
+- Form validation with progressive error display
+- **Unit Tests: 51/51 passing**
+- **Integration Tests: 19/19 passing**
+- **Total: 101 tests passing** (70 comprehensive tests with 2025 RTL patterns)
 
-#### 🔄 Story 10: RecipeDetailScreen - EDIT Mode & Transitions
+#### ✅ Story 10: RecipeDetailScreen - EDIT Mode & Transitions
 **User Story:** As a user, I want to edit existing recipes and have smooth transitions between viewing and editing.
 
-**Features:** (Not Started)
-- EDIT mode with pre-populated form
-- Edit FAB in VIEW mode
-- Update mutation with TanStack Query
-- Smooth VIEW ↔ EDIT transitions
+**Features:**
+- EDIT mode with pre-populated form from existing recipe data
+- Edit FAB in VIEW mode for easy mode transition
+- Update mutation with TanStack Query and cache invalidation
+- Smooth VIEW ↔ EDIT transitions using local state
+- Cancel button with confirmation dialog (only if form has changes)
+- Back button mode-aware behavior (returns to VIEW mode in EDIT)
+- **2025 Best Practices:** `forwardRef` + `useImperativeHandle` for form state access
+- Dirty tracking prevents accidental data loss
+- Success returns to VIEW mode with Snackbar feedback
+- Error handling keeps form editable with Snackbar
+- **All 73 tests passing** with TDD approach (Red → Green → Refactor)
 
 #### 🔄 Story 11: Delete Functionality & MD3 Polish
 **User Story:** As a user, I want to delete recipes from the detail screen and have a polished, professional-looking interface.

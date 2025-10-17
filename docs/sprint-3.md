@@ -1030,40 +1030,6 @@ Each story is complete when:
 
 ---
 
-## Next Actions
-
-### Immediate (This Week)
-1. **Story 7:** Build unified RecipeDetailScreen
-   - Start with VIEW mode (read-only display)
-   - Add EDIT mode (form with pre-populated data)
-   - Ensure CREATE mode works (replace AddRecipeScreen)
-   - Wire up navigation from a list and Add tab
-   - Add update mutation
-
-2. **Story 5.1:** Enhance RecipeForm
-   - Add a category picker component
-   - Add imageUrl input with preview
-   - Test with real data
-
-3. **Story 9:** Add optimistic updates
-   - Extract mutations to custom hook
-   - Implement optimistic create/update/delete
-   - Test error recovery
-
-### Next Week (Polish & Demo Prep)
-- End-to-end testing of full CRUD flow
-- Fix any UI/UX issues
-- Performance optimization
-- Demo script preparation
-- Portfolio documentation
-
-### Following Sprint (Authentication)
-- Stories 10–14: Complete authentication flow
-- User-scoped data
-- Profile management
-
----
-
 ## Development Infrastructure
 
 ### MSW (Mock Service Worker) ✅

@@ -1,3 +1,4 @@
+
 /**
  * RecipeDetailScreen Unit Tests - 2025 React Testing Library Patterns
  *
@@ -27,6 +28,7 @@ jest.mock('../../lib/shared', () => ({
   RecipeService: {
     getRecipeById: jest.fn(),
     createRecipe: jest.fn(),
+    updateRecipe: jest.fn(),
   },
 }));
 
@@ -53,7 +55,7 @@ const mockRecipe = {
 describe('RecipeDetailScreen Unit Tests', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    // Default successful API responses for both VIEW and CREATE modes
+    // Default successful API responses for VIEW, CREATE, and EDIT modes
     (RecipeService.getRecipeById as jest.Mock).mockResolvedValue({
       success: true,
       data: mockRecipe,
@@ -69,6 +71,13 @@ describe('RecipeDetailScreen Unit Tests', () => {
         imageUrl: null,
         createdAt: new Date().toISOString(),
         userId: 'user-123',
+      },
+    });
+    (RecipeService.updateRecipe as jest.Mock).mockResolvedValue({
+      success: true,
+      data: {
+        ...mockRecipe,
+        title: 'Updated Recipe Title',
       },
     });
   });
@@ -371,6 +380,370 @@ describe('RecipeDetailScreen Unit Tests', () => {
       });
     });
 
+    /**
+     * Test 10: Edit FAB visible in VIEW mode (EDIT mode)
+     * RISK: User can't access EDIT mode without the Edit button
+     */
+    it('Given VIEW mode with recipe loaded When displayed Then Edit FAB visible', async () => {
+      // Arrange
+      const route = {
+        params: { recipeId: 'recipe-123' },
+        key: 'test-key',
+        name: 'RecipeDetail' as const,
+      };
+
+      // Act
+      renderWithProviders(
+        <RecipeDetailScreen
+          navigation={mockNavigation}
+          route={route}
+        />
+      );
+
+      // Assert - Edit FAB is present
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-edit-fab')).toBeOnTheScreen();
+      });
+    });
+
+    /**
+     * Test 11: VIEW → EDIT transition (EDIT mode)
+     * RISK: Mode transition broken = entire EDIT feature broken
+     */
+    it('Given VIEW mode When Edit FAB pressed Then transitions to EDIT mode', async () => {
+      // Arrange
+      const route = {
+        params: { recipeId: 'recipe-123' },
+        key: 'test-key',
+        name: 'RecipeDetail' as const,
+      };
+
+      renderWithProviders(
+        <RecipeDetailScreen
+          navigation={mockNavigation}
+          route={route}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeOnTheScreen();
+      });
+
+      // Act - Press Edit FAB
+      const editFAB = screen.getByTestId('recipe-detail-edit-fab');
+      fireEvent.press(editFAB);
+
+      // Assert - Now in EDIT mode
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-edit-mode')).toBeOnTheScreen();
+      });
+    });
+
+    /**
+     * Test 12: Form pre-populated with recipe data (EDIT mode)
+     * RISK: Empty form = user loses existing data
+     */
+    it('Given EDIT mode When form renders Then initialValues populated with recipe data', async () => {
+      // Arrange
+      const route = {
+        params: { recipeId: 'recipe-123' },
+        key: 'test-key',
+        name: 'RecipeDetail' as const,
+      };
+
+      renderWithProviders(
+        <RecipeDetailScreen
+          navigation={mockNavigation}
+          route={route}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeOnTheScreen();
+      });
+
+      // Act - Enter EDIT mode
+      const editFAB = screen.getByTestId('recipe-detail-edit-fab');
+      fireEvent.press(editFAB);
+
+      // Assert - Form pre-populated with existing recipe data
+      await waitFor(() => {
+        expect(screen.getByDisplayValue('Pasta Carbonara')).toBeVisible(); // title
+        expect(screen.getByDisplayValue('4')).toBeVisible(); // servings
+        expect(screen.getByDisplayValue('Cook pasta. Mix eggs with cheese. Combine with hot pasta.')).toBeVisible(); // instructions
+      });
+    });
+
+    /**
+     * Test 13: Update mutation execution (EDIT mode)
+     * RISK: Mutation not triggering = save doesn't work
+     */
+    it('Given valid form data in EDIT mode When user submits Then updateRecipe mutation executes', async () => {
+      // Arrange
+      const route = {
+        params: { recipeId: 'recipe-123' },
+        key: 'test-key',
+        name: 'RecipeDetail' as const,
+      };
+
+      renderWithProviders(
+        <RecipeDetailScreen
+          navigation={mockNavigation}
+          route={route}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeOnTheScreen();
+      });
+
+      // Enter EDIT mode
+      fireEvent.press(screen.getByTestId('recipe-detail-edit-fab'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-edit-mode')).toBeOnTheScreen();
+      });
+
+      // Act - Modify and submit
+      const titleInput = screen.getByTestId('recipe-detail-edit-form-title');
+      fireEvent.changeText(titleInput, 'Updated Pasta Carbonara');
+
+      const submitButton = screen.getByTestId('recipe-detail-edit-form-submit');
+      fireEvent.press(submitButton);
+
+      // Assert - updateRecipe called with correct recipe ID
+      await waitFor(() => {
+        expect(RecipeService.updateRecipe).toHaveBeenCalledWith(
+          'recipe-123',
+          expect.objectContaining({
+            title: 'Updated Pasta Carbonara',
+          })
+        );
+      });
+    });
+
+    /**
+     * Test 14: Successful update returns to VIEW mode (EDIT mode)
+     * RISK: Navigation failure = user stuck in EDIT mode
+     */
+    it('Given successful update When mutation completes Then returns to VIEW mode with Snackbar', async () => {
+      // Arrange
+      const route = {
+        params: { recipeId: 'recipe-123' },
+        key: 'test-key',
+        name: 'RecipeDetail' as const,
+      };
+
+      renderWithProviders(
+        <RecipeDetailScreen
+          navigation={mockNavigation}
+          route={route}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeOnTheScreen();
+      });
+
+      // Enter EDIT mode
+      fireEvent.press(screen.getByTestId('recipe-detail-edit-fab'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-edit-mode')).toBeOnTheScreen();
+      });
+
+      // Act - Submit changes
+      const submitButton = screen.getByTestId('recipe-detail-edit-form-submit');
+      fireEvent.press(submitButton);
+
+      // Assert - Returns to VIEW mode with success message
+      await waitFor(() => {
+        expect(screen.getByText(/recipe updated successfully/i)).toBeOnTheScreen();
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeOnTheScreen();
+      });
+    });
+
+    /**
+     * Test 15: Confirmation dialog on Cancel with changes (EDIT mode)
+     * RISK: Data loss without warning
+     */
+    it('Given EDIT mode with unsaved changes When Cancel pressed Then shows confirmation dialog', async () => {
+      // Arrange
+      const route = {
+        params: { recipeId: 'recipe-123' },
+        key: 'test-key',
+        name: 'RecipeDetail' as const,
+      };
+
+      renderWithProviders(
+        <RecipeDetailScreen
+          navigation={mockNavigation}
+          route={route}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeOnTheScreen();
+      });
+
+      // Enter EDIT mode
+      fireEvent.press(screen.getByTestId('recipe-detail-edit-fab'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-edit-mode')).toBeOnTheScreen();
+      });
+
+      // Act - Make a change (triggers dirty state)
+      const titleInput = screen.getByTestId('recipe-detail-edit-form-title');
+      fireEvent.changeText(titleInput, 'Modified Title');
+
+      // Press Cancel
+      const cancelButton = screen.getByTestId('recipe-detail-edit-form-cancel');
+      fireEvent.press(cancelButton);
+
+      // Assert - Confirmation dialog shown
+      await waitFor(() => {
+        expect(screen.getByText(/discard changes/i)).toBeOnTheScreen();
+      });
+    });
+
+    /**
+     * Test 16: Confirming dialog returns to VIEW mode (EDIT mode)
+     * RISK: Dialog confirmation doesn't work
+     */
+    it('Given confirmation dialog When Yes pressed Then returns to VIEW mode without saving', async () => {
+      // Arrange
+      const route = {
+        params: { recipeId: 'recipe-123' },
+        key: 'test-key',
+        name: 'RecipeDetail' as const,
+      };
+
+      renderWithProviders(
+        <RecipeDetailScreen
+          navigation={mockNavigation}
+          route={route}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeOnTheScreen();
+      });
+
+      // Enter EDIT mode and make changes
+      fireEvent.press(screen.getByTestId('recipe-detail-edit-fab'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-edit-mode')).toBeOnTheScreen();
+      });
+
+      const titleInput = screen.getByTestId('recipe-detail-edit-form-title');
+      fireEvent.changeText(titleInput, 'Modified Title');
+
+      // Press Cancel
+      fireEvent.press(screen.getByTestId('recipe-detail-edit-form-cancel'));
+
+      await waitFor(() => {
+        expect(screen.getByText(/discard changes/i)).toBeOnTheScreen();
+      });
+
+      // Act - Confirm discard
+      const yesButton = screen.getByText('Yes');
+      fireEvent.press(yesButton);
+
+      // Assert - Returns to VIEW mode, update NOT called
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeOnTheScreen();
+      });
+      expect(RecipeService.updateRecipe).not.toHaveBeenCalled();
+    });
+
+    /**
+     * Test 17: Back button in EDIT mode with unsaved changes (EDIT mode)
+     * RISK: Data loss without warning - user accidentally navigates away
+     */
+    it('Given EDIT mode with unsaved changes When back button pressed Then shows confirmation dialog', async () => {
+      // Arrange
+      const route = {
+        params: { recipeId: 'recipe-123' },
+        key: 'test-key',
+        name: 'RecipeDetail' as const,
+      };
+
+      renderWithProviders(
+        <RecipeDetailScreen
+          navigation={mockNavigation}
+          route={route}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeOnTheScreen();
+      });
+
+      // Enter EDIT mode
+      fireEvent.press(screen.getByTestId('recipe-detail-edit-fab'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-edit-mode')).toBeOnTheScreen();
+      });
+
+      // Make a change (triggers dirty state)
+      const titleInput = screen.getByTestId('recipe-detail-edit-form-title');
+      fireEvent.changeText(titleInput, 'Modified Title');
+
+      // Act - Press back button
+      const backButton = screen.getByTestId('recipe-detail-back-button');
+      fireEvent.press(backButton);
+
+      // Assert - Confirmation dialog shown (NOT navigation.goBack())
+      await waitFor(() => {
+        expect(screen.getByText(/discard changes/i)).toBeOnTheScreen();
+      });
+      expect(mockGoBack).not.toHaveBeenCalled();
+    });
+
+    /**
+     * Test 18: Back button in EDIT mode without changes (EDIT mode)
+     * RISK: User expects to go back to VIEW mode
+     */
+    it('Given EDIT mode without changes When back button pressed Then returns to VIEW mode immediately', async () => {
+      // Arrange
+      const route = {
+        params: { recipeId: 'recipe-123' },
+        key: 'test-key',
+        name: 'RecipeDetail' as const,
+      };
+
+      renderWithProviders(
+        <RecipeDetailScreen
+          navigation={mockNavigation}
+          route={route}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeOnTheScreen();
+      });
+
+      // Enter EDIT mode
+      fireEvent.press(screen.getByTestId('recipe-detail-edit-fab'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-edit-mode')).toBeOnTheScreen();
+      });
+
+      // Act - Press back button WITHOUT making changes
+      const backButton = screen.getByTestId('recipe-detail-back-button');
+      fireEvent.press(backButton);
+
+      // Assert - Returns to VIEW mode immediately (NOT navigation.goBack())
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeOnTheScreen();
+      });
+      expect(mockGoBack).not.toHaveBeenCalled();
+    });
+
   });
 
   /**
@@ -569,6 +942,126 @@ describe('RecipeDetailScreen Unit Tests', () => {
       // Assert
       await waitFor(() => {
         expect(screen.getByText('Recipe created successfully!')).toBeOnTheScreen();
+      });
+    });
+
+    /**
+     * Test 18: Complete EDIT workflow (EDIT mode)
+     */
+    it('Given VIEW mode When Edit FAB pressed, form edited, and saved Then returns to VIEW mode', async () => {
+      // Arrange
+      const route = {
+        params: { recipeId: 'recipe-123' },
+        key: 'test-key',
+        name: 'RecipeDetail' as const,
+      };
+
+      renderWithProviders(
+        <RecipeDetailScreen
+          navigation={mockNavigation}
+          route={route}
+        />
+      );
+
+      // Wait for VIEW mode
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeOnTheScreen();
+      });
+
+      // Act - Press Edit FAB
+      fireEvent.press(screen.getByTestId('recipe-detail-edit-fab'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-edit-mode')).toBeOnTheScreen();
+      });
+
+      // Modify title
+      const titleInput = screen.getByTestId('recipe-detail-edit-form-title');
+      fireEvent.changeText(titleInput, 'Updated Pasta Carbonara');
+
+      // Submit
+      const submitButton = screen.getByTestId('recipe-detail-edit-form-submit');
+      fireEvent.press(submitButton);
+
+      // Assert - Returns to VIEW mode with updated data
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeOnTheScreen();
+        expect(screen.getByText('Recipe updated successfully!')).toBeOnTheScreen();
+      });
+    });
+
+    /**
+     * Test 19: Edit FAB press behavior (EDIT mode)
+     */
+    it('Given VIEW mode When Edit FAB pressed Then Edit FAB hidden in EDIT mode', async () => {
+      // Arrange
+      const route = {
+        params: { recipeId: 'recipe-123' },
+        key: 'test-key',
+        name: 'RecipeDetail' as const,
+      };
+
+      renderWithProviders(
+        <RecipeDetailScreen
+          navigation={mockNavigation}
+          route={route}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeOnTheScreen();
+      });
+
+      // Assert - Edit FAB visible in VIEW mode
+      expect(screen.getByTestId('recipe-detail-edit-fab')).toBeOnTheScreen();
+
+      // Act - Press Edit FAB
+      fireEvent.press(screen.getByTestId('recipe-detail-edit-fab'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-edit-mode')).toBeOnTheScreen();
+      });
+
+      // Assert - Edit FAB hidden in EDIT mode
+      expect(screen.queryByTestId('recipe-detail-edit-fab')).toBeNull();
+    });
+
+    /**
+     * Test 20: Snackbar success message (EDIT mode)
+     */
+    it('Given successful update When mutation completes Then Snackbar displays success message', async () => {
+      // Arrange
+      const route = {
+        params: { recipeId: 'recipe-123' },
+        key: 'test-key',
+        name: 'RecipeDetail' as const,
+      };
+
+      renderWithProviders(
+        <RecipeDetailScreen
+          navigation={mockNavigation}
+          route={route}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeOnTheScreen();
+      });
+
+      // Enter EDIT mode
+      fireEvent.press(screen.getByTestId('recipe-detail-edit-fab'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-edit-mode')).toBeOnTheScreen();
+      });
+
+      // Submit
+      const submitButton = screen.getByTestId('recipe-detail-edit-form-submit');
+      fireEvent.press(submitButton);
+
+      // Assert
+      await waitFor(() => {
+        expect(screen.getByText('Recipe updated successfully!')).toBeOnTheScreen();
       });
     });
   });
@@ -1373,6 +1866,155 @@ describe('RecipeDetailScreen Unit Tests', () => {
         // Snackbar from react-native-paper has built-in accessibility
       });
     });
+
+    /**
+     * Test 42: EDIT mode respects initialValues contract (EDIT mode)
+     */
+    it('Given EDIT mode When form initialized Then passes existing recipe as initialValues', async () => {
+      // Arrange
+      const route = {
+        params: { recipeId: 'recipe-123' },
+        key: 'test-key',
+        name: 'RecipeDetail' as const,
+      };
+
+      renderWithProviders(
+        <RecipeDetailScreen
+          navigation={mockNavigation}
+          route={route}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeOnTheScreen();
+      });
+
+      // Act - Enter EDIT mode
+      fireEvent.press(screen.getByTestId('recipe-detail-edit-fab'));
+
+      // Assert - RecipeForm receives initialValues matching the existing recipe
+      await waitFor(() => {
+        expect(screen.getByDisplayValue('Pasta Carbonara')).toBeVisible();
+        expect(screen.getByDisplayValue('4')).toBeVisible();
+        expect(screen.getByDisplayValue('Cook pasta. Mix eggs with cheese. Combine with hot pasta.')).toBeVisible();
+      });
+    });
+
+    /**
+     * Test 43: Update API respects RecipeRequestDto contract (EDIT mode)
+     */
+    it('Given valid EDIT form submission When API called Then matches C# RecipeRequestDto contract', async () => {
+      // Arrange
+      const route = {
+        params: { recipeId: 'recipe-123' },
+        key: 'test-key',
+        name: 'RecipeDetail' as const,
+      };
+
+      renderWithProviders(
+        <RecipeDetailScreen
+          navigation={mockNavigation}
+          route={route}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeOnTheScreen();
+      });
+
+      // Enter EDIT mode
+      fireEvent.press(screen.getByTestId('recipe-detail-edit-fab'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-edit-mode')).toBeOnTheScreen();
+      });
+
+      // Act - Submit changes
+      const submitButton = screen.getByTestId('recipe-detail-edit-form-submit');
+      fireEvent.press(submitButton);
+
+      // Assert - Update API called with RecipeRequestDto structure
+      await waitFor(() => {
+        expect(RecipeService.updateRecipe).toHaveBeenCalledWith(
+          'recipe-123', // recipeId as first param
+          expect.objectContaining({
+            title: expect.any(String),
+            servings: expect.any(Number),
+            // instructions, category, imageUrl are optional
+          })
+        );
+      });
+    });
+
+    /**
+     * Test 44: Cancel button requires confirmation (EDIT mode - business rule)
+     */
+    it('Given EDIT mode without changes When Cancel pressed Then returns to VIEW mode immediately', async () => {
+      // Arrange
+      const route = {
+        params: { recipeId: 'recipe-123' },
+        key: 'test-key',
+        name: 'RecipeDetail' as const,
+      };
+
+      renderWithProviders(
+        <RecipeDetailScreen
+          navigation={mockNavigation}
+          route={route}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeOnTheScreen();
+      });
+
+      // Enter EDIT mode
+      fireEvent.press(screen.getByTestId('recipe-detail-edit-fab'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-edit-mode')).toBeOnTheScreen();
+      });
+
+      // Act - Press Cancel without making changes
+      const cancelButton = screen.getByTestId('recipe-detail-edit-form-cancel');
+      fireEvent.press(cancelButton);
+
+      // Assert - Returns to VIEW mode immediately (no confirmation dialog)
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeOnTheScreen();
+      });
+
+      // No update should be called
+      expect(RecipeService.updateRecipe).not.toHaveBeenCalled();
+    });
+
+    /**
+     * Test 45: Edit FAB accessibility (EDIT mode - accessibility business rule)
+     */
+    it('Given VIEW mode with Edit FAB When screen reader active Then FAB has accessible label', async () => {
+      // Arrange
+      const route = {
+        params: { recipeId: 'recipe-123' },
+        key: 'test-key',
+        name: 'RecipeDetail' as const,
+      };
+
+      renderWithProviders(
+        <RecipeDetailScreen
+          navigation={mockNavigation}
+          route={route}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeOnTheScreen();
+      });
+
+      // Assert - Edit FAB has accessibility properties
+      const editFAB = screen.getByTestId('recipe-detail-edit-fab');
+      expect(editFAB.props.accessibilityLabel).toBeTruthy();
+      expect(editFAB.props.accessibilityRole).toBe('button');
+    });
   });
 
   /**
@@ -1848,6 +2490,302 @@ describe('RecipeDetailScreen Unit Tests', () => {
       resolveCreate!({
         success: true,
         data: { id: 'new-id', title: 'Test', servings: 1, createdAt: new Date().toISOString() }
+      });
+    });
+
+    /**
+     * Test 53: API 500 error (EDIT mode)
+     */
+    it('Given API returns 500 When update fails Then shows Snackbar error and stays in EDIT mode', async () => {
+      // Arrange
+      (RecipeService.updateRecipe as jest.Mock).mockResolvedValue({
+        success: false,
+        error: {
+          title: 'Internal Server Error',
+          status: 500,
+          detail: 'An error occurred while updating your recipe.',
+        },
+      });
+
+      const route = {
+        params: { recipeId: 'recipe-123' },
+        key: 'test-key',
+        name: 'RecipeDetail' as const,
+      };
+
+      renderWithProviders(
+        <RecipeDetailScreen
+          navigation={mockNavigation}
+          route={route}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeOnTheScreen();
+      });
+
+      // Enter EDIT mode
+      fireEvent.press(screen.getByTestId('recipe-detail-edit-fab'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-edit-mode')).toBeOnTheScreen();
+      });
+
+      // Act - Submit changes
+      const submitButton = screen.getByTestId('recipe-detail-edit-form-submit');
+      fireEvent.press(submitButton);
+
+      // Assert - Error Snackbar shown, stays in EDIT mode
+      await waitFor(() => {
+        expect(screen.getByText(/error/i)).toBeOnTheScreen();
+      });
+
+      // Still in EDIT mode
+      expect(screen.getByTestId('recipe-detail-edit-mode')).toBeOnTheScreen();
+    });
+
+    /**
+     * Test 54: API 400 error (EDIT mode)
+     */
+    it('Given API returns 400 When update fails Then shows Snackbar with validation message', async () => {
+      // Arrange
+      (RecipeService.updateRecipe as jest.Mock).mockResolvedValue({
+        success: false,
+        error: {
+          title: 'Validation Error',
+          status: 400,
+          detail: 'Invalid data provided',
+        },
+      });
+
+      const route = {
+        params: { recipeId: 'recipe-123' },
+        key: 'test-key',
+        name: 'RecipeDetail' as const,
+      };
+
+      renderWithProviders(
+        <RecipeDetailScreen
+          navigation={mockNavigation}
+          route={route}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeOnTheScreen();
+      });
+
+      // Enter EDIT mode
+      fireEvent.press(screen.getByTestId('recipe-detail-edit-fab'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-edit-mode')).toBeOnTheScreen();
+      });
+
+      // Act - Submit changes
+      const submitButton = screen.getByTestId('recipe-detail-edit-form-submit');
+      fireEvent.press(submitButton);
+
+      // Assert
+      await waitFor(() => {
+        expect(screen.getByText(/validation error|invalid data/i)).toBeOnTheScreen();
+      });
+    });
+
+    /**
+     * Test 55: Network timeout (EDIT mode)
+     */
+    it('Given network timeout When update fails Then shows Snackbar error', async () => {
+      // Arrange
+      (RecipeService.updateRecipe as jest.Mock).mockRejectedValue(
+        new Error('Network timeout')
+      );
+
+      const route = {
+        params: { recipeId: 'recipe-123' },
+        key: 'test-key',
+        name: 'RecipeDetail' as const,
+      };
+
+      renderWithProviders(
+        <RecipeDetailScreen
+          navigation={mockNavigation}
+          route={route}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeOnTheScreen();
+      });
+
+      // Enter EDIT mode
+      fireEvent.press(screen.getByTestId('recipe-detail-edit-fab'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-edit-mode')).toBeOnTheScreen();
+      });
+
+      // Act - Submit changes
+      const submitButton = screen.getByTestId('recipe-detail-edit-form-submit');
+      fireEvent.press(submitButton);
+
+      // Assert
+      await waitFor(() => {
+        expect(screen.getByText(/error|timeout/i)).toBeOnTheScreen();
+      });
+    });
+
+    /**
+     * Test 56: Error doesn't navigate away (EDIT mode)
+     */
+    it('Given API error When update fails Then does NOT navigate away from EDIT mode', async () => {
+      // Arrange
+      (RecipeService.updateRecipe as jest.Mock).mockResolvedValue({
+        success: false,
+        error: 'Failed to update recipe',
+      });
+
+      const route = {
+        params: { recipeId: 'recipe-123' },
+        key: 'test-key',
+        name: 'RecipeDetail' as const,
+      };
+
+      renderWithProviders(
+        <RecipeDetailScreen
+          navigation={mockNavigation}
+          route={route}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeOnTheScreen();
+      });
+
+      // Enter EDIT mode
+      fireEvent.press(screen.getByTestId('recipe-detail-edit-fab'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-edit-mode')).toBeOnTheScreen();
+      });
+
+      // Act - Submit changes
+      const submitButton = screen.getByTestId('recipe-detail-edit-form-submit');
+      fireEvent.press(submitButton);
+
+      // Assert - Should stay in EDIT mode
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-edit-mode')).toBeOnTheScreen();
+      });
+    });
+
+    /**
+     * Test 57: Form data preserved after error (EDIT mode)
+     */
+    it('Given API error When update fails Then form data still present', async () => {
+      // Arrange
+      (RecipeService.updateRecipe as jest.Mock).mockResolvedValue({
+        success: false,
+        error: 'Server error',
+      });
+
+      const route = {
+        params: { recipeId: 'recipe-123' },
+        key: 'test-key',
+        name: 'RecipeDetail' as const,
+      };
+
+      renderWithProviders(
+        <RecipeDetailScreen
+          navigation={mockNavigation}
+          route={route}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeOnTheScreen();
+      });
+
+      // Enter EDIT mode
+      fireEvent.press(screen.getByTestId('recipe-detail-edit-fab'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-edit-mode')).toBeOnTheScreen();
+      });
+
+      // Modify title
+      const titleInput = screen.getByTestId('recipe-detail-edit-form-title');
+      fireEvent.changeText(titleInput, 'Modified Title');
+
+      // Act - Submit changes
+      const submitButton = screen.getByTestId('recipe-detail-edit-form-submit');
+      fireEvent.press(submitButton);
+
+      // Assert - Form should still have modified data
+      await waitFor(() => {
+        expect(screen.getByDisplayValue('Modified Title')).toBeVisible();
+      });
+    });
+
+    /**
+     * Test 58: User can retry after error (EDIT mode)
+     */
+    it('Given previous error When user resubmits Then update mutation triggers again', async () => {
+      // Arrange - First call fails, second succeeds
+      (RecipeService.updateRecipe as jest.Mock)
+        .mockResolvedValueOnce({
+          success: false,
+          error: 'Server error',
+        })
+        .mockResolvedValueOnce({
+          success: true,
+          data: {
+            ...mockRecipe,
+            title: 'Updated Title',
+          },
+        });
+
+      const route = {
+        params: { recipeId: 'recipe-123' },
+        key: 'test-key',
+        name: 'RecipeDetail' as const,
+      };
+
+      renderWithProviders(
+        <RecipeDetailScreen
+          navigation={mockNavigation}
+          route={route}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeOnTheScreen();
+      });
+
+      // Enter EDIT mode
+      fireEvent.press(screen.getByTestId('recipe-detail-edit-fab'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-edit-mode')).toBeOnTheScreen();
+      });
+
+      const submitButton = screen.getByTestId('recipe-detail-edit-form-submit');
+
+      // First submission (fails)
+      fireEvent.press(submitButton);
+      await waitFor(() => {
+        expect(RecipeService.updateRecipe).toHaveBeenCalledTimes(1);
+      });
+
+      // Second submission (succeeds)
+      fireEvent.press(submitButton);
+      await waitFor(() => {
+        expect(RecipeService.updateRecipe).toHaveBeenCalledTimes(2);
+      });
+
+      // Should return to VIEW mode after success
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeOnTheScreen();
       });
     });
   });

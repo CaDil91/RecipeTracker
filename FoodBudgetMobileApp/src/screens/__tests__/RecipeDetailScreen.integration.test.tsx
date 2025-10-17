@@ -1,23 +1,24 @@
 /**
- * RecipeDetailScreen Integration Tests - VIEW & CREATE Modes (Stories 8 & 9)
+ * RecipeDetailScreen Integration Tests - VIEW, CREATE & EDIT Modes (Stories 8, 9 & 10)
  *
  * Testing Framework:
- * - 89.5% Narrow Integration (17 tests): Single external dependency (MSW)
- * - 10.5% Broad Integration (2 tests): Critical business workflows
+ * - 90.9% Narrow Integration (20 tests): Single external dependency (MSW)
+ * - 9.1% Broad Integration (2 tests): Critical business workflows
  *
  * Focus: Testing integration with API via MSW, NOT business logic
  * Using: MSW for API stubs, React Query for caching, Real navigation
  *
  * Story 8 (VIEW Mode): 13 tests - PASSING
  * Story 9 (CREATE Mode): 6 tests - TDD Red phase (will fail until implemented)
+ * Story 10 (EDIT Mode): 3 tests - TDD Red phase (will fail until implemented)
  *
  * Test Distribution by Fowler Category:
  * - Section 1 (Risk-Based Priority): 2 tests (1 VIEW + 1 CREATE)
  * - Section 2 (Happy Path): 3 tests (2 VIEW + 1 CREATE)
- * - Section 3 (Contract Validation): 3 tests (2 VIEW + 1 CREATE)
- * - Section 4 (Error Propagation): 4 tests (3 VIEW + 1 CREATE)
+ * - Section 3 (Contract Validation): 4 tests (2 VIEW + 1 CREATE + 1 EDIT)
+ * - Section 4 (Error Propagation): 5 tests (3 VIEW + 1 CREATE + 1 EDIT)
  * - Section 5 (Data Integrity): 2 tests (1 VIEW + 1 CREATE)
- * - Section 6 (Failure Modes): 3 tests (2 VIEW + 1 CREATE)
+ * - Section 6 (Failure Modes): 4 tests (2 VIEW + 1 CREATE + 1 EDIT)
  * - Section 7 (Backwards Compatibility): 2 tests (2 VIEW)
  */
 
@@ -439,11 +440,80 @@ describe('RecipeDetailScreen Integration Tests - VIEW & CREATE Modes (Stories 8 
         });
       }, { timeout: 3000 });
     });
+
+    /**
+     * NARROW TEST (EDIT Mode): PUT API request sends correct RecipeRequestDto structure
+     * Integration: Form data → useMutation → MSW PUT API with contract verification
+     */
+    it('Should successfully send RecipeRequestDto structure through PUT API in EDIT mode', async () => {
+      // Arrange: MSW verifies PUT request structure
+      let putApiCalled = false;
+      let putApiReceivedCorrectStructure = false;
+
+      server.use(
+        // Initial GET for VIEW mode
+        http.get(`*/api/Recipe/${testRecipeId}`, () => {
+          return HttpResponse.json(fullRecipeResponse);
+        }),
+        // PUT for EDIT mode save
+        http.put(`*/api/Recipe/${testRecipeId}`, async ({ request }) => {
+          putApiCalled = true;
+          const payload = await request.json() as Record<string, any>;
+          // Verify API contract structure (integration point)
+          putApiReceivedCorrectStructure =
+            payload?.hasOwnProperty('title') &&
+            payload?.hasOwnProperty('servings') &&
+            payload?.hasOwnProperty('category') &&
+            payload?.hasOwnProperty('instructions') &&
+            payload?.hasOwnProperty('imageUrl');
+          return HttpResponse.json(
+            {
+              ...fullRecipeResponse,
+              ...payload,
+            },
+            { status: 200 }
+          );
+        })
+      );
+
+      const route = {
+        params: { recipeId: testRecipeId },
+        key: 'test-key',
+        name: 'RecipeDetail' as const,
+      };
+
+      // Act: Render in VIEW mode, enter EDIT mode, submit
+      renderWithProviders(
+        <RecipeDetailScreen navigation={mockNavigation} route={route} />
+      );
+
+      // Wait for VIEW mode
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeVisible();
+      });
+
+      // Enter EDIT mode
+      fireEvent.press(screen.getByTestId('recipe-detail-edit-fab'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-edit-mode')).toBeVisible();
+      });
+
+      // Submit
+      fireEvent.press(screen.getByTestId('recipe-detail-edit-form-submit'));
+
+      // Assert: Integration successful - correct contract structure sent
+      await waitFor(() => {
+        expect(putApiCalled).toBe(true);
+        expect(putApiReceivedCorrectStructure).toBe(true); // Correct contract structure
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeVisible(); // Returned to VIEW mode
+      }, { timeout: 3000 });
+    });
   });
 
   /**
    * ====================================================================
-   * SECTION 4: ERROR PROPAGATION (4 tests - Narrow Integration)
+   * SECTION 4: ERROR PROPAGATION (5 tests - Narrow Integration)
    * Error propagation through integration layers, not UI display
    * ====================================================================
    */
@@ -607,6 +677,67 @@ describe('RecipeDetailScreen Integration Tests - VIEW & CREATE Modes (Stories 8 
         expect(errorApiCalled).toBe(true);
         expect(mockNavigation.navigate).not.toHaveBeenCalled(); // Error prevented navigation
         expect(screen.getByTestId('recipe-detail-create-form-submit')).toBeVisible(); // Form still present
+      }, { timeout: 3000 });
+    });
+
+    /**
+     * NARROW TEST (EDIT Mode): Error propagation through PUT mutation to onError handler
+     * Integration: PUT API error → useMutation onError → stays in EDIT mode
+     */
+    it('Should propagate PUT API errors through mutation layer keeping component in EDIT mode', async () => {
+      // Arrange: MSW returns 500 error for PUT request
+      let putErrorApiCalled = false;
+
+      server.use(
+        // Initial GET for VIEW mode
+        http.get(`*/api/Recipe/${testRecipeId}`, () => {
+          return HttpResponse.json(fullRecipeResponse);
+        }),
+        // PUT returns error
+        http.put(`*/api/Recipe/${testRecipeId}`, () => {
+          putErrorApiCalled = true;
+          return HttpResponse.json(
+            {
+              type: 'https://tools.ietf.org/html/rfc7231#section-6.6.1',
+              title: 'An error occurred while processing your request.',
+              status: 500,
+              detail: 'Internal server error during update',
+            },
+            { status: 500 }
+          );
+        })
+      );
+
+      const route = {
+        params: { recipeId: testRecipeId },
+        key: 'test-key',
+        name: 'RecipeDetail' as const,
+      };
+
+      // Act: Render in VIEW mode, enter EDIT mode, submit
+      renderWithProviders(
+        <RecipeDetailScreen navigation={mockNavigation} route={route} />
+      );
+
+      // Wait for VIEW mode
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeVisible();
+      });
+
+      // Enter EDIT mode
+      fireEvent.press(screen.getByTestId('recipe-detail-edit-fab'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-edit-mode')).toBeVisible();
+      });
+
+      // Submit (triggers error)
+      fireEvent.press(screen.getByTestId('recipe-detail-edit-form-submit'));
+
+      // Assert: Error propagated, component stays in EDIT mode (integration point)
+      await waitFor(() => {
+        expect(putErrorApiCalled).toBe(true); // PUT API was called
+        expect(screen.getByTestId('recipe-detail-edit-mode')).toBeVisible(); // Still in EDIT mode
       }, { timeout: 3000 });
     });
   });
@@ -834,6 +965,67 @@ describe('RecipeDetailScreen Integration Tests - VIEW & CREATE Modes (Stories 8 
         expect(mockNavigation.navigate).toHaveBeenCalledWith('RecipeDetail', {
           recipeId: cacheRecipeId, // onSuccess handler executed successfully
         });
+      }, { timeout: 3000 });
+    });
+
+    /**
+     * NARROW TEST (EDIT Mode): PUT mutation success triggers mode transition
+     * Integration: PUT mutation success → onSuccess → mode transition to VIEW
+     */
+    it('Should trigger onSuccess handler and transition to VIEW mode when PUT succeeds', async () => {
+      // Arrange: MSW returns successful update
+      let putApiCalled = false;
+
+      server.use(
+        // Initial GET for VIEW mode
+        http.get(`*/api/Recipe/${testRecipeId}`, () => {
+          return HttpResponse.json(fullRecipeResponse);
+        }),
+        // PUT success
+        http.put(`*/api/Recipe/${testRecipeId}`, async ({ request }) => {
+          putApiCalled = true;
+          const payload = await request.json() as Record<string, any>;
+          return HttpResponse.json(
+            {
+              ...fullRecipeResponse,
+              ...payload,
+              title: 'Updated Recipe Title',
+            },
+            { status: 200 }
+          );
+        })
+      );
+
+      const route = {
+        params: { recipeId: testRecipeId },
+        key: 'test-key',
+        name: 'RecipeDetail' as const,
+      };
+
+      // Act: Render in VIEW mode, enter EDIT mode, submit
+      renderWithProviders(
+        <RecipeDetailScreen navigation={mockNavigation} route={route} />
+      );
+
+      // Wait for VIEW mode
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeVisible();
+      });
+
+      // Enter EDIT mode
+      fireEvent.press(screen.getByTestId('recipe-detail-edit-fab'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-edit-mode')).toBeVisible();
+      });
+
+      // Submit
+      fireEvent.press(screen.getByTestId('recipe-detail-edit-form-submit'));
+
+      // Assert: Integration chain executed (PUT API → onSuccess → VIEW mode)
+      await waitFor(() => {
+        expect(putApiCalled).toBe(true); // PUT API called
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeVisible(); // onSuccess transition to VIEW mode
       }, { timeout: 3000 });
     });
   });

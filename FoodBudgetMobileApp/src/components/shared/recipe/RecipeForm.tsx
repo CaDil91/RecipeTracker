@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { HelperText } from 'react-native-paper';
 import { RecipeRequestDto, RecipeResponseDto } from '../../../lib/shared';
@@ -15,10 +15,14 @@ import { ZodError } from 'zod';
 export interface RecipeFormProps {
   initialValues?: Partial<RecipeResponseDto>;
   onSubmit: (data: RecipeRequestDto) => void | Promise<void>;
-  onCancel?: () => void;
+  onCancel?: (hasChanges: boolean) => void;
   submitLabel?: string;
   isLoading?: boolean;
   testID?: string;
+}
+
+export interface RecipeFormRef {
+  hasFormChanges: () => boolean;
 }
 
 interface FormErrors {
@@ -29,14 +33,14 @@ interface FormErrors {
   imageUrl?: string;
 }
 
-export const RecipeForm: React.FC<RecipeFormProps> = ({
+const RecipeFormComponent = forwardRef<RecipeFormRef, RecipeFormProps>(({
   initialValues,
   onSubmit,
   onCancel,
   submitLabel = 'Save Recipe',
   isLoading = false,
   testID = 'recipe-form',
-}) => {
+}, ref) => {
   const [title, setTitle] = useState(initialValues?.title || '');
   const [instructions, setInstructions] = useState(initialValues?.instructions || '');
   const [servings, setServings] = useState<number | undefined>(initialValues?.servings || 1);
@@ -59,6 +63,11 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({
       isMountedRef.current = false;
     };
   }, []);
+
+  // Expose hasFormChanges via ref (2025 pattern: useImperativeHandle)
+  useImperativeHandle(ref, () => ({
+    hasFormChanges,
+  }));
 
   const validateForm = (): boolean => {
     try {
@@ -136,6 +145,29 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({
   const getFieldError = (field: keyof FormErrors): string | undefined => {
     // Hybrid validation: Only show errors after user has attempted to submit
     return hasAttemptedSubmit ? errors[field] : undefined;
+  };
+
+  const hasFormChanges = (): boolean => {
+    // Compare current values to initial values
+    const initialTitle = initialValues?.title || '';
+    const initialInstructions = initialValues?.instructions || '';
+    const initialServings = initialValues?.servings || 1;
+    const initialCategory = initialValues?.category || '';
+    const initialImageUrl = initialValues?.imageUrl || '';
+
+    return (
+      title !== initialTitle ||
+      instructions !== initialInstructions ||
+      servings !== initialServings ||
+      category !== initialCategory ||
+      imageUrl !== initialImageUrl
+    );
+  };
+
+  const handleCancel = () => {
+    if (onCancel) {
+      onCancel(hasFormChanges());
+    }
   };
 
   return (
@@ -217,7 +249,7 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({
           <Button
             title="Cancel"
             variant="secondary"
-            onPress={onCancel}
+            onPress={handleCancel}
             disabled={isLoading || internalLoading}
             fullWidth
             testID={`${testID}-cancel`}
@@ -226,7 +258,7 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({
       </View>
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {
@@ -245,3 +277,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
 });
+
+// Export with the display name for debugging (2025 pattern)
+RecipeFormComponent.displayName = 'RecipeForm';
+export const RecipeForm = RecipeFormComponent;

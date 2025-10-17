@@ -16,5 +16,5 @@ export { EmptyState, type EmptyStateProps } from './feedback/EmptyState';
 
 // Recipe Components
 export { RecipeCard, type RecipeCardProps } from './recipe/RecipeCard';
-export { RecipeForm, type RecipeFormProps } from './recipe/RecipeForm';
+export { RecipeForm, type RecipeFormProps, type RecipeFormRef } from './recipe/RecipeForm';
 export { RecipeList, type RecipeListProps } from './recipe/RecipeList';

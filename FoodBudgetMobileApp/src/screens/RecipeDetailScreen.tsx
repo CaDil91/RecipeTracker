@@ -1,7 +1,5 @@
 /**
  * RecipeDetailScreen - Unified screen for viewing, editing, and creating recipes
- * Story 9: CREATE Mode (Future)
- * Story 10: EDIT Mode (Future)
  *
  * VIEW Mode Features:
  * - Display recipe details with Material Design 3 styling
@@ -9,15 +7,23 @@
  * - TanStack Query integration for data fetching
  * - Responsive layout with scrolling support
  * - Conditional rendering for optional fields (image, category, instructions)
+ * - Edit FAB to transition to EDIT mode
+ *
+ * EDIT Mode Features:
+ * - Edit existing recipe with pre-populated form
+ * - Save changes with PUT API
+ * - Cancel with confirmation dialog (only if form has changes)
+ * - Success: transition to VIEW mode with snackbar
+ * - Error: stay in EDIT mode with snackbar
  */
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, Image } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ActivityIndicator, useTheme, IconButton, Surface, Divider, Snackbar } from 'react-native-paper';
+import { ActivityIndicator, useTheme, IconButton, Surface, Divider, Snackbar, FAB, Portal, Dialog, Button } from 'react-native-paper';
 import { RecipeDetailScreenNavigationProp, RecipeDetailScreenRouteProp } from '../types/navigation';
 import { RecipeService, RecipeRequestDto } from '../lib/shared';
-import { RecipeForm } from '../components/shared';
+import { RecipeForm, RecipeFormRef } from '../components/shared';
 
 type RecipeDetailScreenProps = {
   navigation: RecipeDetailScreenNavigationProp;
@@ -39,7 +45,13 @@ const RecipeDetailScreen: React.FC<RecipeDetailScreenProps> = ({ navigation, rou
   const { recipeId } = routeParams;
 
   // Track edit state for VIEW → EDIT transition (local state, not navigation)
-  const [isEditing] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+
+  // Confirmation dialog state
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+
+  // Ref to access RecipeForm's hasFormChanges function (2025 pattern: useImperativeHandle)
+  const recipeFormRef = useRef<RecipeFormRef>(null);
 
   // Derive mode from recipeId and edit state (React 19 best practice: derive from props)
   const currentMode: 'view' | 'edit' | 'create' =
@@ -111,9 +123,77 @@ const RecipeDetailScreen: React.FC<RecipeDetailScreenProps> = ({ navigation, rou
     },
   });
 
-  // Handle form submission
+  // EDIT mode mutation
+  const updateMutation = useMutation({
+    mutationFn: async (data: RecipeRequestDto) => {
+      if (!recipeId) {
+        throw new Error('Recipe ID is required for update');
+      }
+      const response = await RecipeService.updateRecipe(recipeId, data);
+      if (!response.success) {
+        throw new Error(
+          typeof response.error === 'string'
+            ? response.error
+            : response.error.title || 'Failed to update recipe'
+        );
+      }
+      return response.data;
+    },
+    onSuccess: () => {
+      // Show a success message
+      setSnackbarMessage('Recipe updated successfully!');
+      setSnackbarVisible(true);
+
+      // Invalidate caches
+      void queryClient.invalidateQueries({ queryKey: ['recipe', recipeId] });
+      void queryClient.invalidateQueries({ queryKey: ['recipes'] });
+
+      // Transition back to VIEW mode
+      setIsEditing(false);
+    },
+    onError: (error: Error) => {
+      // Show an error message (stay in EDIT mode)
+      setSnackbarMessage(error.message || 'Failed to update recipe. Please try again.');
+      setSnackbarVisible(true);
+    },
+  });
+
+  // Handle form submissions
   const handleCreateSubmit = (data: RecipeRequestDto) => {
     createMutation.mutate(data);
+  };
+
+  const handleEditSubmit = (data: RecipeRequestDto) => {
+    updateMutation.mutate(data);
+  };
+
+  // Handle cancel in EDIT mode - receives hasChanges from RecipeForm
+  const handleEditCancel = (hasChanges: boolean) => {
+    if (hasChanges) {
+      // Show a confirmation dialog if there are unsaved changes
+      setShowCancelDialog(true);
+    } else {
+      // Return to VIEW mode immediately if no changes
+      setIsEditing(false);
+    }
+  };
+
+  // Confirm cancellation (discard changes)
+  const confirmCancel = () => {
+    setShowCancelDialog(false);
+    setIsEditing(false);
+  };
+
+  // Handle back button press (mode-aware)
+  const handleBackButton = () => {
+    if (currentMode === 'edit') {
+      // In EDIT mode, check for changes and behave like the Cancel button
+      const hasChanges = recipeFormRef.current?.hasFormChanges() ?? false;
+      handleEditCancel(hasChanges);
+    } else {
+      // In VIEW or CREATE mode, navigate back
+      navigation.goBack();
+    }
   };
 
   // Dynamic styles using theme
@@ -284,6 +364,111 @@ const RecipeDetailScreen: React.FC<RecipeDetailScreenProps> = ({ navigation, rou
             </View>
           )}
         </ScrollView>
+
+        {/* Edit FAB - Story 10 */}
+        <FAB
+          icon="pencil"
+          style={{ position: 'absolute', right: 16, bottom: 16 }}
+          onPress={() => setIsEditing(true)}
+          testID="recipe-detail-edit-fab"
+          accessibilityLabel="Edit recipe"
+        />
+
+        {/* Snackbar for success/error messages */}
+        <Snackbar
+          visible={snackbarVisible}
+          onDismiss={() => setSnackbarVisible(false)}
+          duration={3000}
+          action={{
+            label: 'Dismiss',
+            onPress: () => setSnackbarVisible(false),
+          }}
+        >
+          {snackbarMessage}
+        </Snackbar>
+      </View>
+    );
+  }
+
+  // EDIT mode - edit existing recipe (Story 10)
+  if (currentMode === 'edit' && recipe) {
+    return (
+      <View style={dynamicStyles.container} testID="recipe-detail-edit-mode">
+        {/* Header with back button */}
+        <Surface style={dynamicStyles.header}>
+          <IconButton
+            icon="arrow-left"
+            size={24}
+            onPress={handleBackButton}
+            testID="recipe-detail-back-button"
+            accessibilityLabel="Go back to recipe list"
+            accessibilityRole="button"
+          />
+        </Surface>
+
+        {/* Scrollable form content */}
+        <ScrollView
+          style={dynamicStyles.container}
+          contentContainerStyle={dynamicStyles.contentContainer}
+          testID="recipe-detail-scroll-view"
+        >
+          <RecipeForm
+            ref={recipeFormRef}
+            initialValues={{
+              title: recipe.title,
+              servings: recipe.servings,
+              category: recipe.category,
+              instructions: recipe.instructions,
+              imageUrl: recipe.imageUrl,
+            }}
+            onSubmit={handleEditSubmit}
+            onCancel={handleEditCancel}
+            submitLabel="Save Changes"
+            isLoading={updateMutation.isPending}
+            testID="recipe-detail-edit-form"
+          />
+        </ScrollView>
+
+        {/* Confirmation Dialog */}
+        <Portal>
+          <Dialog
+            visible={showCancelDialog}
+            onDismiss={() => setShowCancelDialog(false)}
+            testID="recipe-detail-cancel-dialog"
+          >
+            <Dialog.Title>Discard Changes?</Dialog.Title>
+            <Dialog.Content>
+              <Text>Are you sure you want to discard your changes?</Text>
+            </Dialog.Content>
+            <Dialog.Actions>
+              <Button
+                onPress={() => setShowCancelDialog(false)}
+                testID="recipe-detail-cancel-dialog-dismiss"
+              >
+                No
+              </Button>
+              <Button
+                onPress={confirmCancel}
+                testID="recipe-detail-cancel-dialog-confirm"
+              >
+                Yes
+              </Button>
+            </Dialog.Actions>
+          </Dialog>
+        </Portal>
+
+        {/* Snackbar for success/error messages */}
+        <Snackbar
+          visible={snackbarVisible}
+          onDismiss={() => setSnackbarVisible(false)}
+          duration={3000}
+          action={{
+            label: 'Dismiss',
+            onPress: () => setSnackbarVisible(false),
+          }}
+        >
+          {snackbarMessage}
+        </Snackbar>
       </View>
     );
   }

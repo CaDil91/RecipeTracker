@@ -8,13 +8,7 @@
  * - Responsive layout with scrolling support
  * - Conditional rendering for optional fields (image, category, instructions)
  * - Edit FAB to transition to EDIT mode
- *
- * EDIT Mode Features:
- * - Edit existing recipe with pre-populated form
- * - Save changes with PUT API
- * - Cancel with confirmation dialog (only if form has changes)
- * - Success: transition to VIEW mode with snackbar
- * - Error: stay in EDIT mode with snackbar
+ * - Delete button in header with confirmation dialog
  */
 
 import React, { useState, useRef } from 'react';
@@ -49,6 +43,7 @@ const RecipeDetailScreen: React.FC<RecipeDetailScreenProps> = ({ navigation, rou
 
   // Confirmation dialog state
   const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   // Ref to access RecipeForm's hasFormChanges function (2025 pattern: useImperativeHandle)
   const recipeFormRef = useRef<RecipeFormRef>(null);
@@ -158,6 +153,39 @@ const RecipeDetailScreen: React.FC<RecipeDetailScreenProps> = ({ navigation, rou
     },
   });
 
+  // DELETE mutation (Story 11)
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      if (!recipeId) {
+        throw new Error('Recipe ID is required for delete');
+      }
+      const response = await RecipeService.deleteRecipe(recipeId);
+      if (!response.success) {
+        throw new Error(
+          typeof response.error === 'string'
+            ? response.error
+            : response.error.title || 'Failed to delete recipe'
+        );
+      }
+    },
+    onSuccess: () => {
+      // Show a success message
+      setSnackbarMessage('Recipe deleted successfully!');
+      setSnackbarVisible(true);
+
+      // Invalidate recipe list cache
+      void queryClient.invalidateQueries({ queryKey: ['recipes'] });
+
+      // Navigate back to the list
+      navigation.goBack();
+    },
+    onError: (error: Error) => {
+      // Show error message (stay on screen)
+      setSnackbarMessage(error.message || 'Failed to delete recipe. Please try again.');
+      setSnackbarVisible(true);
+    },
+  });
+
   // Handle form submissions
   const handleCreateSubmit = (data: RecipeRequestDto) => {
     createMutation.mutate(data);
@@ -182,6 +210,17 @@ const RecipeDetailScreen: React.FC<RecipeDetailScreenProps> = ({ navigation, rou
   const confirmCancel = () => {
     setShowCancelDialog(false);
     setIsEditing(false);
+  };
+
+  // Handle delete button press
+  const handleDeletePress = () => {
+    setShowDeleteDialog(true);
+  };
+
+  // Confirm delete
+  const confirmDelete = () => {
+    setShowDeleteDialog(false);
+    deleteMutation.mutate();
   };
 
   // Handle back button press (mode-aware)
@@ -296,7 +335,7 @@ const RecipeDetailScreen: React.FC<RecipeDetailScreenProps> = ({ navigation, rou
   if (currentMode === 'view' && recipe) {
     return (
       <View style={dynamicStyles.container} testID="recipe-detail-view-mode">
-        {/* Header with back button */}
+        {/* Header with a back button and delete button */}
         <Surface style={dynamicStyles.header}>
           <IconButton
             icon="arrow-left"
@@ -304,6 +343,15 @@ const RecipeDetailScreen: React.FC<RecipeDetailScreenProps> = ({ navigation, rou
             onPress={() => navigation.goBack()}
             testID="recipe-detail-back-button"
             accessibilityLabel="Go back to recipe list"
+            accessibilityRole="button"
+          />
+          <View style={{ flex: 1 }} />
+          <IconButton
+            icon="delete"
+            size={24}
+            onPress={handleDeletePress}
+            testID="recipe-detail-delete-button"
+            accessibilityLabel="Delete recipe"
             accessibilityRole="button"
           />
         </Surface>
@@ -374,6 +422,34 @@ const RecipeDetailScreen: React.FC<RecipeDetailScreenProps> = ({ navigation, rou
           accessibilityLabel="Edit recipe"
         />
 
+        {/* Delete Confirmation Dialog */}
+        <Portal>
+          <Dialog
+            visible={showDeleteDialog}
+            onDismiss={() => setShowDeleteDialog(false)}
+            testID="recipe-detail-delete-dialog"
+          >
+            <Dialog.Title>Delete Recipe?</Dialog.Title>
+            <Dialog.Content>
+              <Text>Are you sure you want to delete this recipe? This action cannot be undone.</Text>
+            </Dialog.Content>
+            <Dialog.Actions>
+              <Button
+                onPress={() => setShowDeleteDialog(false)}
+                testID="recipe-detail-delete-dialog-cancel"
+              >
+                Cancel
+              </Button>
+              <Button
+                onPress={confirmDelete}
+                testID="recipe-detail-delete-dialog-confirm"
+              >
+                Delete
+              </Button>
+            </Dialog.Actions>
+          </Dialog>
+        </Portal>
+
         {/* Snackbar for success/error messages */}
         <Snackbar
           visible={snackbarVisible}
@@ -394,7 +470,7 @@ const RecipeDetailScreen: React.FC<RecipeDetailScreenProps> = ({ navigation, rou
   if (currentMode === 'edit' && recipe) {
     return (
       <View style={dynamicStyles.container} testID="recipe-detail-edit-mode">
-        {/* Header with back button */}
+        {/* Header with a back button and delete button */}
         <Surface style={dynamicStyles.header}>
           <IconButton
             icon="arrow-left"
@@ -402,6 +478,15 @@ const RecipeDetailScreen: React.FC<RecipeDetailScreenProps> = ({ navigation, rou
             onPress={handleBackButton}
             testID="recipe-detail-back-button"
             accessibilityLabel="Go back to recipe list"
+            accessibilityRole="button"
+          />
+          <View style={{ flex: 1 }} />
+          <IconButton
+            icon="delete"
+            size={24}
+            onPress={handleDeletePress}
+            testID="recipe-detail-delete-button"
+            accessibilityLabel="Delete recipe"
             accessibilityRole="button"
           />
         </Surface>
@@ -429,7 +514,7 @@ const RecipeDetailScreen: React.FC<RecipeDetailScreenProps> = ({ navigation, rou
           />
         </ScrollView>
 
-        {/* Confirmation Dialog */}
+        {/* Cancel Changes Confirmation Dialog */}
         <Portal>
           <Dialog
             visible={showCancelDialog}
@@ -452,6 +537,34 @@ const RecipeDetailScreen: React.FC<RecipeDetailScreenProps> = ({ navigation, rou
                 testID="recipe-detail-cancel-dialog-confirm"
               >
                 Yes
+              </Button>
+            </Dialog.Actions>
+          </Dialog>
+        </Portal>
+
+        {/* Delete Confirmation Dialog */}
+        <Portal>
+          <Dialog
+            visible={showDeleteDialog}
+            onDismiss={() => setShowDeleteDialog(false)}
+            testID="recipe-detail-delete-dialog"
+          >
+            <Dialog.Title>Delete Recipe?</Dialog.Title>
+            <Dialog.Content>
+              <Text>Are you sure you want to delete this recipe? This action cannot be undone.</Text>
+            </Dialog.Content>
+            <Dialog.Actions>
+              <Button
+                onPress={() => setShowDeleteDialog(false)}
+                testID="recipe-detail-delete-dialog-cancel"
+              >
+                Cancel
+              </Button>
+              <Button
+                onPress={confirmDelete}
+                testID="recipe-detail-delete-dialog-confirm"
+              >
+                Delete
               </Button>
             </Dialog.Actions>
           </Dialog>

@@ -1,22 +1,18 @@
 /**
- * RecipeDetailScreen Integration Tests - VIEW, CREATE & EDIT Modes (Stories 8, 9 & 10)
+ * RecipeDetailScreen Integration Tests - VIEW, CREATE, EDIT & DELETE Modes (Stories 8, 9, 10 & 11)
  *
  * Testing Framework:
- * - 90.9% Narrow Integration (20 tests): Single external dependency (MSW)
- * - 9.1% Broad Integration (2 tests): Critical business workflows
+ * - 92% Narrow Integration (23 tests): Single external dependency (MSW)
+ * - 8% Broad Integration (2 tests): Critical business workflows
  *
  * Focus: Testing integration with API via MSW, NOT business logic
  * Using: MSW for API stubs, React Query for caching, Real navigation
  *
- * Story 8 (VIEW Mode): 13 tests - PASSING
- * Story 9 (CREATE Mode): 6 tests - TDD Red phase (will fail until implemented)
- * Story 10 (EDIT Mode): 3 tests - TDD Red phase (will fail until implemented)
- *
  * Test Distribution by Fowler Category:
- * - Section 1 (Risk-Based Priority): 2 tests (1 VIEW + 1 CREATE)
+ * - Section 1 (Risk-Based Priority): 3 tests (1 VIEW + 1 CREATE + 1 DELETE)
  * - Section 2 (Happy Path): 3 tests (2 VIEW + 1 CREATE)
  * - Section 3 (Contract Validation): 4 tests (2 VIEW + 1 CREATE + 1 EDIT)
- * - Section 4 (Error Propagation): 5 tests (3 VIEW + 1 CREATE + 1 EDIT)
+ * - Section 4 (Error Propagation): 7 tests (3 VIEW + 1 CREATE + 1 EDIT + 2 DELETE)
  * - Section 5 (Data Integrity): 2 tests (1 VIEW + 1 CREATE)
  * - Section 6 (Failure Modes): 4 tests (2 VIEW + 1 CREATE + 1 EDIT)
  * - Section 7 (Backwards Compatibility): 2 tests (2 VIEW)
@@ -158,6 +154,56 @@ describe('RecipeDetailScreen Integration Tests - VIEW & CREATE Modes (Stories 8 
           recipeId: persistRecipeId, // Navigation integration successful
         });
       });
+    });
+
+    /**
+     * NARROW INTEGRATION TEST (DELETE - Story 11)
+     * Integration: Delete button → confirmation → MSW DELETE API → Navigation
+     */
+    it('Should successfully delete recipe through API and trigger navigation on success', async () => {
+      // Arrange: Set up MSW for GET and DELETE
+      let deleteApiCalled = false;
+      server.use(
+        http.get(`*/api/Recipe/${testRecipeId}`, () => {
+          return HttpResponse.json(fullRecipeResponse);
+        }),
+        http.delete(`*/api/Recipe/${testRecipeId}`, () => {
+          deleteApiCalled = true;
+          return new HttpResponse(null, { status: 204 });
+        })
+      );
+
+      const route = {
+        params: { recipeId: testRecipeId },
+        key: 'test-key',
+        name: 'RecipeDetail' as const,
+      };
+
+      // Act: User deletes recipe
+      renderWithProviders(
+        <RecipeDetailScreen navigation={mockNavigation} route={route} />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeVisible();
+      });
+
+      // Press delete button
+      fireEvent.press(screen.getByTestId('recipe-detail-delete-button'));
+
+      // Wait for the dialog to appear (check for confirmation button testID)
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-delete-dialog-confirm')).toBeTruthy();
+      });
+
+      // Confirm delete
+      fireEvent.press(screen.getByTestId('recipe-detail-delete-dialog-confirm'));
+
+      // Assert: Integration layers communicated successfully
+      await waitFor(() => {
+        expect(deleteApiCalled).toBe(true); // DELETE API called
+        expect(mockNavigation.goBack).toHaveBeenCalledTimes(1); // Navigation triggered
+      }, { timeout: 3000 });
     });
   });
 
@@ -738,6 +784,118 @@ describe('RecipeDetailScreen Integration Tests - VIEW & CREATE Modes (Stories 8 
       await waitFor(() => {
         expect(putErrorApiCalled).toBe(true); // PUT API was called
         expect(screen.getByTestId('recipe-detail-edit-mode')).toBeVisible(); // Still in EDIT mode
+      }, { timeout: 3000 });
+    });
+
+    /**
+     * NARROW TEST (DELETE - Story 11): DELETE API 500 error propagation
+     * Integration: DELETE API error → onError handler → no navigation
+     */
+    it('Should propagate DELETE API 500 error through mutation layer preventing navigation', async () => {
+      // Arrange: MSW returns 500 error for DELETE
+      let deleteApiCalled = false;
+      server.use(
+        http.get(`*/api/Recipe/${testRecipeId}`, () => {
+          return HttpResponse.json(fullRecipeResponse);
+        }),
+        http.delete(`*/api/Recipe/${testRecipeId}`, () => {
+          deleteApiCalled = true;
+          return HttpResponse.json(
+            {
+              type: 'https://tools.ietf.org/html/rfc7231#section-6.6.1',
+              title: 'An error occurred while processing your request.',
+              status: 500,
+              detail: 'Failed to delete recipe',
+            },
+            { status: 500 }
+          );
+        })
+      );
+
+      const route = {
+        params: { recipeId: testRecipeId },
+        key: 'test-key',
+        name: 'RecipeDetail' as const,
+      };
+
+      // Act: User tries to delete
+      renderWithProviders(
+        <RecipeDetailScreen navigation={mockNavigation} route={route} />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeVisible();
+      });
+
+      fireEvent.press(screen.getByTestId('recipe-detail-delete-button'));
+
+      // Wait for the dialog to appear (check for confirmation button testID)
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-delete-dialog-confirm')).toBeTruthy();
+      });
+
+      fireEvent.press(screen.getByTestId('recipe-detail-delete-dialog-confirm'));
+
+      // Assert: Error propagated, navigation blocked
+      await waitFor(() => {
+        expect(deleteApiCalled).toBe(true);
+        expect(mockNavigation.goBack).not.toHaveBeenCalled(); // Error prevented navigation
+      }, { timeout: 3000 });
+    });
+
+    /**
+     * NARROW TEST (DELETE - Story 11): DELETE API 404 error handling
+     * Integration: DELETE 404 → onError handler → user-friendly error
+     */
+    it('Should handle DELETE API 404 error gracefully without crashing', async () => {
+      // Arrange: MSW returns 404 (recipe already deleted)
+      let deleteApiCalled = false;
+      server.use(
+        http.get(`*/api/Recipe/${testRecipeId}`, () => {
+          return HttpResponse.json(fullRecipeResponse);
+        }),
+        http.delete(`*/api/Recipe/${testRecipeId}`, () => {
+          deleteApiCalled = true;
+          return HttpResponse.json(
+            {
+              type: 'https://tools.ietf.org/html/rfc7231#section-6.5.4',
+              title: 'Not Found',
+              status: 404,
+              detail: 'Recipe not found',
+            },
+            { status: 404 }
+          );
+        })
+      );
+
+      const route = {
+        params: { recipeId: testRecipeId },
+        key: 'test-key',
+        name: 'RecipeDetail' as const,
+      };
+
+      // Act: User tries to delete
+      renderWithProviders(
+        <RecipeDetailScreen navigation={mockNavigation} route={route} />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeVisible();
+      });
+
+      fireEvent.press(screen.getByTestId('recipe-detail-delete-button'));
+
+      // Wait for the dialog to appear (check for confirmation button testID)
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-delete-dialog-confirm')).toBeTruthy();
+      });
+
+      fireEvent.press(screen.getByTestId('recipe-detail-delete-dialog-confirm'));
+
+      // Assert: Error handled gracefully
+      await waitFor(() => {
+        expect(deleteApiCalled).toBe(true);
+        expect(mockNavigation.goBack).not.toHaveBeenCalled();
       }, { timeout: 3000 });
     });
   });

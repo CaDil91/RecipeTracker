@@ -15,11 +15,11 @@
  */
 
 import React from 'react';
-import { screen, waitFor, fireEvent } from '@testing-library/react-native';
-import { renderWithProviders, createMockNavigation } from '../../test/test-utils';
+import {fireEvent, screen, waitFor} from '@testing-library/react-native';
+import {createMockNavigation, renderWithProviders} from '../../test/test-utils';
 import RecipeDetailScreen from '../RecipeDetailScreen';
-import { RecipeService } from '../../lib/shared';
-import { RecipeDetailScreenNavigationProp } from '../../types/navigation';
+import {RecipeService} from '../../lib/shared';
+import {RecipeDetailScreenNavigationProp} from '../../types/navigation';
 
 // Mock only external boundaries - API and Navigation
 // IMPORTANT: Use jest.requireActual to preserve schema exports
@@ -29,6 +29,7 @@ jest.mock('../../lib/shared', () => ({
     getRecipeById: jest.fn(),
     createRecipe: jest.fn(),
     updateRecipe: jest.fn(),
+    deleteRecipe: jest.fn(),
   },
 }));
 
@@ -744,6 +745,226 @@ describe('RecipeDetailScreen Unit Tests', () => {
       expect(mockGoBack).not.toHaveBeenCalled();
     });
 
+    /**
+     * Test 19: Delete button visible in VIEW mode (Story 11 - DELETE)
+     * RISK: User can't access delete functionality
+     */
+    it('Given VIEW mode When rendered Then delete button appears in header', async () => {
+      // Arrange
+      const route = {
+        params: { recipeId: 'recipe-123' },
+        key: 'test-key',
+        name: 'RecipeDetail' as const,
+      };
+
+      // Act
+      renderWithProviders(
+        <RecipeDetailScreen
+          navigation={mockNavigation}
+          route={route}
+        />
+      );
+
+      // Assert - Delete button visible
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeOnTheScreen();
+        expect(screen.getByTestId('recipe-detail-delete-button')).toBeOnTheScreen();
+      });
+    });
+
+    /**
+     * Test 20: Delete button visible in EDIT mode (Story 11 - DELETE)
+     * RISK: Inconsistent UI between modes
+     */
+    it('Given EDIT mode When rendered Then delete button appears in header', async () => {
+      // Arrange
+      const route = {
+        params: { recipeId: 'recipe-123' },
+        key: 'test-key',
+        name: 'RecipeDetail' as const,
+      };
+
+      renderWithProviders(
+        <RecipeDetailScreen
+          navigation={mockNavigation}
+          route={route}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeOnTheScreen();
+      });
+
+      // Enter EDIT mode
+      fireEvent.press(screen.getByTestId('recipe-detail-edit-fab'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-edit-mode')).toBeOnTheScreen();
+      });
+
+      // Assert - Delete button still visible in EDIT mode
+      expect(screen.getByTestId('recipe-detail-delete-button')).toBeOnTheScreen();
+    });
+
+    /**
+     * Test 21: Delete confirmation dialog triggers (Story 11 - DELETE)
+     * RISK: Accidental deletes without confirmation
+     */
+    it('Given user presses delete button When in VIEW mode Then confirmation dialog shows', async () => {
+      // Arrange
+      const route = {
+        params: { recipeId: 'recipe-123' },
+        key: 'test-key',
+        name: 'RecipeDetail' as const,
+      };
+
+      renderWithProviders(
+        <RecipeDetailScreen
+          navigation={mockNavigation}
+          route={route}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeOnTheScreen();
+      });
+
+      // Act - Press the delete button
+      const deleteButton = screen.getByTestId('recipe-detail-delete-button');
+      fireEvent.press(deleteButton);
+
+      // Assert - Confirmation dialog appears
+      await waitFor(() => {
+        expect(screen.getByText(/delete recipe/i)).toBeOnTheScreen();
+        expect(screen.getByText(/are you sure/i)).toBeOnTheScreen();
+      });
+    });
+
+    /**
+     * Test 22: Delete mutation executes on confirmation (Story 11 - DELETE)
+     * RISK: Core delete functionality doesn't work
+     */
+    it('Given confirmation dialog shown When user confirms Then deleteRecipe called with correct ID', async () => {
+      // Arrange
+      const mockDeleteRecipe = jest.fn().mockResolvedValue({ success: true });
+      (RecipeService as any).deleteRecipe = mockDeleteRecipe;
+
+      const route = {
+        params: { recipeId: 'recipe-123' },
+        key: 'test-key',
+        name: 'RecipeDetail' as const,
+      };
+
+      renderWithProviders(
+        <RecipeDetailScreen
+          navigation={mockNavigation}
+          route={route}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeOnTheScreen();
+      });
+
+      // Press delete button
+      fireEvent.press(screen.getByTestId('recipe-detail-delete-button'));
+
+      await waitFor(() => {
+        expect(screen.getByText(/delete recipe/i)).toBeOnTheScreen();
+      });
+
+      // Act - Confirm delete
+      const confirmButton = screen.getByTestId('recipe-detail-delete-dialog-confirm');
+      fireEvent.press(confirmButton);
+
+      // Assert - RecipeService.deleteRecipe called with correct ID
+      await waitFor(() => {
+        expect(mockDeleteRecipe).toHaveBeenCalledWith('recipe-123');
+      });
+    });
+
+    /**
+     * Test 23: Navigation after successful delete (Story 11 - DELETE)
+     * RISK: User stuck on the deleted recipe screen
+     */
+    it('Given delete succeeds When mutation completes Then navigates back', async () => {
+      // Arrange
+      (RecipeService as any).deleteRecipe = jest.fn().mockResolvedValue({success: true});
+
+      const route = {
+        params: { recipeId: 'recipe-123' },
+        key: 'test-key',
+        name: 'RecipeDetail' as const,
+      };
+
+      renderWithProviders(
+        <RecipeDetailScreen
+          navigation={mockNavigation}
+          route={route}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeOnTheScreen();
+      });
+
+      // Press delete and confirm
+      fireEvent.press(screen.getByTestId('recipe-detail-delete-button'));
+
+      await waitFor(() => {
+        expect(screen.getByText(/delete recipe/i)).toBeOnTheScreen();
+      });
+
+      fireEvent.press(screen.getByTestId('recipe-detail-delete-dialog-confirm'));
+
+      // Assert - Navigation triggered
+      await waitFor(() => {
+        expect(mockGoBack).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    /**
+     * Test 24: Cache invalidation after successful delete (Story 11 - DELETE)
+     * RISK: Stale data in recipe list
+     */
+    it('Given delete succeeds When mutation completes Then recipe list cache invalidated', async () => {
+      // Arrange
+      (RecipeService as any).deleteRecipe = jest.fn().mockResolvedValue({success: true});
+
+      const route = {
+        params: { recipeId: 'recipe-123' },
+        key: 'test-key',
+        name: 'RecipeDetail' as const,
+      };
+
+      const { queryClient } = renderWithProviders(
+        <RecipeDetailScreen
+          navigation={mockNavigation}
+          route={route}
+        />
+      ) as any;
+
+      const invalidateSpy = jest.spyOn(queryClient || (global as any).testQueryClient, 'invalidateQueries');
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeOnTheScreen();
+      });
+
+      // Press delete and confirm
+      fireEvent.press(screen.getByTestId('recipe-detail-delete-button'));
+
+      await waitFor(() => {
+        expect(screen.getByText(/delete recipe/i)).toBeOnTheScreen();
+      });
+
+      fireEvent.press(screen.getByTestId('recipe-detail-delete-dialog-confirm'));
+
+      // Assert - Cache invalidated
+      await waitFor(() => {
+        expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['recipes'] });
+      });
+    });
+
   });
 
   /**
@@ -1374,6 +1595,51 @@ describe('RecipeDetailScreen Unit Tests', () => {
         );
       });
     });
+
+    /**
+     * Test 27: Cancel confirmation dialog (Story 11 - DELETE)
+     * EDGE CASE: User changes mind about deleting
+     */
+    it('Given confirmation dialog shown When user presses Cancel Then dialog closes and no delete occurs', async () => {
+      // Arrange
+      const mockDeleteRecipe = jest.fn();
+      (RecipeService as any).deleteRecipe = mockDeleteRecipe;
+
+      const route = {
+        params: { recipeId: 'recipe-123' },
+        key: 'test-key',
+        name: 'RecipeDetail' as const,
+      };
+
+      renderWithProviders(
+        <RecipeDetailScreen
+          navigation={mockNavigation}
+          route={route}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeOnTheScreen();
+      });
+
+      // Press delete button
+      fireEvent.press(screen.getByTestId('recipe-detail-delete-button'));
+
+      await waitFor(() => {
+        expect(screen.getByText(/delete recipe/i)).toBeOnTheScreen();
+      });
+
+      // Act - Press Cancel
+      const cancelButton = screen.getByTestId('recipe-detail-delete-dialog-cancel');
+      fireEvent.press(cancelButton);
+
+      // Assert - Dialog closes, no deletion
+      await waitFor(() => {
+        expect(screen.queryByText(/delete recipe/i)).toBeNull();
+      }, { timeout: 3000 });
+      expect(mockDeleteRecipe).not.toHaveBeenCalled();
+      expect(mockGoBack).not.toHaveBeenCalled();
+    });
   });
 
   /**
@@ -1559,6 +1825,33 @@ describe('RecipeDetailScreen Unit Tests', () => {
       await waitFor(() => {
         expect(RecipeService.createRecipe).toHaveBeenCalled();
       });
+    });
+
+    /**
+     * Test 32: Delete button NOT in CREATE mode (Story 11 - DELETE)
+     * BOUNDARY: Delete only for existing recipes
+     */
+    it('Given CREATE mode When rendered Then delete button does NOT appear', async () => {
+      // Arrange
+      const route = {
+        params: {}, // No recipeId = CREATE mode
+        key: 'test-key',
+        name: 'RecipeDetail' as const,
+      };
+
+      // Act
+      renderWithProviders(
+        <RecipeDetailScreen
+          navigation={mockNavigation}
+          route={route}
+        />
+      );
+
+      // Assert - Delete button should NOT be visible (can't delete non-existent recipe)
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-create-mode')).toBeOnTheScreen();
+      });
+      expect(screen.queryByTestId('recipe-detail-delete-button')).toBeNull();
     });
   });
 
@@ -2014,6 +2307,36 @@ describe('RecipeDetailScreen Unit Tests', () => {
       const editFAB = screen.getByTestId('recipe-detail-edit-fab');
       expect(editFAB.props.accessibilityLabel).toBeTruthy();
       expect(editFAB.props.accessibilityRole).toBe('button');
+    });
+
+    /**
+     * Test 46: Delete button accessibility (Story 11 - DELETE)
+     * BUSINESS RULE: Accessibility compliance
+     */
+    it('Given delete button When screen reader active Then has proper accessibility label', async () => {
+      // Arrange
+      const route = {
+        params: { recipeId: 'recipe-123' },
+        key: 'test-key',
+        name: 'RecipeDetail' as const,
+      };
+
+      renderWithProviders(
+        <RecipeDetailScreen
+          navigation={mockNavigation}
+          route={route}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeOnTheScreen();
+      });
+
+      // Assert - Delete button has accessibility properties
+      const deleteButton = screen.getByTestId('recipe-detail-delete-button');
+      expect(deleteButton.props.accessibilityLabel).toBeTruthy();
+      expect(deleteButton.props.accessibilityLabel).toMatch(/delete/i);
+      expect(deleteButton.props.accessibilityRole).toBe('button');
     });
   });
 
@@ -2786,6 +3109,139 @@ describe('RecipeDetailScreen Unit Tests', () => {
       // Should return to VIEW mode after success
       await waitFor(() => {
         expect(screen.getByTestId('recipe-detail-view-mode')).toBeOnTheScreen();
+      });
+    });
+
+    /**
+     * Test 59: Delete API error shows error snackbar (Story 11 - DELETE)
+     * ERROR: API failure handling
+     */
+    it('Given API returns error When delete fails Then error snackbar shows with error message', async () => {
+      // Arrange
+      (RecipeService as any).deleteRecipe = jest.fn().mockResolvedValue({
+        success: false,
+        error: {
+          title: 'Internal Server Error',
+          status: 500,
+          detail: 'Failed to delete recipe',
+        },
+      });
+
+      const route = {
+        params: { recipeId: 'recipe-123' },
+        key: 'test-key',
+        name: 'RecipeDetail' as const,
+      };
+
+      renderWithProviders(
+        <RecipeDetailScreen
+          navigation={mockNavigation}
+          route={route}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeOnTheScreen();
+      });
+
+      // Press delete and confirm
+      fireEvent.press(screen.getByTestId('recipe-detail-delete-button'));
+
+      await waitFor(() => {
+        expect(screen.getByText(/delete recipe/i)).toBeOnTheScreen();
+      });
+
+      fireEvent.press(screen.getByTestId('recipe-detail-delete-dialog-confirm'));
+
+      // Assert - Error snackbar shows
+      await waitFor(() => {
+        expect(screen.getByText(/failed to delete|error/i)).toBeOnTheScreen();
+      });
+    });
+
+    /**
+     * Test 60: Delete API error does NOT navigate away (Story 11 - DELETE)
+     * ERROR: Don't leave the user on broken state
+     */
+    it('Given API returns error When delete fails Then does NOT navigate away', async () => {
+      // Arrange
+      (RecipeService as any).deleteRecipe = jest.fn().mockResolvedValue({
+        success: false,
+        error: 'Failed to delete recipe',
+      });
+
+      const route = {
+        params: { recipeId: 'recipe-123' },
+        key: 'test-key',
+        name: 'RecipeDetail' as const,
+      };
+
+      renderWithProviders(
+        <RecipeDetailScreen
+          navigation={mockNavigation}
+          route={route}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeOnTheScreen();
+      });
+
+      // Press delete and confirm
+      fireEvent.press(screen.getByTestId('recipe-detail-delete-button'));
+
+      await waitFor(() => {
+        expect(screen.getByText(/delete recipe/i)).toBeOnTheScreen();
+      });
+
+      fireEvent.press(screen.getByTestId('recipe-detail-delete-dialog-confirm'));
+
+      // Assert - Still on VIEW mode, navigation NOT called
+      await waitFor(() => {
+        expect(screen.getByText(/failed to delete|error/i)).toBeOnTheScreen();
+      });
+      expect(mockGoBack).not.toHaveBeenCalled();
+    });
+
+    /**
+     * Test 61: Delete network timeout shows error (Story 11 - DELETE)
+     * ERROR: Network failure handling
+     */
+    it('Given network timeout When delete fails Then error snackbar shows timeout message', async () => {
+      // Arrange
+      (RecipeService as any).deleteRecipe = jest.fn().mockRejectedValue(
+          new Error('Network timeout')
+      );
+
+      const route = {
+        params: { recipeId: 'recipe-123' },
+        key: 'test-key',
+        name: 'RecipeDetail' as const,
+      };
+
+      renderWithProviders(
+        <RecipeDetailScreen
+          navigation={mockNavigation}
+          route={route}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeOnTheScreen();
+      });
+
+      // Press delete and confirm
+      fireEvent.press(screen.getByTestId('recipe-detail-delete-button'));
+
+      await waitFor(() => {
+        expect(screen.getByText(/delete recipe/i)).toBeOnTheScreen();
+      });
+
+      fireEvent.press(screen.getByTestId('recipe-detail-delete-dialog-confirm'));
+
+      // Assert - Timeout error shown
+      await waitFor(() => {
+        expect(screen.getByText(/timeout|error/i)).toBeOnTheScreen();
       });
     });
   });

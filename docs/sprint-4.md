@@ -1,459 +1,512 @@
-# Sprint 4: User Management Foundation - Authentication & Data Isolation
+# Sprint 4: User Management & Authentication
 
 ## Sprint Goal
 Transform the recipe demo into a production-ready application with user authentication, secure data isolation, and personalized recipe management.
 
-**Timeline:** Post-Demo (2-3 weeks)  
+**Timeline:** 3-4 weeks  
 **Focus:** User authentication, database security, and user-scoped data management
 
 ---
 
-## Technical Stack
+## Story Ordering & Dependencies
 
-- **Frontend:** React Native + React Native Web + Expo
-- **State Management:** TanStack Query with optimistic updates
-- **Backend:** C# ASP.NET Core API (Azure deployment)
-- **Database:** SQL Server with EF Core
-- **Authentication:** JWT tokens (15min access, 7day refresh)
-- **Security:** User-scoped data isolation, secure token storage
+```
+Story 1: Database Schema (Foundation)
+    ↓
+Story 2: Backend User API (Register, Login, Profile)
+    ↓
+Story 3: JWT Authentication & Security (Tokens, Middleware)
+    ↓
+Story 4: Frontend Authentication (Screens, Context, Navigation)
+    ↓
+Story 5: User-Scoped Recipe Data (Data Isolation)
+    ↓
+Story 6: Password Reset Flow (Requires Stories 1-3)
+    ↓
+Story 7: Email Verification (Optional - Requires Story 6)
+```
 
 ---
 
-## Phase 1: Database Foundation
+# Story 1: Database Schema - User Management Foundation
 
-### Story 11: Database Schema - User Management Foundation
-**Status:** 🔴 NOT STARTED  
 **Priority:** HIGH  
 **Type:** Database & Backend Infrastructure  
+**Dependencies:** None  
 **Estimated Effort:** Medium
 
-**User Story:**
-As a developer, I need to add user management to the database schema so that recipes can be associated with specific users and properly isolated.
+## User Story
+> As a developer, I need a user management database schema so that recipes can be associated with specific users and properly isolated.
 
-**Implementation:**
-
-#### Database Schema Changes
-```sql
--- Create User table
-CREATE TABLE users (
-    id NVARCHAR(450) PRIMARY KEY,              -- GUID
-    email NVARCHAR(256) NOT NULL UNIQUE,
-    password_hash NVARCHAR(MAX) NOT NULL,
-    name NVARCHAR(100),
-    created_at DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
-    INDEX IX_users_email (email)
-);
-
--- Add UserId to Recipe table
-ALTER TABLE recipes 
-ADD user_id NVARCHAR(450) NOT NULL
-    CONSTRAINT FK_recipes_users 
-    FOREIGN KEY (user_id) 
-    REFERENCES users(id);
-
--- Add index for efficient user recipe lookups
-CREATE INDEX IX_recipes_user_id ON recipes(user_id, created_at DESC);
-
--- Create default system user for existing recipes
-INSERT INTO users (id, email, password_hash, name, created_at)
-VALUES ('system-user-guid', 'system@foodbudget.app', 'no-login', 'System User', GETUTCDATE());
-
--- Assign existing recipes to system user
-UPDATE recipes 
-SET user_id = 'system-user-guid' 
-WHERE user_id IS NULL;
-```
-
-#### Tasks
-- [ ] Create database migration for User table
-- [ ] Create database migration for Recipe.UserId foreign key
-- [ ] Create User entity class in backend
-- [ ] Update Recipe entity to include User navigation property
-- [ ] Create and run data migration for existing recipes
-- [ ] Add database indexes for performance
-- [ ] Verify referential integrity constraints
-
-**Files to Create:**
-- `FoodBudgetAPI/Entities/User.cs`
-- Database migration: `xxxx_CreateUserTable.cs`
-- Database migration: `xxxx_AddUserIdToRecipes.cs`
-
-**Files to Modify:**
-- `FoodBudgetAPI/Entities/Recipe.cs` (add UserId and User navigation)
-- `FoodBudgetAPI/Data/ApplicationDbContext.cs` (add User DbSet)
-
-**Acceptance Criteria:**
-- ✅ User table created with proper schema
-- ✅ Recipe table updated with UserId foreign key
-- ✅ Database index created on Recipe.UserId
-- ✅ Migration script handles existing data
-- ✅ All existing recipes associated with system user
+## Acceptance Criteria
+- ✅ User table created with proper schema (id, email, password_hash, name, created_at)
+- ✅ Recipe table updated with user_id foreign key
+- ✅ Database indexes created for performance (user.email, recipe.user_id)
+- ✅ Migration script handles existing data (assigns to system user)
+- ✅ All existing recipes associated with default system user
 - ✅ Database constraints ensure referential integrity
 
+## Technical Notes
+**User Table Fields:**
+- id (GUID primary key)
+- email (unique, indexed)
+- password_hash (BCrypt hashed)
+- name (optional)
+- created_at (timestamp)
+
+**Recipe Table Changes:**
+- Add user_id foreign key to users table
+- Index on (user_id, created_at) for efficient queries
+
+**Data Migration Strategy:**
+- Create system user for existing recipes
+- Assign all orphaned recipes to system user
+- Prevent data loss during migration
+
+## Files to Create
+- Backend: `Entities/User.cs`
+- Backend: `Migrations/xxxx_CreateUserTable.cs`
+- Backend: `Migrations/xxxx_AddUserIdToRecipes.cs`
+
+## Files to Modify
+- Backend: `Entities/Recipe.cs` (add User navigation property)
+- Backend: `Data/ApplicationDbContext.cs` (add User DbSet)
+
 ---
 
-### Story 12: Backend API - User Management Endpoints
-**Status:** 🔴 NOT STARTED  
+# Story 2: Backend API - User Management Endpoints
+
 **Priority:** HIGH  
 **Type:** Backend API Development  
-**Dependencies:** Story 11  
+**Dependencies:** Story 1  
 **Estimated Effort:** Medium
 
-**User Story:**
-As a frontend developer, I need user management API endpoints so that users can register, login, and manage their accounts.
+## User Story
+> As a user, I want to register for an account and log in so that I can access my personal recipe collection.
 
-**API Endpoints:**
-```csharp
-// Authentication
-POST /api/auth/register     // Register new user
-POST /api/auth/login        // Login user
-POST /api/auth/refresh      // Refresh JWT token
-POST /api/auth/logout       // Logout user
+## Acceptance Criteria
+- ✅ POST /api/auth/register endpoint (email, password, name)
+- ✅ POST /api/auth/login endpoint (email, password)
+- ✅ GET /api/users/profile endpoint (authenticated)
+- ✅ PUT /api/users/profile endpoint (update name)
+- ✅ Input validation for all endpoints (email format, password strength)
+- ✅ Password hashing with BCrypt
+- ✅ Proper error handling and HTTP status codes
+- ✅ API documentation updated (Swagger)
+- ✅ Unit tests for all endpoints
 
-// User Profile
-GET  /api/users/profile     // Get current user profile
-PUT  /api/users/profile     // Update user profile
-```
+## Technical Notes
+**Password Requirements:**
+- Minimum 8 characters
+- At least one uppercase letter
+- At least one lowercase letter
+- At least one number
+- At least one special character
+
+**Error Responses:**
+- 400: Validation errors (weak password, invalid email)
+- 401: Invalid credentials
+- 409: Email already exists
+- 500: Server errors
 
 **DTOs:**
-```csharp
-public class RegisterRequestDto
-{
-    public string Email { get; set; }
-    public string Password { get; set; }
-    public string Name { get; set; }
-}
+- RegisterRequestDto, LoginRequestDto
+- AuthResponseDto (includes user info)
+- UserDto (profile information)
 
-public class LoginRequestDto
-{
-    public string Email { get; set; }
-    public string Password { get; set; }
-}
-
-public class AuthResponseDto
-{
-    public string AccessToken { get; set; }
-    public string RefreshToken { get; set; }
-    public UserDto User { get; set; }
-}
-
-public class UserDto
-{
-    public string Id { get; set; }
-    public string Email { get; set; }
-    public string Name { get; set; }
-    public DateTime CreatedAt { get; set; }
-}
-```
-
-#### Tasks
-- [ ] Create AuthController with register/login endpoints
-- [ ] Create UsersController with profile endpoints
-- [ ] Create UserService with business logic
-- [ ] Implement password hashing with BCrypt
-- [ ] Create user DTOs (request/response)
-- [ ] Add input validation and error handling
-- [ ] Add rate limiting to auth endpoints
-- [ ] Create unit tests for UserService
-- [ ] Create integration tests for auth endpoints
-- [ ] Update Swagger documentation
-
-**Files to Create:**
-- `FoodBudgetAPI/Controllers/AuthController.cs`
-- `FoodBudgetAPI/Controllers/UsersController.cs`
-- `FoodBudgetAPI/Services/IUserService.cs`
-- `FoodBudgetAPI/Services/UserService.cs`
-- `FoodBudgetAPI/Models/DTOs/Requests/RegisterRequestDto.cs`
-- `FoodBudgetAPI/Models/DTOs/Requests/LoginRequestDto.cs`
-- `FoodBudgetAPI/Models/DTOs/Responses/AuthResponseDto.cs`
-- `FoodBudgetAPI/Models/DTOs/Responses/UserDto.cs`
-
-**Acceptance Criteria:**
-- ✅ POST /api/auth/register endpoint implemented
-- ✅ POST /api/auth/login endpoint implemented
-- ✅ GET /api/users/profile endpoint implemented
-- ✅ Input validation for all user endpoints
-- ✅ Proper error handling and HTTP status codes
-- ✅ Password hashing implemented securely
-- ✅ API documentation updated (Swagger)
-- ✅ Unit tests for all user endpoints
+## Files to Create
+- Backend: `Controllers/AuthController.cs`
+- Backend: `Controllers/UsersController.cs`
+- Backend: `Services/IUserService.cs`
+- Backend: `Services/UserService.cs`
+- Backend: `Models/DTOs/Requests/RegisterRequestDto.cs`
+- Backend: `Models/DTOs/Requests/LoginRequestDto.cs`
+- Backend: `Models/DTOs/Responses/AuthResponseDto.cs`
+- Backend: `Models/DTOs/Responses/UserDto.cs`
 
 ---
 
-## Phase 2: Security & Authentication
+# Story 3: JWT Authentication & Security
 
-### Story 13: JWT Authentication & Security
-**Status:** 🔴 NOT STARTED  
 **Priority:** HIGH  
 **Type:** Security & Authentication  
-**Dependencies:** Story 12  
-**Estimated Effort:** Medium
-
-**User Story:**
-As a system administrator, I need secure JWT token authentication so that user sessions are protected and API access is properly controlled.
-
-**Implementation:**
-
-#### JWT Configuration
-```csharp
-// appsettings.json
-{
-  "JwtSettings": {
-    "SecretKey": "your-256-bit-secret-key-here",
-    "Issuer": "FoodBudgetAPI",
-    "Audience": "FoodBudgetApp",
-    "AccessTokenExpiryMinutes": 15,
-    "RefreshTokenExpiryDays": 7
-  }
-}
-```
-
-#### Middleware Setup
-```csharp
-// Program.cs
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
-    {
-        // JWT configuration
-    });
-
-builder.Services.AddAuthorization();
-
-app.UseAuthentication();
-app.UseAuthorization();
-```
-
-#### Tasks
-- [ ] Create JWT authentication middleware
-- [ ] Create TokenService for JWT generation/validation
-- [ ] Add authentication to all recipe endpoints
-- [ ] Implement token refresh mechanism
-- [ ] Add proper CORS configuration
-- [ ] Add security headers middleware
-- [ ] Create authorization policies
-- [ ] Update recipe endpoints to require authentication
-- [ ] Add user context to recipe operations
-- [ ] Create integration tests for JWT auth
-
-**Files to Create:**
-- `FoodBudgetAPI/Services/ITokenService.cs`
-- `FoodBudgetAPI/Services/TokenService.cs`
-- `FoodBudgetAPI/Middleware/JwtMiddleware.cs`
-- `FoodBudgetAPI/Models/JwtSettings.cs`
-
-**Files to Modify:**
-- `FoodBudgetAPI/Controllers/RecipesController.cs` (add [Authorize] attributes)
-- `FoodBudgetAPI/Services/RecipeService.cs` (filter by authenticated user)
-- `FoodBudgetAPI/Program.cs` (register auth services)
-- `appsettings.json` (JWT configuration)
-
-**Acceptance Criteria:**
-- ✅ JWT middleware implemented for authentication
-- ✅ All recipe endpoints protected with JWT validation
-- ✅ Token generation includes proper user claims
-- ✅ Token expiration and refresh logic implemented
-- ✅ Secure token signing with proper secrets
-- ✅ Authorization middleware filters recipes by authenticated user
-- ✅ Security headers and CORS properly configured
-- ✅ Authentication integration tests passing
-
----
-
-## Phase 3: Frontend Authentication
-
-### Story 14: Frontend Authentication Integration
-**Status:** 🔴 NOT STARTED  
-**Priority:** HIGH  
-**Type:** Frontend Authentication  
-**Dependencies:** Story 13  
+**Dependencies:** Story 2  
 **Estimated Effort:** Large
 
-**User Story:**
-As a recipe app user, I want to log in with my credentials so that I can access my personal recipe collection.
+## User Story
+> As a system administrator, I need secure JWT token authentication so that user sessions are protected and API access is properly controlled.
 
-**Implementation:**
+## Acceptance Criteria
+- ✅ JWT middleware implemented for authentication
+- ✅ Access tokens (15 minute expiry)
+- ✅ Refresh tokens (7 day expiry)
+- ✅ Token refresh endpoint (POST /api/auth/refresh)
+- ✅ All recipe endpoints protected with [Authorize] attribute
+- ✅ Security headers middleware (CORS, CSP)
+- ✅ Rate limiting on auth endpoints (max 5 login attempts per IP per minute)
+- ✅ Account lockout after 5 failed login attempts (15 minute lockout)
+- ✅ Security audit logging (login attempts, password changes)
+- ✅ Integration tests for JWT authentication flow
 
-#### Authentication Service
-```typescript
-// lib/shared/services/AuthService.ts
-export class AuthService {
-  static async register(data: RegisterRequest): Promise<AuthResponse> {
-    // Implementation
-  }
-  
-  static async login(data: LoginRequest): Promise<AuthResponse> {
-    // Implementation
-  }
-  
-  static async logout(): Promise<void> {
-    // Clear tokens and state
-  }
-  
-  static async refreshToken(): Promise<AuthResponse> {
-    // Token refresh logic
-  }
-}
-```
+## Technical Notes
+**JWT Configuration:**
+- Secret key from Azure Key Vault (production)
+- Proper issuer and audience claims
+- User ID and email in token claims
 
-#### Authentication Context
-```typescript
-// contexts/AuthContext.tsx
-interface AuthContextType {
-  user: User | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  login: (credentials: LoginRequest) => Promise<void>;
-  register: (data: RegisterRequest) => Promise<void>;
-  logout: () => Promise<void>;
-}
-```
+**Security Enhancements:**
+- Rate limiting per IP address
+- Account lockout mechanism (5 failed attempts = 15min lockout)
+- Audit logging for security events
+- HTTPS enforcement in production
 
-#### Navigation Structure
-```typescript
-// navigation/AppNavigator.tsx
-export const AppNavigator = () => {
-  const { isAuthenticated, isLoading } = useAuth();
-  
-  if (isLoading) {
-    return <SplashScreen />;
-  }
-  
-  return isAuthenticated ? <AuthenticatedNavigator /> : <AuthNavigator />;
-};
-```
+**Token Service:**
+- Generate access and refresh tokens
+- Validate token signatures
+- Handle token expiration
+- Revoke tokens on logout
 
-#### Tasks
-- [ ] Create AuthService for API integration
-- [ ] Create AuthContext for state management
-- [ ] Create LoginScreen with form validation
-- [ ] Create RegisterScreen with form validation
-- [ ] Implement secure token storage (AsyncStorage)
-- [ ] Add authentication navigation guards
-- [ ] Create logout functionality
-- [ ] Add loading states and error handling
-- [ ] Update RecipeService to include auth headers
-- [ ] Create authentication hooks (useAuth, useLogin, etc.)
-- [ ] Add MSW handlers for auth endpoints
-- [ ] Create integration tests for auth flows
+## Files to Create
+- Backend: `Services/ITokenService.cs`
+- Backend: `Services/TokenService.cs`
+- Backend: `Middleware/JwtMiddleware.cs`
+- Backend: `Models/JwtSettings.cs`
 
-**Files to Create:**
-- `screens/auth/LoginScreen.tsx`
-- `screens/auth/RegisterScreen.tsx`
-- `screens/auth/SplashScreen.tsx`
-- `lib/shared/services/AuthService.ts`
-- `contexts/AuthContext.tsx`
-- `hooks/useAuth.ts`
-- `hooks/useLogin.ts`
-- `hooks/useRegister.ts`
-- `navigation/AuthNavigator.tsx`
-- `navigation/AuthenticatedNavigator.tsx`
+## Files to Modify
+- Backend: `Controllers/RecipesController.cs` (add [Authorize])
+- Backend: `Services/RecipeService.cs` (filter by authenticated user)
+- Backend: `Program.cs` (register auth services)
+- Backend: `appsettings.json` (JWT configuration)
 
-**Files to Modify:**
-- `navigation/AppNavigator.tsx` (conditional routing)
-- `lib/shared/services/RecipeService.ts` (add auth headers)
-- `lib/shared/services/FetchClient.ts` (token interceptors)
-- `mocks/handlers/auth.ts` (new MSW handlers)
+---
 
-**Acceptance Criteria:**
-- ✅ Login screen with email/password form
-- ✅ Registration screen with validation
-- ✅ AuthService for login/register/logout API calls
+# Story 4: Frontend Authentication Integration
+
+**Priority:** HIGH  
+**Type:** Frontend Authentication  
+**Dependencies:** Story 3  
+**Estimated Effort:** Large
+
+## User Story
+> As a user, I want to log in with my credentials so that I can access my personal recipe collection.
+
+## Acceptance Criteria
+- ✅ LoginScreen with email/password form
+- ✅ RegisterScreen with validation
 - ✅ AuthContext for app-wide authentication state
-- ✅ Token storage with AsyncStorage
+- ✅ AuthService for API integration (login, register, logout)
+- ✅ Secure token storage (AsyncStorage for mobile)
 - ✅ Navigation guards for authenticated routes
 - ✅ Logout functionality clears tokens and state
-- ✅ Loading states and error handling for auth operations
+- ✅ Loading states during authentication
+- ✅ Error handling with user-friendly messages
+- ✅ Auto-redirect to login if token expires
+- ✅ MSW handlers for auth endpoints
 - ✅ Integration tests for auth flows
 
+## Technical Notes
+**Authentication Flow:**
+- Unauthenticated: Show AuthNavigator (Login/Register screens)
+- Authenticated: Show MainNavigator (Recipe app)
+- Loading: Show SplashScreen while checking token
+
+**Token Management:**
+- Store access and refresh tokens securely
+- Auto-refresh tokens before expiry
+- Clear tokens on logout
+- Handle 401 responses globally
+
+**Form Validation:**
+- Zod schemas for email and password
+- Real-time validation feedback
+- Progressive disclosure of errors
+
+## Files to Create
+- Frontend: `screens/auth/LoginScreen.tsx`
+- Frontend: `screens/auth/RegisterScreen.tsx`
+- Frontend: `screens/auth/SplashScreen.tsx`
+- Frontend: `lib/shared/services/AuthService.ts`
+- Frontend: `contexts/AuthContext.tsx`
+- Frontend: `hooks/useAuth.ts`
+- Frontend: `navigation/AuthNavigator.tsx`
+- Frontend: `lib/shared/schemas/auth.schema.ts`
+
+## Files to Modify
+- Frontend: `navigation/AppNavigator.tsx` (conditional routing)
+- Frontend: `lib/shared/services/RecipeService.ts` (add auth headers)
+- Frontend: `lib/shared/services/FetchClient.ts` (token interceptors)
+- Frontend: `mocks/handlers/auth.ts` (MSW handlers)
+
 ---
 
-## Phase 4: User-Scoped Data
+# Story 5: User-Scoped Recipe Data
 
-### Story 15: User-Scoped Recipe Data
-**Status:** 🔴 NOT STARTED  
 **Priority:** MEDIUM  
-**Type:** Data Filtering & User Experience  
-**Dependencies:** Story 14  
+**Type:** Data Filtering & Security  
+**Dependencies:** Story 4  
 **Estimated Effort:** Small
 
-**User Story:**
-As a logged-in user, I want to see only my own recipes so that I have a private, personalized recipe collection.
+## User Story
+> As a logged-in user, I want to see only my own recipes so that I have a private, personalized recipe collection.
 
-**Implementation:**
-
-#### Backend Changes
-- Recipe queries automatically filter by authenticated user
-- Recipe mutations associate with authenticated user
-- Cross-user data access prevention
-
-#### Frontend Changes
-- No changes needed to recipe screens
-- All API calls automatically scoped to authenticated user
-- MSW mocks support user-scoped data
-
-#### Tasks
-- [ ] Update RecipeService to filter by authenticated user
-- [ ] Ensure new recipes are assigned to authenticated user
-- [ ] Add user context to all recipe operations
-- [ ] Update MSW handlers for user-scoped data
-- [ ] Test data isolation between different users
-- [ ] Verify all existing functionality works with user-scoped data
-- [ ] Add integration tests for data isolation
-
-**Files to Modify:**
-- Backend: `FoodBudgetAPI/Services/RecipeService.cs` (add user filtering)
-- Frontend: No recipe screen changes needed
-- Frontend: `mocks/handlers/recipes.ts` (user-scoped mock data)
-
-**Acceptance Criteria:**
+## Acceptance Criteria
 - ✅ Recipe list shows only current user's recipes
 - ✅ New recipes automatically assigned to authenticated user
+- ✅ Recipe updates only allowed for recipe owner
+- ✅ Recipe deletion only allowed for recipe owner
 - ✅ Search and filtering work within user's recipe scope
-- ✅ All existing recipe functionality works with user-scoped data
-- ✅ No breaking changes to existing Recipe screens
+- ✅ Cross-user data access is prevented (backend validation)
+- ✅ All existing recipe functionality works without breaking changes
+- ✅ No frontend recipe screen changes required
 - ✅ Integration tests verify data isolation between users
 
+## Technical Notes
+**Backend Changes:**
+- RecipeService filters all queries by authenticated user ID
+- Recipe creation assigns user_id from JWT claims
+- Recipe update/delete validates ownership
+- Return 403 Forbidden for cross-user access attempts
+
+**Frontend Changes:**
+- No changes to recipe screens needed
+- All API calls automatically scoped to authenticated user
+- MSW handlers support user-scoped mock data
+
+**Testing:**
+- Create two test users
+- Verify User A cannot see User B's recipes
+- Verify User A cannot edit/delete User B's recipes
+
+## Files to Modify
+- Backend: `Services/RecipeService.cs` (add user filtering and validation)
+- Frontend: `mocks/handlers/recipes.ts` (user-scoped mock data)
+
 ---
 
-## BACKLOG: Future Enhancements
+# Story 6: Password Reset Flow
 
-### User-Defined Categories System (Future Sprint)
-**Status:** 🔴 BACKLOG  
+**Priority:** CRITICAL  
+**Type:** Authentication Enhancement  
+**Dependencies:** Stories 1, 2, 3  
+**Estimated Effort:** Large
+
+## User Story
+> As a user, I want to reset my password if I forget it so that I can regain access to my account without contacting support.
+
+## Acceptance Criteria
+- ✅ "Forgot Password?" link on login screen
+- ✅ POST /api/auth/forgot-password endpoint (sends reset email)
+- ✅ POST /api/auth/reset-password endpoint (resets with token)
+- ✅ GET /api/auth/verify-reset-token endpoint (validates token)
+- ✅ ForgotPasswordScreen with email input
+- ✅ ResetPasswordScreen with new password form
+- ✅ Email service integration (SendGrid or AWS SES)
+- ✅ Password reset email template
+- ✅ Password changed confirmation email
+- ✅ Tokens expire after 1 hour
+- ✅ Tokens are single-use (marked as used after reset)
+- ✅ Rate limiting (3 requests per email per hour)
+- ✅ No user enumeration (generic success messages)
+- ✅ Password strength validation enforced
+- ✅ MSW handlers for password reset flow
+- ✅ Integration tests for full reset flow
+
+## Technical Notes
+**Security Requirements:**
+- Tokens stored as SHA256 hashes (not plaintext)
+- 1 hour expiry from creation
+- Single-use enforcement (mark as used)
+- Rate limiting prevents abuse
+- IP address tracking for audit
+- Generic messages prevent user enumeration
+
+**Email Provider Options:**
+- SendGrid (recommended - free tier available)
+- AWS SES (Azure-friendly, cheap)
+- Mailgun (alternative)
+
+**Reset Flow:**
+1. User enters email → Token generated → Email sent
+2. User clicks link → Token validated → Reset form shown
+3. User submits new password → Token marked used → Password updated
+4. Optional: Revoke all refresh tokens (force re-login)
+
+## Files to Create
+- Backend: `Entities/PasswordResetToken.cs`
+- Backend: `Services/IPasswordResetService.cs`
+- Backend: `Services/PasswordResetService.cs`
+- Backend: `Services/IEmailService.cs`
+- Backend: `Services/SendGridEmailService.cs`
+- Backend: `Repositories/IPasswordResetTokenRepository.cs`
+- Backend: `Repositories/PasswordResetTokenRepository.cs`
+- Backend: `Migrations/xxxx_CreatePasswordResetTokensTable.cs`
+- Frontend: `screens/auth/ForgotPasswordScreen.tsx`
+- Frontend: `screens/auth/ResetPasswordScreen.tsx`
+- Frontend: `lib/shared/services/PasswordResetService.ts`
+- Frontend: `lib/shared/schemas/passwordReset.schema.ts`
+- Frontend: `components/auth/PasswordStrengthIndicator.tsx`
+
+## Files to Modify
+- Backend: `Controllers/AuthController.cs` (add reset endpoints)
+- Backend: `appsettings.json` (email service config)
+- Frontend: `screens/auth/LoginScreen.tsx` (add forgot password link)
+- Frontend: `types/navigation.ts` (add reset password routes)
+- Frontend: `navigation/AuthNavigator.tsx` (add new screens)
+
+---
+
+# Story 7: Email Verification Flow (Optional)
+
 **Priority:** MEDIUM  
-**Type:** Feature Enhancement
+**Type:** User Management Enhancement  
+**Dependencies:** Story 6  
+**Estimated Effort:** Medium
 
-**User Story:**
-As a user, I want to create my own categories and assign multiple categories to each recipe so I can organize recipes my way (e.g., "Quick Meals", "Kid-Friendly", "Italian", "Meal Prep").
+## User Story
+> As a user, I want to verify my email address so that my account is secure and I can receive important notifications.
 
-**Notes:**
-- Depends on user authentication being complete
-- Will require category management API and multi-select UI
-- Currently using hardcoded categories from Sprint 3
+## Acceptance Criteria
+- ✅ Verification email sent on registration
+- ✅ GET /api/auth/verify-email/:token endpoint
+- ✅ POST /api/auth/resend-verification endpoint
+- ✅ EmailVerificationPromptScreen after registration
+- ✅ EmailVerificationBanner for unverified users
+- ✅ Verification status shown in profile
+- ✅ Tokens expire after 7 days
+- ✅ Resend rate limiting (3 per hour)
+- ✅ Email verification template
+- ✅ Integration tests for verification flow
+
+## Technical Notes
+**Verification Strategy (Choose One):**
+- **Soft:** User can access app, banner prompts verification
+- **Hard:** Must verify before creating recipes
+- **Strict:** Must verify before any login
+
+**Recommendation:** Start with Soft approach, upgrade if abuse occurs
+
+**Database Options:**
+- Inline on User table (simple)
+- Separate verification_tokens table (scalable, recommended)
+
+**Integration with Password Reset:**
+- Option: Only send reset emails to verified addresses
+- Or: Allow reset for unverified users (less secure)
+
+## Implementation Decision
+**Status:** DEFERRED to Sprint 4 or Sprint 5 depending on:
+- Story 6 (Password Reset) completion timeline
+- Email service reliability after Story 6
+- Sprint 4 bandwidth after completing Stories 1-6
+
+**Include in Sprint 4 if:**
+- Story 6 completes smoothly
+- Email infrastructure is working well
+- Time permits (~1 week additional)
+
+**Defer to Sprint 5 if:**
+- Sprint 4 is already at capacity
+- Want to stabilize password reset first
+- User verification not critical for initial launch
 
 ---
 
-## Success Metrics
+# Sprint 4 Success Metrics
 
-**Authentication Metrics:**
-- [ ] Users can register and login successfully
-- [ ] JWT tokens are generated and validated properly
-- [ ] User sessions persist across app restarts
-- [ ] Logout clears all authentication state
+## Authentication Metrics
+- ✅ Users can register and login successfully
+- ✅ JWT tokens are generated and validated properly
+- ✅ User sessions persist across app restarts
+- ✅ Logout clears all authentication state
 
-**Data Isolation Metrics:**
-- [ ] Users see only their own recipes
-- [ ] Cross-user data access is prevented
-- [ ] New recipes are automatically user-scoped
-- [ ] All existing functionality works without breaking changes
+## Data Isolation Metrics
+- ✅ Users see only their own recipes
+- ✅ Cross-user data access is prevented
+- ✅ New recipes are automatically user-scoped
+- ✅ All existing functionality works without breaking changes
 
-**Technical Metrics:**
-- [ ] All unit tests passing (>90% coverage)
-- [ ] All integration tests passing
-- [ ] No security vulnerabilities in auth flow
-- [ ] Performance remains acceptable with user-scoped queries
+## Security Metrics
+- ✅ Passwords are hashed securely (BCrypt)
+- ✅ Account lockout prevents brute force attacks
+- ✅ Rate limiting protects auth endpoints
+- ✅ Security audit logging captures important events
 
-**User Experience Metrics:**
-- [ ] Login flow is intuitive and fast
-- [ ] Error messages are helpful and clear
-- [ ] Loading states provide good user feedback
-- [ ] App feels responsive during authentication operations
+## User Experience Metrics
+- ✅ Login flow is intuitive and fast (<3 seconds)
+- ✅ Error messages are helpful and clear
+- ✅ Loading states provide good user feedback
+- ✅ Password reset flow works end-to-end (<2 minutes)
+
+## Technical Metrics
+- ✅ All unit tests passing (>90% coverage)
+- ✅ All integration tests passing
+- ✅ No security vulnerabilities in auth flow
+- ✅ Performance remains acceptable with user-scoped queries
+
+---
+
+# Definition of Done (Sprint 4)
+
+## For Each Story
+- ✅ Code implemented and working
+- ✅ API integration tested (where applicable)
+- ✅ Error handling implemented
+- ✅ Loading states shown to user
+- ✅ Works on web platform (mobile optional)
+- ✅ Unit tests passing
+- ✅ Integration tests passing (for API-connected features)
+- ✅ No console errors or warnings
+- ✅ Code reviewed and merged to main branch
+- ✅ Deployed to staging and tested
+
+## For Sprint 4 Overall
+- ✅ All Stories 1-6 complete (Story 7 optional)
+- ✅ Users can register, login, and manage recipes
+- ✅ Password reset functionality working
+- ✅ Data isolation verified between users
+- ✅ Security audit completed
+- ✅ User acceptance testing completed
+- ✅ Deployed to production
+- ✅ Documentation updated
+
+---
+
+# Deployment Checklist
+
+## Before Deployment
+- [ ] Database migrations tested on staging
+- [ ] Email service configured and tested
+- [ ] Environment variables set in Azure
+- [ ] HTTPS enforced in production
+- [ ] Security headers configured
+- [ ] Rate limiting configured
+- [ ] JWT secrets securely stored (Azure Key Vault)
+- [ ] Backup strategy in place
+
+## After Deployment
+- [ ] Test user registration end-to-end
+- [ ] Test login and logout flows
+- [ ] Test password reset flow
+- [ ] Verify data isolation between users
+- [ ] Monitor error logs for 48 hours
+- [ ] Verify email delivery metrics
+- [ ] Check security audit logs
+
+---
+
+# Backlog (Future Sprints)
+
+## Sprint 5 Candidates
+- Multi-category system with user-defined categories
+- Email verification (if deferred from Sprint 4)
+- User profile enhancements (avatar, bio)
+- Change password (while logged in)
+- Delete account (GDPR compliance)
+
+## Sprint 6+ Ideas
+- Social authentication (Google, GitHub)
+- Two-factor authentication (2FA)
+- Session management UI (view all devices)
+- API pagination for large recipe collections
+- Advanced security features (suspicious login alerts)
+- Biometric authentication (Face ID, Touch ID)

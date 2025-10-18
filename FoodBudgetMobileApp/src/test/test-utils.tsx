@@ -34,6 +34,7 @@ interface CustomRenderOptions {
 // 2025 Pattern: Return both render results AND user event instance
 interface CustomRenderResult extends RenderAPI {
   user: ReturnType<typeof userEvent.setup>;
+  queryClient: QueryClient;
 }
 
 export const renderWithProviders = (
@@ -67,6 +68,7 @@ export const renderWithProviders = (
   return {
     ...renderResult,
     user,
+    queryClient,
   };
 };
 

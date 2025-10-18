@@ -137,15 +137,22 @@ Story 7: Email Verification (Optional - Requires Story 6)
 > As a system administrator, I need secure JWT token authentication so that user sessions are protected and API access is properly controlled.
 
 ## Acceptance Criteria
+
+### JWT & Token Management
 - ✅ JWT middleware implemented for authentication
 - ✅ Access tokens (15 minute expiry)
 - ✅ Refresh tokens (7 day expiry)
 - ✅ Token refresh endpoint (POST /api/auth/refresh)
+- ✅ **RefreshToken database table** with IsActive tracking
+- ✅ **Token revocation on logout** (mark refresh token as revoked)
+- ✅ **All refresh tokens revoked on password change** (security best practice)
 - ✅ All recipe endpoints protected with [Authorize] attribute
-- ✅ Security headers middleware (CORS, CSP)
+
+### Security & Protection
+- ✅ **Security headers middleware** (X-Content-Type-Options, X-Frame-Options, X-XSS-Protection, Referrer-Policy, HSTS)
 - ✅ Rate limiting on auth endpoints (max 5 login attempts per IP per minute)
 - ✅ Account lockout after 5 failed login attempts (15 minute lockout)
-- ✅ Security audit logging (login attempts, password changes)
+- ✅ Security audit logging (login attempts, password changes, token revocations)
 - ✅ Integration tests for JWT authentication flow
 
 ## Technical Notes
@@ -164,19 +171,76 @@ Story 7: Email Verification (Optional - Requires Story 6)
 - Generate access and refresh tokens
 - Validate token signatures
 - Handle token expiration
-- Revoke tokens on logout
+- **Save refresh tokens to database with expiry**
+- **Revoke tokens on logout (mark as revoked, not deleted)**
+- **Revoke all user tokens on password change**
+
+**RefreshToken Entity (NEW):**
+```csharp
+public class RefreshToken
+{
+    public Guid Id { get; set; }
+    public Guid UserId { get; set; }
+    public string Token { get; set; } = null!;  // Store hashed token
+    public DateTime ExpiresAt { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime? RevokedAt { get; set; }
+    public string? RevokedByIp { get; set; }
+    public bool IsRevoked => RevokedAt != null;
+    public bool IsExpired => DateTime.UtcNow >= ExpiresAt;
+    public bool IsActive => !IsRevoked && !IsExpired;
+
+    // Navigation
+    public User User { get; set; } = null!;
+}
+```
+
+**Security Headers Middleware (NEW):**
+```csharp
+// Middleware/SecurityHeadersMiddleware.cs
+public class SecurityHeadersMiddleware
+{
+    public async Task InvokeAsync(HttpContext context)
+    {
+        context.Response.Headers.Add("X-Content-Type-Options", "nosniff");
+        context.Response.Headers.Add("X-Frame-Options", "DENY");
+        context.Response.Headers.Add("X-XSS-Protection", "1; mode=block");
+        context.Response.Headers.Add("Referrer-Policy", "strict-origin-when-cross-origin");
+        context.Response.Headers.Add("Permissions-Policy", "geolocation=(), microphone=(), camera=()");
+
+        if (!env.IsDevelopment())
+        {
+            context.Response.Headers.Add("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+        }
+
+        await next(context);
+    }
+}
+```
+
+**Why These Enhancements are Critical for 2025:**
+- **Token Revocation Table:** Cannot implement logout properly without tracking issued tokens. Required for OAuth 2.0 best practices and security audits.
+- **Security Headers:** OWASP Top 10 defense against XSS, clickjacking, MIME sniffing. Security scanners flag missing headers as vulnerabilities.
 
 ## Files to Create
 - Backend: `Services/ITokenService.cs`
 - Backend: `Services/TokenService.cs`
 - Backend: `Middleware/JwtMiddleware.cs`
 - Backend: `Models/JwtSettings.cs`
+- **Backend: `Entities/RefreshToken.cs` - NEW for token tracking**
+- **Backend: `Repositories/IRefreshTokenRepository.cs` - NEW**
+- **Backend: `Repositories/RefreshTokenRepository.cs` - NEW**
+- **Backend: `Middleware/SecurityHeadersMiddleware.cs` - NEW**
+- **Backend: `Migrations/xxxx_CreateRefreshTokensTable.cs` - NEW**
 
 ## Files to Modify
 - Backend: `Controllers/RecipesController.cs` (add [Authorize])
 - Backend: `Services/RecipeService.cs` (filter by authenticated user)
 - Backend: `Program.cs` (register auth services)
 - Backend: `appsettings.json` (JWT configuration)
+- **Backend: `Data/FoodBudgetDbContext.cs` (add DbSet<RefreshToken>)**
+- **Backend: `Middleware/MiddlewareExtensions.cs` (add security headers extension)**
+- **Backend: `Utility/Setup/ApplicationConfiguration.cs` (add security headers to pipeline before exception handler)**
 
 ---
 
@@ -191,18 +255,28 @@ Story 7: Email Verification (Optional - Requires Story 6)
 > As a user, I want to log in with my credentials so that I can access my personal recipe collection.
 
 ## Acceptance Criteria
+
+### Authentication Screens & UI
 - ✅ LoginScreen with email/password form
 - ✅ RegisterScreen with validation
 - ✅ AuthContext for app-wide authentication state
 - ✅ AuthService for API integration (login, register, logout)
-- ✅ Secure token storage (AsyncStorage for mobile)
-- ✅ Navigation guards for authenticated routes
-- ✅ Logout functionality clears tokens and state
 - ✅ Loading states during authentication
 - ✅ Error handling with user-friendly messages
-- ✅ Auto-redirect to login if token expires
+
+### Token Management (ENHANCED)
+- ✅ Secure token storage (AsyncStorage for mobile, web storage for web)
+- ✅ **TokenService with automatic refresh before expiry** (refresh 5 minutes before expiration)
+- ✅ **Race condition protection for concurrent token refresh** (singleton promise pattern)
+- ✅ **Auth interceptor added to FetchClient** (automatic token injection)
+- ✅ **Token expiry handled globally** (401 → logout and redirect to login)
+- ✅ Navigation guards for authenticated routes
+- ✅ Logout functionality clears tokens and state
+
+### Testing
 - ✅ MSW handlers for auth endpoints
 - ✅ Integration tests for auth flows
+- ✅ **Token refresh integration tests** (expiry scenarios)
 
 ## Technical Notes
 **Authentication Flow:**
@@ -210,11 +284,72 @@ Story 7: Email Verification (Optional - Requires Story 6)
 - Authenticated: Show MainNavigator (Recipe app)
 - Loading: Show SplashScreen while checking token
 
-**Token Management:**
+**Token Management (ENHANCED):**
 - Store access and refresh tokens securely
-- Auto-refresh tokens before expiry
+- **Auto-refresh tokens 5 minutes before expiry** (prevents user interruptions)
+- **Singleton promise pattern prevents concurrent refresh** (race condition protection)
 - Clear tokens on logout
-- Handle 401 responses globally
+- Handle 401 responses globally (auto-logout)
+
+**TokenService Implementation (NEW):**
+```typescript
+// lib/shared/services/TokenService.ts
+export class TokenService {
+  private static refreshPromise: Promise<string> | null = null;
+
+  static async getAccessToken(): Promise<string | null> {
+    const token = await AsyncStorage.getItem('access_token');
+    const expiresAt = await AsyncStorage.getItem('token_expires_at');
+
+    if (!token || !expiresAt) return null;
+
+    // Refresh if expiring in next 5 minutes
+    if (Date.now() >= (parseInt(expiresAt) - 5 * 60 * 1000)) {
+      return await this.refreshAccessToken();
+    }
+
+    return token;
+  }
+
+  private static async refreshAccessToken(): Promise<string> {
+    // Prevent concurrent refresh calls (race condition protection)
+    if (this.refreshPromise) {
+      return this.refreshPromise;
+    }
+
+    this.refreshPromise = this._doRefresh();
+    const token = await this.refreshPromise;
+    this.refreshPromise = null;
+    return token;
+  }
+
+  private static async _doRefresh(): Promise<string> {
+    const refreshToken = await AsyncStorage.getItem('refresh_token');
+    // Call POST /api/auth/refresh endpoint
+    // Save new tokens and return access token
+  }
+}
+```
+
+**Auth Interceptor for FetchClient (NEW):**
+```typescript
+// lib/shared/api/auth-interceptor.ts
+export async function addAuthHeader(headers: HeadersInit): Promise<HeadersInit> {
+  const token = await TokenService.getAccessToken();
+  if (token) {
+    return {
+      ...headers,
+      'Authorization': `Bearer ${token}`
+    };
+  }
+  return headers;
+}
+```
+
+**Why These Enhancements are Critical for 2025:**
+- **Auto-Refresh:** Modern SPAs refresh tokens transparently - users expect uninterrupted sessions
+- **Race Condition Protection:** Multiple API calls happening simultaneously could trigger duplicate refresh requests without singleton pattern
+- **Auth Interceptor:** DRY principle - automatic token injection prevents repetitive code and bugs
 
 **Form Validation:**
 - Zod schemas for email and password
@@ -230,11 +365,13 @@ Story 7: Email Verification (Optional - Requires Story 6)
 - Frontend: `hooks/useAuth.ts`
 - Frontend: `navigation/AuthNavigator.tsx`
 - Frontend: `lib/shared/schemas/auth.schema.ts`
+- **Frontend: `lib/shared/services/TokenService.ts` - NEW for automatic token refresh**
+- **Frontend: `lib/shared/api/auth-interceptor.ts` - NEW for automatic auth headers**
 
 ## Files to Modify
 - Frontend: `navigation/AppNavigator.tsx` (conditional routing)
 - Frontend: `lib/shared/services/RecipeService.ts` (add auth headers)
-- Frontend: `lib/shared/services/FetchClient.ts` (token interceptors)
+- **Frontend: `lib/shared/api/fetch-client.ts` (integrate auth interceptor, handle 401 globally)**
 - Frontend: `mocks/handlers/auth.ts` (MSW handlers)
 
 ---
@@ -474,14 +611,29 @@ Story 7: Email Verification (Optional - Requires Story 6)
 # Deployment Checklist
 
 ## Before Deployment
+
+### Database & Infrastructure
 - [ ] Database migrations tested on staging
-- [ ] Email service configured and tested
+- [ ] **Backup strategy configured and tested:**
+  - [ ] Azure SQL automated backups enabled (7-35 day retention)
+  - [ ] Point-in-time restore window configured (default: 7 days)
+  - [ ] Long-term retention (LTR) for weekly/monthly backups (optional)
+  - [ ] Backup restore procedure tested in staging environment
+  - [ ] Backup retention policy documented in deployment guide
+  - [ ] Backup monitoring alerts configured
 - [ ] Environment variables set in Azure
+
+### Security Configuration
 - [ ] HTTPS enforced in production
-- [ ] Security headers configured
-- [ ] Rate limiting configured
+- [ ] Security headers configured (X-Content-Type-Options, X-Frame-Options, HSTS)
+- [ ] Rate limiting configured (auth endpoints + global)
 - [ ] JWT secrets securely stored (Azure Key Vault)
-- [ ] Backup strategy in place
+- [ ] CORS restricted to production origins only
+
+### Email & Authentication
+- [ ] Email service configured and tested (SendGrid/AWS SES)
+- [ ] Email templates verified (password reset, verification)
+- [ ] Email delivery monitoring enabled
 
 ## After Deployment
 - [ ] Test user registration end-to-end
@@ -494,19 +646,14 @@ Story 7: Email Verification (Optional - Requires Story 6)
 
 ---
 
-# Backlog (Future Sprints)
+# Future Work
 
-## Sprint 5 Candidates
-- Multi-category system with user-defined categories
-- Email verification (if deferred from Sprint 4)
-- User profile enhancements (avatar, bio)
-- Change password (while logged in)
-- Delete account (GDPR compliance)
+All post-Sprint 4 features, enhancements, and technical debt have been consolidated into **[Product Backlog](./backlog.md)**.
 
-## Sprint 6+ Ideas
-- Social authentication (Google, GitHub)
-- Two-factor authentication (2FA)
-- Session management UI (view all devices)
-- API pagination for large recipe collections
-- Advanced security features (suspicious login alerts)
-- Biometric authentication (Face ID, Touch ID)
+The backlog includes prioritized roadmap for Sprint 5+ covering:
+- **Sprint 5:** Observability & Performance (APM, pagination, PWA, email verification if deferred)
+- **Sprint 6:** Infrastructure & Security (IaC, 2FA, load testing, session management)
+- **Sprint 7+:** User-facing features (multi-category, profile enhancements, social auth, GDPR compliance)
+- **Technical Debt:** Ongoing code quality, testing, and DevOps improvements
+
+See **[backlog.md](./backlog.md)** for complete implementation details and prioritization framework.

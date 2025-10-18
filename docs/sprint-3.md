@@ -8,10 +8,12 @@ Build a complete vertical slice demonstrating full CRUD functionality for recipe
 
 
 ### ✅ Completed Infrastructure
+
+**Frontend:**
 - ✅ Navigation architecture with bottom tabs
 - ✅ Home screen with search, filtering, and grid layout options
-- ✅ API service layer with complete CRUD operations
-- ✅ Data models matching C# backend (including category & imageUrl)
+- ✅ API service layer with retry logic, timeout protection, and RFC 9457 support
+- ✅ Data models matching C# backend (including category, imageUrl, userId)
 - ✅ Theme system with Material Design 3
 - ✅ Recipe list connected to API with TanStack Query
 - ✅ Recipe creation with API integration
@@ -20,28 +22,62 @@ Build a complete vertical slice demonstrating full CRUD functionality for recipe
 - ✅ TypeScript type safety in test utilities
 - ✅ Proper Promise handling in TanStack Query mutations
 - ✅ MSW mock service for development without a backend
-- ✅ Azure API deployed with automated CI/CD
 - ✅ GitHub Pages deployment configured
+
+**Backend (Production-Ready):**
+- ✅ Global exception handling with RFC 9457 ProblemDetails
+- ✅ API versioning (v1) with URL segment routing
+- ✅ Health check endpoints (`/health`, `/readiness`)
+- ✅ Request/response logging with TraceId correlation
+- ✅ CORS configuration for cross-origin requests
+- ✅ HTTPS redirection in production
+- ✅ SQL injection protection (EF Core parameterization)
+- ✅ Swagger/OpenAPI documentation
+- ✅ Azure API deployed with automated CI/CD
+- ✅ Recipe.UserId field ready for Sprint 4 authentication
 
 ### 🔧 Remaining Work for Demo
 - ✅ **CRITICAL:** Unified RecipeDetail screen - 100% complete
   - ✅ Story 8: VIEW mode (COMPLETED - 39 tests passing)
   - ✅ Story 9: CREATE mode (COMPLETED - 101 tests passing total)
   - ✅ Story 10: EDIT mode (COMPLETED - 73 tests passing, TDD with back button enhancement)
+  - ✅ Story 11: DELETE functionality (COMPLETED - 110 tests passing, TDD implementation)
 - ✅ **HIGH:** Add category & image fields to RecipeForm (COMPLETED)
 - 🟡 **HIGH:** Implement optimistic updates for better UX
+- ⏳ **MEDIUM:** MD3 polish and refinements (spacing, animations)
 
 ---
 
 ## Technical Stack
 
-- **Frontend:** React Native + React Native Web + Expo
-- **State Management:** TanStack Query (data fetching and optimistic updates)
-- **API Client:** Custom FetchClient with type safety
-- **Validation:** Zod schemas
-- **Backend:** C# ASP.NET Core API (deployed to Azure)
-- **Database:** SQL Server with EF Core
-- **Deployment:** GitHub Pages (web) + Azure (API)
+### Frontend
+- **Framework:** React Native + React Native Web + Expo
+- **State Management:** TanStack Query v5 (data fetching, caching, optimistic updates)
+- **API Client:** Custom FetchClient with retry logic, timeouts, and RFC 9457 ProblemDetails support
+- **Validation:** Zod schemas (runtime validation)
+- **Testing:** Jest + React Testing Library (110 tests passing)
+- **Mocking:** MSW (Mock Service Worker) for development
+
+### Backend (Already Implemented)
+- **Framework:** C# ASP.NET Core with .NET 8
+- **Database:** SQL Server with Entity Framework Core
+- **API Design:** RESTful with API versioning (v1)
+- **Error Handling:** Global exception middleware with RFC 9457 ProblemDetails
+- **Health Checks:** `/health` and `/readiness` endpoints implemented
+- **Logging:** Structured logging with TraceId correlation
+- **Security:** CORS configured, HTTPS redirection, SQL injection protection (EF Core parameterization)
+- **Documentation:** Swagger/OpenAPI with XML comments
+- **Deployment:** Azure App Service with CI/CD
+
+### Infrastructure Features (Production-Ready)
+- ✅ **API Versioning** - URL segment versioning (`/api/v1/recipe`)
+- ✅ **Global Exception Handling** - RFC 9457 compliant ProblemDetails responses
+- ✅ **Health Checks** - Kubernetes-ready health/readiness endpoints
+- ✅ **Request/Response Logging** - TraceId correlation for debugging
+- ✅ **CORS** - Configured for cross-origin requests
+- ✅ **Retry Logic** - Frontend: 3 retries with exponential backoff
+- ✅ **Timeout Protection** - 30-second timeout with AbortController
+- ✅ **Environment Configuration** - User secrets in dev, Azure config in production
 
 ---
 
@@ -96,16 +132,21 @@ Build a complete vertical slice demonstrating full CRUD functionality for recipe
 
 **Completed:**
 - RecipeService with all CRUD operations
-- Type-safe FetchClient
-- Error handling and retry logic
+- Type-safe FetchClient with advanced features:
+  - **Retry logic with exponential backoff** (3 retries, configurable delay)
+  - **Timeout support** (30s default with AbortController)
+  - **Request/response logging** in development mode
+  - **ProblemDetails parsing** (RFC 9457 compliant)
 - Request/Response DTOs matching C# API
-- Zod validation schemas
+- Zod validation schemas (runtime type safety)
+- Environment-based configuration (EXPO_PUBLIC_API_URL)
 
 **Files:**
-- `lib/shared/services/RecipeService.ts`
-- `lib/shared/services/FetchClient.ts`
-- `lib/shared/schemas/recipe.schema.ts`
-- `lib/shared/types/dto.ts`
+- `lib/shared/api/recipe.service.ts` - Recipe CRUD operations
+- `lib/shared/api/fetch-client.ts` - Enhanced fetch with retry/timeout
+- `lib/shared/api/config.ts` - API configuration and environment variables
+- `lib/shared/schemas/recipe.schema.ts` - Zod schemas
+- `lib/shared/types/dto.ts` - TypeScript DTOs
 
 ---
 
@@ -185,6 +226,7 @@ As a developer, I need the API to support category and image fields so the front
 **Completed:**
 - Added `imageUrl` field to Recipe entity
 - Added `category` field to Recipe entity
+- Added `userId` field to Recipe entity (optional, ready for Sprint 4)
 - Database migration (`20250927044450_CategoryAndImageUrlAddToRecipe.cs`)
 - Updated all API endpoints to include new fields
 - Updated RecipeResponseDto and RecipeRequestDto
@@ -193,10 +235,22 @@ As a developer, I need the API to support category and image fields so the front
 - Frontend schemas support both fields
 - MSW mock data includes categories and images
 
+**Backend Architecture (Already Implemented):**
+- **Entry Point:** `Program.cs` - Clean entry point delegates to setup classes
+- **Configuration:** `Utility/Setup/ServiceConfiguration.cs` - DI registration, CORS, API versioning
+- **Middleware Pipeline:** `Utility/Setup/ApplicationConfiguration.cs` - Ordered middleware setup
+- **Global Exception Handler:** `Middleware/ExceptionHandlingMiddleware.cs` - RFC 9457 ProblemDetails
+- **Request Logging:** `Middleware/RequestResponseLoggingMiddleware.cs` - HTTP logging with TraceId
+- **Health Checks:** `Controllers/HealthController.cs` - Health and readiness endpoints
+- **Data Context:** `Data/FoodBudgetDbContext.cs` - EF Core DbContext with Recipe DbSet
+
 **Files:**
-- Backend: `FoodBudgetAPI/Entities/Recipe.cs`
-- Backend: `FoodBudgetAPI/Services/RecipeService.cs:99-100`
-- Backend: `FoodBudgetAPI/Models/DTOs/*`
+- Backend: `FoodBudgetAPI/Entities/Recipe.cs:46` - UserId field already present
+- Backend: `FoodBudgetAPI/Data/FoodBudgetDbContext.cs` - DbContext configuration
+- Backend: `FoodBudgetAPI/Controllers/HealthController.cs` - Health endpoints
+- Backend: `FoodBudgetAPI/Middleware/ExceptionHandlingMiddleware.cs` - Global error handling
+- Backend: `FoodBudgetAPI/Utility/Setup/ServiceConfiguration.cs` - Service registration
+- Backend: `FoodBudgetAPI/Utility/Setup/ApplicationConfiguration.cs` - Middleware pipeline
 - Frontend: `lib/shared/schemas/recipe.schema.ts:26-36`
 - Frontend: `lib/shared/types/dto.ts`
 
@@ -672,62 +726,82 @@ As a user, I want to edit existing recipes and have smooth transitions between v
 
 ---
 
-### Story 11: Delete Functionality & MD3 Polish
-**Status:** 🔴 NOT STARTED
+### Story 11: Delete Functionality
+**Status:** ✅ COMPLETED
 **Priority:** MEDIUM
 **Type:** Enhancement
 **Dependencies:** Story 10
 **Estimated Effort:** Small
 
 **User Story:**
-As a user, I want to delete recipes from the detail screen and have a polished, professional-looking interface.
+As a user, I want to delete recipes from the detail screen with a confirmation prompt.
 
 **Scope:**
 - Add Delete functionality in header menu
-- Material Design 3 polish and refinement
-- Smooth animations and transitions
-- Cleanup old AddRecipeScreen
+- Confirmation dialog before deletion
+- Navigate back to list after successful delete
+- Proper error handling
 
 **Tasks:**
-- [ ] Add Delete button in header (VIEW and EDIT modes)
-- [ ] Implement delete mutation with TanStack Query
-- [ ] Confirmation dialog before delete
-- [ ] Navigate back to list after delete
-- [ ] Refine MD3 styling (spacing, elevation, shadows)
-- [ ] Add smooth transitions/animations
-- [ ] Refine typography hierarchy
-- [ ] Ensure consistent Surface/Card usage
-- [ ] Delete old AddRecipeScreen files
+- [x] Add Delete button in header (VIEW and EDIT modes)
+- [x] Implement delete mutation with TanStack Query
+- [x] Confirmation dialog before delete
+- [x] Navigate back to list after delete
+- [x] Delete old AddRecipeScreen files (already removed in Story 9)
 
 **Testing** (included in this story):
-- [ ] Unit tests for Delete functionality
-- [ ] Integration tests for delete with API
-- [ ] Confirmation dialog tests
-- [ ] Navigation after delete tests
-- [ ] UI/styling regression tests
-- [ ] Update affected tests (remove AddRecipeScreen references)
+- [x] Unit tests for Delete functionality (13 tests)
+- [x] Integration tests for delete with API (3 tests)
+- [x] Confirmation dialog tests
+- [x] Navigation after delete tests
+- [x] Error handling tests (API failures, network errors)
+- [x] Cache invalidation tests
+- [x] Update affected tests (remove AddRecipeScreen references)
 
-**Files to Modify:**
-- `screens/RecipeDetailScreen.tsx`
-- `screens/__tests__/RecipeDetailScreen.test.tsx`
-- `screens/__tests__/RecipeDetailScreen.integration.test.tsx`
-- Various test files referencing AddRecipeScreen
+**Files Modified:**
+- ✅ `screens/RecipeDetailScreen.tsx:1-567` - Delete mutation, dialog, UI elements
+- ✅ `test/test-utils.tsx:35-72` - Enhanced to return queryClient for cache testing
+- ✅ `screens/__tests__/RecipeDetailScreen.unit.test.tsx` - 85 tests passing (13 new delete tests)
+- ✅ `screens/__tests__/RecipeDetailScreen.integration.test.tsx` - 25 tests passing (3 new delete tests)
 
-**Files to Delete:**
-- ❌ `screens/AddRecipeScreen.tsx`
-- ❌ `screens/__tests__/AddRecipeScreen.test.tsx`
-- ❌ `screens/__tests__/AddRecipeScreen.integration.test.tsx`
+**Files Already Deleted (Story 9):**
+- ✅ `screens/AddRecipeScreen.tsx` (removed in Story 9)
+- ✅ `screens/__tests__/AddRecipeScreen.test.tsx` (removed in Story 9)
+- ✅ `screens/__tests__/AddRecipeScreen.integration.test.tsx` (removed in Story 9)
+
+**Test Results:**
+- ✅ **RecipeDetailScreen Unit Tests:** 85/85 passing
+  - Risk-Based Priority: Delete button visibility, confirmation dialog, API integration, cache invalidation
+  - Null/Empty/Invalid: Cancel confirmation dialog behavior
+  - Boundaries: Delete button excluded from CREATE mode
+  - Business Rules: Delete only in VIEW/EDIT modes
+  - Error Handling: API 500/404 errors, network failures, stays on screen on error
+- ✅ **RecipeDetailScreen Integration Tests:** 25/25 passing
+  - Section 1 (Risk-Based Priority): DELETE success flow with navigation (1 test)
+  - Section 4 (Error Propagation): DELETE API errors 500/404 (2 tests)
+- ✅ **Total: 110 tests passing** (85 unit + 25 integration)
+
+**Implementation Details:**
+- Delete button appears in VIEW and EDIT mode headers (IconButton with "delete" icon)
+- Confirmation dialog: "Delete Recipe? Are you sure you want to delete this recipe? This action cannot be undone."
+- DELETE mutation with TanStack Query
+- Success: navigate back to list with "Recipe deleted successfully!" snackbar
+- Error: stay on screen with error snackbar
+- Cache invalidation on successful deletion
+- testIDs: recipe-detail-delete-button, recipe-detail-delete-dialog-confirm, recipe-detail-delete-dialog-cancel
 
 **Acceptance Criteria:**
-- ✅ Delete button in header (VIEW and EDIT)
+- ✅ Delete button in header (VIEW and EDIT modes)
+- ✅ Delete button excluded from CREATE mode
 - ✅ Confirmation dialog shown before delete
-- ✅ Delete removes recipe via API
-- ✅ Navigates back to list after delete
-- ✅ Material Design 3 styling polished throughout
-- ✅ Smooth animations between states
-- ✅ Old AddRecipeScreen removed
-- ✅ All tests pass
-- ✅ No references to AddRecipeScreen remain
+- ✅ Delete removes recipe via API (DELETE /api/Recipe/:id)
+- ✅ Navigates back to list after successful delete
+- ✅ Error handling prevents navigation on failure
+- ✅ Snackbar feedback for success/error
+- ✅ Recipe list cache invalidated on success
+- ✅ Old AddRecipeScreen removed (completed in Story 9)
+- ✅ All tests pass (110/110)
+- ✅ No references to AddRecipeScreen remain (verified)
 
 ---
 
@@ -735,7 +809,7 @@ As a user, I want to delete recipes from the detail screen and have a polished, 
 **Status:** 🔴 NOT STARTED
 **Priority:** HIGH
 **Type:** UX Enhancement
-**Dependencies:** Story 7
+**Dependencies:** Story 11
 
 **User Story:**
 As a user, I want instant feedback when I create, update, or delete recipes so the app feels fast and responsive.
@@ -826,139 +900,239 @@ const createMutation = useMutation({
 
 ---
 
-## Phase 4: Authentication (POST-DEMO)
-
-### Story 13: User Registration & Login API
-**Status:** 🔵 POST-DEMO
-**Priority:** MEDIUM
-**Type:** Backend Authentication
+### Story 12.5: Error Boundary & Offline Detection
+**Status:** 🔴 NOT STARTED
+**Priority:** CRITICAL
+**Type:** Reliability & UX
+**Dependencies:** Story 11
+**Estimated Effort:** Small (4-5 hours)
 
 **User Story:**
-As a user, I want to create an account and log in so my recipes are private and secure.
+As a user, I want the app to handle errors gracefully and inform me when I'm offline, so I don't see blank screens or confusing error messages.
 
-**Backend Implementation:**
-- [ ] User entity (Id, Email, PasswordHash, CreatedAt)
-- [ ] POST /api/auth/register endpoint
-- [ ] POST /api/auth/login endpoint
-- [ ] Password hashing with BCrypt
-- [ ] JWT token generation (15min access, 7day refresh)
-- [ ] Email validation and uniqueness check
-- [ ] Rate limiting on auth endpoints
-- [ ] Unit and integration tests
+**Why Critical for 2025 Production:**
+- **Error Boundary:** Industry standard since React 16 (2017), expected in all production React apps
+- **Offline Detection:** PWAs and modern apps detect offline state as baseline UX in 2025
+- **Demo Risk:** Component errors during demo show white screen without recovery
+- **Professional Standard:** Proper error handling is non-negotiable for portfolio presentation
+
+**Current Gaps:**
+- No ErrorBoundary component - crashes show white screen of death
+- No offline detection in FetchClient - retries happen even without network
+- Poor UX during network failures - no user feedback
+
+**Implementation Tasks:**
+- [ ] Create ErrorBoundary component with getDerivedStateFromError
+- [ ] Create ErrorFallbackScreen with "Try Again" button
+- [ ] Wrap App root with ErrorBoundary
+- [ ] Add navigator.onLine check to FetchClient before retries
+- [ ] Improve offline error messages for users
+- [ ] Optional: Create OfflineBanner component
+- [ ] Unit tests for ErrorBoundary (error catching, reset)
+- [ ] Integration tests for offline detection
 
 **Files to Create:**
-- `FoodBudgetAPI/Entities/User.cs`
-- `FoodBudgetAPI/Controllers/AuthController.cs`
-- `FoodBudgetAPI/Services/IAuthService.cs`
-- `FoodBudgetAPI/Services/AuthService.cs`
-- `FoodBudgetAPI/Services/TokenService.cs`
-- `FoodBudgetAPI/Models/DTOs/Requests/RegisterRequestDto.cs`
-- `FoodBudgetAPI/Models/DTOs/Requests/LoginRequestDto.cs`
-- `FoodBudgetAPI/Models/DTOs/Responses/AuthResponseDto.cs`
-- Database migration for User table
-
----
-
-### Story 14: User-Scoped Recipe Security
-**Status:** 🔵 POST-DEMO
-**Priority:** MEDIUM
-**Type:** Backend Security
-**Dependencies:** Story 13
-
-**User Story:**
-As a user, I want only my recipes visible to me so my data stays private.
-
-**Backend Implementation:**
-- [ ] Add UserId field to Recipe entity (already exists in schema)
-- [ ] Add JWT authentication middleware
-- [ ] Update RecipeController to filter by authenticated user
-- [ ] Prevent cross-user recipe access
-- [ ] Update all recipe endpoints to require authentication
-- [ ] Migration to add UserId foreign key
-- [ ] Update tests to include authentication
+- `src/components/ErrorBoundary.tsx` - Class component with error catching
+- `src/screens/ErrorFallbackScreen.tsx` - User-friendly error display with retry
+- `src/components/__tests__/ErrorBoundary.test.tsx` - Error boundary tests
+- Optional: `src/components/OfflineBanner.tsx` - Banner for offline state
 
 **Files to Modify:**
-- `FoodBudgetAPI/Entities/Recipe.cs` - Add UserId foreign key
-- `FoodBudgetAPI/Controllers/RecipeController.cs` - Add [Authorize] attribute
-- `FoodBudgetAPI/Services/RecipeService.cs` - Filter by UserId
-- Database migration for UserId foreign key
+- `App.tsx` - Wrap root component with ErrorBoundary
+- `src/lib/shared/api/fetch-client.ts:36` - Add navigator.onLine check before retry loop
+
+**Technical Notes:**
+```tsx
+// ErrorBoundary.tsx (class component required for error boundaries)
+export class ErrorBoundary extends React.Component<Props, State> {
+  state = { hasError: false, error: null };
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.error('React Error Boundary caught:', error, info);
+    // Future Sprint 5: Send to Sentry or Application Insights
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return <ErrorFallbackScreen onReset={() => this.setState({ hasError: false })} />;
+    }
+    return this.props.children;
+  }
+}
+
+// fetch-client.ts - Add before retry loop (line 36)
+if (!navigator.onLine) {
+  throw new Error('No network connection. Please check your internet and try again.');
+}
+```
+
+**Acceptance Criteria:**
+- [ ] ErrorBoundary wraps app root in App.tsx
+- [ ] Component errors caught by ErrorBoundary (no white screen)
+- [ ] ErrorFallbackScreen shows with user-friendly message
+- [ ] "Try Again" button resets error state and re-renders app
+- [ ] FetchClient checks navigator.onLine before making requests
+- [ ] User-friendly "No network connection" error message shown when offline
+- [ ] No API retries attempted when offline (saves battery/bandwidth)
+- [ ] ErrorBoundary unit tests pass (5+ tests)
+- [ ] Offline detection integration tests pass
+
+**Why This Belongs in Sprint 3:**
+- Demo blocker: Prevents embarrassing crashes during portfolio presentation
+- Quick win: 4-5 hours for significant UX improvement
+- Foundation: Sets up error handling patterns for Sprint 4 auth errors
 
 ---
 
-### Story 15: Frontend Authentication State
-**Status:** 🔵 POST-DEMO
+### Story 12.6: Demo API Protection (Optional)
+**Status:** 🔴 NOT STARTED
 **Priority:** MEDIUM
-**Type:** Frontend Authentication
-**Dependencies:** Story 13
+**Type:** Security & Infrastructure
+**Dependencies:** Story 12.5
+**Estimated Effort:** Small (2-3 hours)
 
 **User Story:**
-As a user, I want to stay logged in across sessions so I don't have to log in repeatedly.
+As the API owner, I want to protect the demo API from abuse so it remains available for portfolio viewers and doesn't incur unexpected Azure costs.
 
-**Frontend Implementation:**
-- [ ] Create AuthContext with JWT handling
-- [ ] Secure token storage (SecureStore for mobile, secure cookies for web)
-- [ ] Auto token refresh logic
-- [ ] API interceptors for auth headers
-- [ ] Protected route wrapper component
-- [ ] Login/logout actions
-- [ ] Auth state persistence
+**Why Needed for 2025 Production:**
+- **Rate Limiting:** Public APIs without rate limiting are targets for abuse
+- **CORS Restriction:** `AllowAnyOrigin()` is a security vulnerability flagged by scanners
+- **Cost Control:** Prevents demo API from being overwhelmed and incurring Azure overages
+- **Professional Standard:** Shows understanding of production API protection
+
+**Current Gaps:**
+- No rate limiting middleware in backend
+- CORS set to `AllowAnyOrigin()` (accepts requests from any domain)
+- Public demo URL is unprotected
+
+**Implementation Tasks:**
+- [ ] Add AspNetCoreRateLimit NuGet package
+- [ ] Configure in-memory rate limiting (100 req/min per IP)
+- [ ] Add rate limiting middleware to pipeline
+- [ ] Update appsettings.json with AllowedOrigins
+- [ ] Restrict CORS to demo origin + localhost
+- [ ] Add logging for rate limit violations
+- [ ] Test rate limiting with rapid requests
 
 **Files to Create:**
-- `contexts/AuthContext.tsx`
-- `hooks/useAuth.ts`
-- `lib/shared/services/AuthService.ts`
-- `lib/shared/services/TokenStorage.ts`
+- None (uses AspNetCoreRateLimit library)
+
+**Files to Modify:**
+- `FoodBudgetAPI/FoodBudgetAPI.csproj` - Add AspNetCoreRateLimit package
+- `FoodBudgetAPI/Utility/Setup/ServiceConfiguration.cs` - Register rate limiting services
+- `FoodBudgetAPI/Utility/Setup/ApplicationConfiguration.cs:22` - Add middleware after logging
+- `FoodBudgetAPI/appsettings.json` - Add AllowedOrigins configuration
+- `FoodBudgetAPI/Utility/Setup/ServiceConfiguration.cs:86-89` - Restrict CORS origins
+
+**Technical Notes:**
+```csharp
+// ServiceConfiguration.cs - Add rate limiting registration
+services.AddInMemoryRateLimiting();
+services.Configure<IpRateLimitOptions>(options =>
+{
+    options.GeneralRules = new List<RateLimitRule>
+    {
+        new() { Endpoint = "*", Period = "1m", Limit = 100 }
+    };
+});
+
+// ApplicationConfiguration.cs - Add middleware (after logging, line 22)
+app.UseIpRateLimiting();
+
+// appsettings.json - Add allowed origins
+"AllowedOrigins": "https://cadil91.github.io,http://localhost:8081"
+
+// ServiceConfiguration.cs - Restrict CORS (replace AllowAnyOrigin)
+var allowedOrigins = builder.Configuration.GetValue<string>("AllowedOrigins")
+    ?.Split(',') ?? Array.Empty<string>();
+
+policy.WithOrigins(allowedOrigins)
+    .AllowAnyMethod()
+    .AllowAnyHeader();
+```
+
+**Acceptance Criteria:**
+- [ ] Rate limiting enabled (100 requests/minute per IP)
+- [ ] 429 Too Many Requests returned when limit exceeded
+- [ ] Rate limit violations logged with IP address
+- [ ] CORS restricted to GitHub Pages demo URL + localhost
+- [ ] CORS preflight requests work correctly
+- [ ] Demo app still functions with restricted CORS
+- [ ] Rate limiting doesn't affect normal demo usage
+
+**Why This is Optional for Sprint 3:**
+- Not a demo blocker (nice-to-have)
+- Quick security win before public launch
+- Can be added after initial demo if time is tight
 
 ---
 
-### Story 13: Login & Registration Screens
-**Status:** 🔵 POST-DEMO
+### Story 13: Material Design 3 Polish & Refinements
+**Status:** 🔴 NOT STARTED
 **Priority:** MEDIUM
-**Type:** Frontend Authentication
-**Dependencies:** Story 12
+**Type:** UI/UX Enhancement
+**Dependencies:** Story 11
+**Estimated Effort:** Small
 
 **User Story:**
-As a new user, I want to register for an account and log in easily.
+As a user, I want a polished, professional-looking interface with smooth animations and consistent Material Design 3 styling.
 
-**Frontend Implementation:**
-- [ ] LoginScreen with email/password
-- [ ] RegistrationScreen with validation
-- [ ] Form validation with Zod
-- [ ] Error handling for auth failures
-- [ ] Auto-login after registration
-- [ ] "Forgot password" placeholder
-- [ ] Loading states during auth
-- [ ] Navigation to protected routes after login
+**Scope:**
+- Refine MD3 styling throughout the app
+- Add smooth transitions and animations
+- Improve typography hierarchy
+- Ensure consistent use of Surface/Card components
+- Polish spacing, elevation, and shadows
 
-**Files to Create:**
-- `screens/LoginScreen.tsx`
-- `screens/RegistrationScreen.tsx`
-- `screens/__tests__/LoginScreen.test.tsx`
-- `screens/__tests__/RegistrationScreen.test.tsx`
+**Tasks:**
+- [ ] Refine MD3 styling (spacing, elevation, shadows)
+- [ ] Add smooth transitions/animations between states
+- [ ] Refine typography hierarchy (consistent heading/body text)
+- [ ] Ensure consistent Surface/Card usage across screens
+- [ ] Polish RecipeDetailScreen layout and spacing
+- [ ] Polish RecipeListScreen cards and grid
+- [ ] Add subtle animations for mode transitions (VIEW ↔ EDIT)
+- [ ] Review and apply MD3 elevation system
+- [ ] Ensure consistent color theming
 
-**Files to Modify:**
-- `navigation/AppNavigator.tsx` - Add auth navigation flow
+**Areas to Polish:**
+- RecipeDetailScreen (VIEW/EDIT/CREATE modes)
+- RecipeListScreen (cards, grid, filters)
+- RecipeForm (input fields, pickers)
+- Navigation transitions
+- Dialog animations
+- Snackbar styling
+
+**Acceptance Criteria:**
+- [ ] Consistent MD3 styling across all screens
+- [ ] Smooth animations between mode transitions
+- [ ] Proper elevation and shadows applied
+- [ ] Typography hierarchy is clear and consistent
+- [ ] Spacing follows MD3 guidelines (8px grid)
+- [ ] All Surface/Card components used correctly
+- [ ] No visual regressions
+- [ ] App feels polished and professional
 
 ---
 
-### Story 14: Profile Screen
-**Status:** 🔵 POST-DEMO
-**Priority:** LOW
-**Type:** User Management
-**Dependencies:** Story 13
+## Sprint 4: User Management & Authentication (POST-DEMO)
 
-**User Story:**
-As a user, I want to view my profile and log out when needed.
+Sprint 3 focuses on the recipe management demo. For complete authentication and user management implementation details, see:
 
-**Implementation:**
-- [ ] Display user email
-- [ ] Logout button
-- [ ] App version info
-- [ ] Settings placeholder
-- [ ] Account deletion option (future)
+**📄 [Sprint 4 Documentation](./sprint-4.md)**
 
-**Files to Modify:**
-- `screens/ProfileScreen.tsx` (currently placeholder)
+Sprint 4 will include:
+- Database schema for user management
+- User registration and login API
+- JWT authentication and security
+- Frontend authentication integration
+- User-scoped recipe data
+- Password reset flow
+- Email verification (optional)
 
 ---
 
@@ -991,10 +1165,10 @@ Each story is complete when:
 - [x] API deployed and accessible
 - [x] Web app deployed and accessible
 
-### Post-Demo Enhancements
-- [ ] User authentication (Stories 10-13)
-- [ ] Personal recipe collections (Story 11)
-- [ ] Profile management (Story 14)
+### Post-Demo Enhancements (Sprint 4+)
+- [ ] User authentication and management (See [Sprint 4](./sprint-4.md))
+- [ ] Personal recipe collections with user isolation
+- [ ] Profile management
 - [ ] Meal planning features (Future)
 - [ ] Shopping list integration (Future)
 
@@ -1003,30 +1177,30 @@ Each story is complete when:
 ## Priority Order for Sprint 3 Completion
 
 ### 🔥 **Critical Path (Must Complete for Demo)**
-1. **Story 8-10:** Unified RecipeDetail Screen (view/edit/create modes) - ✅ COMPLETED (100% complete)
+1. **Story 8-11:** Unified RecipeDetail Screen (view/edit/create/delete modes) - ✅ COMPLETED (100% complete)
    - ✅ Story 8: VIEW mode - COMPLETED (39 tests passing)
    - ✅ Story 9: CREATE mode - COMPLETED (101 tests passing total)
    - ✅ Story 10: EDIT mode - COMPLETED (73 tests passing with TDD)
-   - 🔴 Story 11: Delete & Polish - NOT STARTED
+   - ✅ Story 11: Delete functionality - COMPLETED (110 tests passing with TDD)
+   - ⏳ Story 11: MD3 Polish - PENDING
 2. **Story 7:** Enhanced Recipe Form (category & image fields) - ✅ COMPLETED
 3. **Story 12:** Optimistic Updates with TanStack Query - 🔴 NOT STARTED
 
-### 📋 **Post-Demo (Next Sprint)**
-1. **Story 10:** User Registration & Login API
-2. **Story 11:** User-Scoped Recipe Security
-3. **Story 12:** Frontend Authentication State
-4. **Story 13:** Login & Registration Screens
-5. **Story 14:** Profile Screen
+### 📋 **Post-Demo (Sprint 4)**
+See **[Sprint 4: User Management & Authentication](./sprint-4.md)** for complete implementation plan including:
+1. Database schema for users
+2. Backend authentication API
+3. JWT security and tokens
+4. Frontend authentication screens
+5. User-scoped recipe data
+6. Password reset flow
 
 ### 🔮 **Future Enhancements**
-- Meal Planning features (MealPlanScreen implementation)
-- Shopping list generation from recipes
-- Nutritional information tracking
-- Recipe sharing and social features
-- Recipe import from URLs
-- Multi-image support per recipe
-- Video/GIF support for cooking steps
-- Rating and reviews system
+
+For post-Sprint 4 features and enhancements, see **[Product Backlog](./backlog.md)** which includes:
+- **Sprint 5:** Observability & Performance (APM, pagination, PWA)
+- **Sprint 6:** Infrastructure & Security (IaC, 2FA, load testing)
+- **Sprint 7+:** User-facing features (categories, sharing, advanced recipes)
 
 ---
 
@@ -1059,23 +1233,11 @@ npm run ios:mock        # iOS with mock data
 
 ## Technical Debt & Future Work
 
-### Code Quality
-- [ ] Add E2E tests with Detox or Maestro
-- [ ] Improve test coverage (target 80%+)
-- [ ] Add performance monitoring
-- [ ] Add error tracking (Sentry)
+All technical debt and future feature work has been consolidated into **[Product Backlog](./backlog.md)**.
 
-### Features
-- [ ] Implement actual image upload (Azure Blob Storage)
-- [ ] Add a rich text editor for instructions
-- [ ] Add ingredients as separate entity with quantities
-- [ ] Add cooking timers
-- [ ] Add recipe search with Elasticsearch
-- [ ] Add recipe recommendations
-- [ ] Add offline support with a local database
+Sprint 3 technical debt items have been prioritized and categorized:
+- **Critical for Demo:** Story 12.5 (Error Boundary & Offline Detection) - added to Sprint 3
+- **Demo Protection:** Story 12.6 (Rate Limiting & CORS Restriction) - optional for Sprint 3
+- **Future Sprints:** Observability, infrastructure, and advanced features documented in backlog.md
 
-### DevOps
-- [ ] Add staging environment
-- [ ] Add automated E2E test runs
-- [ ] Add performance benchmarks in CI
-- [ ] Add automated accessibility testing
+See backlog.md for complete roadmap of post-Sprint 4 enhancements including testing, DevOps, and feature work.

@@ -147,14 +147,21 @@ Build a complete vertical slice demonstrating full CRUD functionality for recipe
 - Error handling keeps form editable with Snackbar
 - **All 73 tests passing** with TDD approach (Red → Green → Refactor)
 
-#### 🔄 Story 11: Delete Functionality & MD3 Polish
-**User Story:** As a user, I want to delete recipes from the detail screen and have a polished, professional-looking interface.
+#### ✅ Story 11: Delete Functionality
+**User Story:** As a user, I want to delete recipes from the detail screen with a confirmation prompt.
 
-**Features:** (Not Started)
-- Delete button in header with confirmation
-- Material Design 3 refinement
-- Smooth animations
-- Remove old AddRecipeScreen
+**Features:** (Completed)
+- ✅ Delete button in header (VIEW and EDIT modes, excluded from CREATE)
+- ✅ Confirmation dialog before deletion ("Delete Recipe? Are you sure...")
+- ✅ DELETE mutation with TanStack Query
+- ✅ Success: navigate back to list with "Recipe deleted successfully!" snackbar
+- ✅ Error: stay on screen with error snackbar
+- ✅ Cache invalidation on successful deletion
+- ✅ Comprehensive error handling (API 500/404, network failures)
+- ✅ Old AddRecipeScreen removed (completed in Story 9)
+- **Unit Tests: 85/85 passing** (13 new delete tests)
+- **Integration Tests: 25/25 passing** (3 new delete tests)
+- **Total: 110 tests passing** with full TDD approach (Red → Green → Refactor)
 
 #### 🔄 Story 12: Optimistic Updates
 **User Story:** As a user, I want instant feedback when I create, update, or delete recipes so the app feels fast and responsive.
@@ -163,6 +170,25 @@ Build a complete vertical slice demonstrating full CRUD functionality for recipe
 - Instant UI updates before API confirmation
 - Automatic rollback on errors
 - Background synchronization
+
+#### 🔄 Story 13: Material Design 3 Polish
+**User Story:** As a user, I want a polished, professional-looking interface with smooth animations.
+
+**Features:** (Not Started - Optional for Demo)
+- MD3 styling refinements (spacing, elevation, shadows)
+- Smooth transitions and animations
+- Typography hierarchy improvements
+
+---
+
+## 🚀 Next Sprint: User Management & Authentication
+
+**Sprint 4** will add user authentication and data isolation. See [`docs/sprint-4.md`](./docs/sprint-4.md) for details:
+- User registration and login
+- JWT authentication with refresh tokens
+- User-scoped recipe data
+- Password reset flow
+- Email verification (optional)
 
 ## Architecture
 

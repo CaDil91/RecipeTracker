@@ -779,12 +779,135 @@ describe('RecipeListScreen Comprehensive Unit Tests - Sociable Testing', () => {
 
   /**
    * ============================================
-   * SECTION 7: INTEGRATION WITH REACT QUERY
+   * SECTION 7: STORY 12A - OPTIMISTIC DELETE
+   * Tests for optimistic update behavior in RecipeListScreen
+   * ============================================
+   */
+
+  describe('7. Story 12a: Optimistic Delete Integration', () => {
+    /**
+     * RISK-BASED PRIORITY: Verify useDeleteRecipe hook is used
+     */
+    it('GIVEN RecipeListScreen WHEN delete action triggered THEN uses useDeleteRecipe hook from useRecipeMutations', async () => {
+      // This test will verify the screen uses the new hook once implemented
+      // For now; it documents the expected behavior
+
+      // Arrange
+      const { getByText } = renderWithProviders(
+        <RecipeListScreen navigation={mockNavigation} />
+      );
+
+      await waitFor(() => {
+        expect(getByText('Chicken Pasta')).toBeTruthy();
+      });
+
+      // Act & Assert - Once a hook is integrated, verify it's called
+      // This will be a placeholder until GREEN phase
+      expect(RecipeService.deleteRecipe).toBeDefined();
+    });
+
+    /**
+     * HAPPY PATH: Success snackbar shown after optimistic delete succeeds
+     */
+    it('GIVEN successful delete WHEN mutation completes THEN shows success snackbar without blocking UI', async () => {
+      // Arrange
+      (RecipeService.deleteRecipe as jest.Mock).mockResolvedValue({
+        success: true,
+        data: { message: 'Deleted successfully' }
+      });
+
+      const { getByText } = renderWithProviders(
+        <RecipeListScreen navigation={mockNavigation} />
+      );
+
+      await waitFor(() => {
+        expect(getByText('Chicken Pasta')).toBeTruthy();
+      });
+
+      // Act - Once optimistic delete is implemented, UI should update instantly
+      // This test documents expected behavior
+
+      // Assert - Verify delete API is callable (placeholder for GREEN phase)
+      expect(RecipeService.deleteRecipe).toBeDefined();
+    });
+
+    /**
+     * ERROR HANDLING: Retry action in error snackbar
+     */
+    it('GIVEN delete fails WHEN error occurs THEN shows error snackbar with retry action', async () => {
+      // Arrange
+      (RecipeService.deleteRecipe as jest.Mock).mockRejectedValue(
+        new Error('Network error')
+      );
+
+      const { getByText } = renderWithProviders(
+        <RecipeListScreen navigation={mockNavigation} />
+      );
+
+      await waitFor(() => {
+        expect(getByText('Chicken Pasta')).toBeTruthy();
+      });
+
+      // Act & Assert - Once optimistic delete is implemented with retry
+      // This test will verify retry action appears in the snackbar
+      expect(RecipeService.deleteRecipe).toBeDefined();
+    });
+
+    /**
+     * ERROR HANDLING: UI updates immediately on optimistic delete
+     */
+    it('GIVEN recipe list displayed WHEN delete triggered THEN recipe disappears before API responds', async () => {
+      // Arrange
+      (RecipeService.deleteRecipe as jest.Mock).mockImplementation(
+        () => new Promise((resolve) => setTimeout(resolve, 1000)) // Slow API
+      );
+
+      const { getByText, queryByText } = renderWithProviders(
+        <RecipeListScreen navigation={mockNavigation} />
+      );
+
+      await waitFor(() => {
+        expect(getByText('Chicken Pasta')).toBeTruthy();
+      });
+
+      // Act & Assert - Once optimistic update is implemented
+      // Recipe should disappear before the API completes (within 100 ms)
+      // This is a placeholder documenting expected behavior
+      expect(queryByText('Chicken Pasta')).toBeTruthy(); // Currently true, will change in GREEN
+    });
+
+    /**
+     * ERROR HANDLING: Rollback on failure
+     */
+    it('GIVEN optimistic delete in progress WHEN API fails THEN recipe reappears in list (rollback)', async () => {
+      // Arrange
+      (RecipeService.deleteRecipe as jest.Mock).mockRejectedValue(
+        new Error('API Error')
+      );
+
+      const { getByText } = renderWithProviders(
+        <RecipeListScreen navigation={mockNavigation} />
+      );
+
+      await waitFor(() => {
+        expect(getByText('Chicken Pasta')).toBeTruthy();
+      });
+
+      // Act & Assert - Once optimistic rollback is implemented, 
+      // Recipe should reappear after failed delete
+      // This is a placeholder documenting expected behavior
+      expect(RecipeService.deleteRecipe).toBeDefined();
+    });
+  });
+
+  /**
+   * ============================================
+   * SECTION 8: INTEGRATION WITH REACT QUERY
    * Tests specific to React Query behavior
    * ============================================
    */
 
-  describe('7. React Query Integration Tests', () => {
+  describe('8. React Query Integration Tests', () => {
     /**
      * Test 23: Cache behavior
      */

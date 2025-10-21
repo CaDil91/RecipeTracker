@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { View, StyleSheet, Alert } from 'react-native';
 import { FAB, useTheme, Snackbar, ActivityIndicator, Button, Text } from 'react-native-paper';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { RecipeListScreenNavigationProp } from '../types/navigation';
 import { Container } from '../components/shared';
 import { RecipeResponseDto } from '../lib/shared';
@@ -9,6 +9,7 @@ import SearchBar from '../components/SearchBar';
 import FilterChips, { FilterType } from '../components/FilterChips';
 import { RecipeGrid } from '../components/shared/recipe/RecipeGrid';
 import { RecipeService } from '../lib/shared';
+import { useDeleteRecipe } from '../hooks/useRecipeMutations';
 
 // TODO: Move grid column selection (2/3/4) to a Settings menu/screen
 type GridColumns = 2 | 3 | 4;
@@ -20,13 +21,18 @@ type RecipeListScreenProps = {
 // Main screen component for displaying and managing recipes
 const RecipeListScreen: React.FC<RecipeListScreenProps> = ({ navigation }) => {
   const theme = useTheme();
-  const queryClient = useQueryClient();
 
   // UI state
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState<FilterType>('All');
   const [gridColumns] = useState<GridColumns>(2);
-  const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
+  const [snackbar, setSnackbar] = useState<{
+    message: string;
+    action?: { label: string; onPress: () => void };
+  } | null>(null);
+
+  // Story 12a: Optimistic delete mutation hook
+  const deleteMutation = useDeleteRecipe();
 
   // Fetch recipes using TanStack Query
   const {
@@ -85,30 +91,26 @@ const RecipeListScreen: React.FC<RecipeListScreenProps> = ({ navigation }) => {
     // navigation.navigate('RecipeDetail', { recipeId: recipe.id, mode: 'EDIT' });
   }, [navigation]);
 
-  // Delete mutation using TanStack Query
-  const deleteMutation = useMutation({
-    mutationFn: async (recipeId: string) => {
-      const response = await RecipeService.deleteRecipe(recipeId);
-      if (!response.success) {
-        throw new Error(
-          typeof response.error === 'string'
-            ? response.error
-            : response.error.title || 'Failed to delete recipe'
-        );
-      }
-      return response.data;
-    },
-    onSuccess: () => {
-      // Invalidate and refetch recipes after successful deletion
-      void queryClient.invalidateQueries({ queryKey: ['recipes'] });
-      setSnackbarMessage('Recipe deleted successfully');
-    },
-    onError: (error) => {
-      setSnackbarMessage(error.message || 'Failed to delete recipe');
-    },
-  });
-
+  // Story 12a: Optimistic delete handler with retry support
   const handleRecipeDelete = useCallback((recipe: RecipeResponseDto) => {
+    const performDelete = async () => {
+      try {
+        await deleteMutation.mutateAsync(recipe.id);
+        setSnackbar({
+          message: 'Recipe deleted successfully',
+        });
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Failed to delete recipe';
+        setSnackbar({
+          message: errorMessage,
+          action: {
+            label: 'Retry',
+            onPress: performDelete,
+          },
+        });
+      }
+    };
+
     Alert.alert(
       'Delete Recipe',
       `Are you sure you want to delete "${recipe.title}"?`,
@@ -117,7 +119,7 @@ const RecipeListScreen: React.FC<RecipeListScreenProps> = ({ navigation }) => {
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: () => deleteMutation.mutate(recipe.id),
+          onPress: performDelete,
         },
       ],
     );
@@ -249,17 +251,19 @@ const RecipeListScreen: React.FC<RecipeListScreenProps> = ({ navigation }) => {
         />
 
         <Snackbar
-          visible={!!snackbarMessage}
-          onDismiss={() => setSnackbarMessage(null)}
-          duration={3000}
+          visible={!!snackbar}
+          onDismiss={() => setSnackbar(null)}
+          duration={snackbar?.action ? 5000 : 3000}
           style={{ backgroundColor: theme.colors.inverseSurface }}
-          action={{
-            label: 'Dismiss',
-            labelStyle: { color: theme.colors.inverseOnSurface },
-            onPress: () => setSnackbarMessage(null),
-          }}
+          action={
+            snackbar?.action || {
+              label: 'Dismiss',
+              labelStyle: { color: theme.colors.inverseOnSurface },
+              onPress: () => setSnackbar(null),
+            }
+          }
         >
-          {snackbarMessage}
+          {snackbar?.message}
         </Snackbar>
       </Container>
     </>

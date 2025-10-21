@@ -24,7 +24,106 @@ Story 5: User-Scoped Recipe Data (Data Isolation)
 Story 6: Password Reset Flow (Requires Stories 1-3)
     ↓
 Story 7: Email Verification (Optional - Requires Story 6)
+    ↓
+Story 8: Offline Support & Sync (Deferred from Sprint 3)
 ```
+
+## Deferred Features from Sprint 3
+
+### Story 8: Offline Support & Mutation Queue
+
+**Status:** 🔴 NOT STARTED
+**Priority:** MEDIUM
+**Type:** Reliability & UX Enhancement
+**Dependencies:** Sprint 3 Stories 12a, 12b, 12c (Optimistic Updates)
+**Estimated Effort:** Medium (8-10 hours)
+
+**Context:**
+During Sprint 3's optimistic updates implementation, offline support was identified as important but deferred to avoid scope creep. Now that user authentication is in place, offline support becomes more critical for a production app.
+
+**User Story:**
+As a user, I want to create, update, and delete recipes while offline so that I can use the app without an internet connection, with changes syncing automatically when I reconnect.
+
+**Technical Approach:**
+- Use `@react-native-community/netinfo` for network detection
+- Queue mutations while offline using TanStack Query's retry mechanism
+- Show offline indicator in UI
+- Automatically sync queued mutations when connection restored
+- Handle authentication token refresh during offline periods
+
+**Implementation Tasks:**
+- [ ] Install and configure `@react-native-community/netinfo`
+- [ ] Add global network status detector
+- [ ] Update `hooks/useRecipeMutations.ts` to detect offline state
+- [ ] Queue mutations when offline (TanStack Query retries automatically)
+- [ ] Add offline indicator component to navigation
+- [ ] Handle auth token expiration during offline mode
+- [ ] Add tests for offline scenarios
+
+**Files to Create:**
+- `hooks/useNetworkStatus.ts` - Network detection hook
+- `components/shared/ui/OfflineIndicator.tsx` - Offline banner component
+
+**Files to Modify:**
+- `hooks/useRecipeMutations.ts` - Add offline detection
+- `navigation/AppNavigator.tsx` - Add offline indicator
+
+**Technical Implementation:**
+```typescript
+// hooks/useNetworkStatus.ts
+import { useEffect, useState } from 'react';
+import NetInfo from '@react-native-community/netinfo';
+
+export const useNetworkStatus = () => {
+  const [isOnline, setIsOnline] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener(state => {
+      setIsOnline(state.isConnected ?? false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  return { isOnline };
+};
+
+// hooks/useRecipeMutations.ts (enhanced)
+export const useCreateRecipe = () => {
+  const queryClient = useQueryClient();
+  const { isOnline } = useNetworkStatus();
+
+  return useMutation({
+    mutationFn: RecipeService.createRecipe,
+    onMutate: async (newRecipe) => {
+      if (!isOnline) {
+        // Show queued indicator instead of error
+        console.log('Queued for sync when online');
+      }
+
+      // Proceed with optimistic update
+      // TanStack Query will automatically retry when online
+    },
+    retry: 3, // Retry failed mutations
+    retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
+  });
+};
+```
+
+**Acceptance Criteria:**
+- [ ] App detects offline status accurately
+- [ ] Offline indicator shown when no connection
+- [ ] Mutations queued while offline
+- [ ] Queued mutations sync automatically when online
+- [ ] User sees clear feedback about queued operations
+- [ ] Auth tokens handled correctly during offline periods
+- [ ] Tests verify offline behavior
+
+**Notes:**
+- This story builds on the optimistic updates from Sprint 3 Stories 12a-c
+- Network detection is lightweight and doesn't impact performance
+- TanStack Query handles retry logic automatically
+- Consider adding exponential backoff for failed syncs
 
 ---
 

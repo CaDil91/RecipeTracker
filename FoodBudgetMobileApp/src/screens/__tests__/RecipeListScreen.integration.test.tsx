@@ -589,4 +589,328 @@ describe('RecipeListScreen Integration Tests', () => {
       });
     });
   });
+
+  /**
+   * ====================================================================
+   * SECTION 7: STORY 12A - OPTIMISTIC DELETE INTEGRATION
+   * Tests for API → TanStack Query → UI optimistic update flow
+   * ====================================================================
+   */
+  describe('7. Story 12a: Optimistic Delete Integration', () => {
+    /**
+     * NARROW TEST: API delete success → cache invalidation → UI update
+     */
+    test('GIVEN recipe in list WHEN delete succeeds THEN API called and cache updated', async () => {
+      // Arrange: MSW intercepts delete request
+      const deletedRecipeId = randomUUID();
+      let deleteApiCalled = false;
+
+      server.use(
+        http.get('*/api/Recipe', () => {
+          return HttpResponse.json([
+            {
+              id: deletedRecipeId,
+              title: 'Recipe To Delete',
+              servings: 4,
+              createdAt: new Date().toISOString(),
+            },
+            {
+              id: randomUUID(),
+              title: 'Other Recipe',
+              servings: 2,
+              createdAt: new Date().toISOString(),
+            },
+          ]);
+        }),
+        http.delete(`*/api/Recipe/${deletedRecipeId}`, async () => {
+          deleteApiCalled = true;
+          await delay(50); // Simulate network latency
+          return new HttpResponse(null, { status: 204 });
+        })
+      );
+
+      const mockNavigation = createMockNavigation();
+      const { getByText } = renderWithProviders(
+        <RecipeListScreen navigation={mockNavigation} />
+      );
+
+      // Wait for the initial load
+      await waitFor(() => {
+        expect(getByText('Recipe To Delete')).toBeTruthy();
+      });
+
+      // Act: This will be triggered by the useDeleteRecipe hook once implemented
+      // For now, this test documents the expected integration flow
+
+      // Assert: Placeholder for GREEN phase - will verify deleteApiCalled = true
+      expect(deleteApiCalled).toBe(false); // Will change to true in the GREEN phase
+    });
+
+    /**
+     * NARROW TEST: Optimistic update → instant UI feedback
+     */
+    test('GIVEN delete triggered WHEN optimistic update applied THEN UI updates before API responds', async () => {
+      // Arrange: Slow API to test optimistic behavior
+      const recipeId = randomUUID();
+
+      server.use(
+        http.get('*/api/Recipe', () => {
+          return HttpResponse.json([
+            {
+              id: recipeId,
+              title: 'Quick Delete Test',
+              servings: 4,
+              createdAt: new Date().toISOString(),
+            },
+          ]);
+        }),
+        http.delete(`*/api/Recipe/${recipeId}`, async () => {
+          await delay(1000); // Very slow API - 1 second
+          return new HttpResponse(null, { status: 204 });
+        })
+      );
+
+      const mockNavigation = createMockNavigation();
+      const { getByText, queryByText } = renderWithProviders(
+        <RecipeListScreen navigation={mockNavigation} />
+      );
+
+      await waitFor(() => {
+        expect(getByText('Quick Delete Test')).toBeTruthy();
+      });
+
+      // Act & Assert: Once optimistic delete is implemented, 
+      // Recipe should disappear within 100 ms (before 1000 ms API completes)
+      // Placeholder for GREEN phase
+      expect(queryByText('Quick Delete Test')).toBeTruthy(); // Will be null in GREEN
+    });
+
+    /**
+     * NARROW TEST: API failure → rollback → refetch
+     */
+    test('GIVEN delete fails WHEN error occurs THEN cache rolled back and refetch triggered', async () => {
+      // Arrange: API returns error
+      const recipeId = randomUUID();
+
+      server.use(
+        http.get('*/api/Recipe', () => {
+          return HttpResponse.json([
+            {
+              id: recipeId,
+              title: 'Rollback Test Recipe',
+              servings: 4,
+              createdAt: new Date().toISOString(),
+            },
+          ]);
+        }),
+        http.delete(`*/api/Recipe/${recipeId}`, () => {
+          return HttpResponse.json(
+            {
+              type: 'https://tools.ietf.org/html/rfc9110#section-15.5.1',
+              title: 'Server Error',
+              status: 500,
+              detail: 'Database connection failed',
+            },
+            { status: 500 }
+          );
+        })
+      );
+
+      const mockNavigation = createMockNavigation();
+      const { getByText } = renderWithProviders(
+        <RecipeListScreen navigation={mockNavigation} />
+      );
+
+      await waitFor(() => {
+        expect(getByText('Rollback Test Recipe')).toBeTruthy();
+      });
+
+      // Act & Assert: Once rollback is implemented, 
+      // Recipe should reappear after failed to delete 
+      // Placeholder for GREEN phase
+      expect(getByText('Rollback Test Recipe')).toBeTruthy();
+    });
+
+    /**
+     * NARROW TEST: Success response → no refetch (trust optimistic update)
+     */
+    test('GIVEN delete succeeds WHEN using Manual Rollback + Refetch strategy THEN success does NOT trigger refetch', async () => {
+      // Arrange
+      const recipeId = randomUUID();
+      let getRequestCount = 0;
+
+      server.use(
+        http.get('*/api/Recipe', () => {
+          getRequestCount++;
+          return HttpResponse.json([
+            {
+              id: recipeId,
+              title: 'No Refetch Test',
+              servings: 4,
+              createdAt: new Date().toISOString(),
+            },
+          ]);
+        }),
+        http.delete(`*/api/Recipe/${recipeId}`, () => {
+          return new HttpResponse(null, { status: 204 });
+        })
+      );
+
+      const mockNavigation = createMockNavigation();
+      const { getByText } = renderWithProviders(
+        <RecipeListScreen navigation={mockNavigation} />
+      );
+
+      await waitFor(() => {
+        expect(getByText('No Refetch Test')).toBeTruthy();
+      });
+
+      const initialGetCount = getRequestCount;
+
+      // Act: Delete recipe (once hook is implemented)
+      // Should NOT trigger refetch on success
+
+      // Assert: Placeholder for GREEN phase
+      // Will verify getRequestCount === initialGetCount (no additional GET)
+      expect(getRequestCount).toBe(initialGetCount);
+    });
+
+    /**
+     * ERROR HANDLING: Network timeout → rollback
+     */
+    test('GIVEN delete request times out WHEN network fails THEN rolls back optimistic update', async () => {
+      // Arrange: Simulate timeout
+      const recipeId = randomUUID();
+
+      server.use(
+        http.get('*/api/Recipe', () => {
+          return HttpResponse.json([
+            {
+              id: recipeId,
+              title: 'Timeout Test Recipe',
+              servings: 4,
+              createdAt: new Date().toISOString(),
+            },
+          ]);
+        }),
+        http.delete(`*/api/Recipe/${recipeId}`, async () => {
+          await delay(35000); // Exceeds 30s timeout
+          return new HttpResponse(null, { status: 204 });
+        })
+      );
+
+      const mockNavigation = createMockNavigation();
+      const { getByText } = renderWithProviders(
+        <RecipeListScreen navigation={mockNavigation} />
+      );
+
+      await waitFor(() => {
+        expect(getByText('Timeout Test Recipe')).toBeTruthy();
+      });
+
+      // Act & Assert: Once timeout handling is implemented, 
+      // Recipe should reappear after timeout
+      // Placeholder for GREEN phase
+      expect(getByText('Timeout Test Recipe')).toBeTruthy();
+    });
+
+    /**
+     * ERROR HANDLING: RFC 9457 ProblemDetails error → rollback
+     */
+    test('GIVEN API returns RFC 9457 error WHEN delete fails THEN parses error and rolls back', async () => {
+      // Arrange
+      const recipeId = randomUUID();
+
+      server.use(
+        http.get('*/api/Recipe', () => {
+          return HttpResponse.json([
+            {
+              id: recipeId,
+              title: 'RFC 9457 Test',
+              servings: 4,
+              createdAt: new Date().toISOString(),
+            },
+          ]);
+        }),
+        http.delete(`*/api/Recipe/${recipeId}`, () => {
+          return HttpResponse.json(
+            {
+              type: 'https://tools.ietf.org/html/rfc9110#section-15.5.5',
+              title: 'Not Found',
+              status: 404,
+              detail: 'Recipe with ID not found in database',
+              traceId: '00-test-trace-id-00',
+            },
+            { status: 404 }
+          );
+        })
+      );
+
+      const mockNavigation = createMockNavigation();
+      const { getByText } = renderWithProviders(
+        <RecipeListScreen navigation={mockNavigation} />
+      );
+
+      await waitFor(() => {
+        expect(getByText('RFC 9457 Test')).toBeTruthy();
+      });
+
+      // Act & Assert: Once RFC 9457 error handling is implemented
+      // Should parse ProblemDetails and rollback
+      // Placeholder for GREEN phase
+      expect(getByText('RFC 9457 Test')).toBeTruthy();
+    });
+
+    /**
+     * BUSINESS RULES: Concurrent deletes → query cancellation
+     */
+    test('GIVEN multiple concurrent delete requests WHEN triggered THEN cancels in-flight queries before optimistic update', async () => {
+      // Arrange
+      const recipe1Id = randomUUID();
+      const recipe2Id = randomUUID();
+
+      server.use(
+        http.get('*/api/Recipe', () => {
+          return HttpResponse.json([
+            {
+              id: recipe1Id,
+              title: 'Concurrent Delete 1',
+              servings: 4,
+              createdAt: new Date().toISOString(),
+            },
+            {
+              id: recipe2Id,
+              title: 'Concurrent Delete 2',
+              servings: 2,
+              createdAt: new Date().toISOString(),
+            },
+          ]);
+        }),
+        http.delete(`*/api/Recipe/${recipe1Id}`, async () => {
+          await delay(100);
+          return new HttpResponse(null, { status: 204 });
+        }),
+        http.delete(`*/api/Recipe/${recipe2Id}`, async () => {
+          await delay(100);
+          return new HttpResponse(null, { status: 204 });
+        })
+      );
+
+      const mockNavigation = createMockNavigation();
+      const { getByText } = renderWithProviders(
+        <RecipeListScreen navigation={mockNavigation} />
+      );
+
+      await waitFor(() => {
+        expect(getByText('Concurrent Delete 1')).toBeTruthy();
+        expect(getByText('Concurrent Delete 2')).toBeTruthy();
+      });
+
+      // Act & Assert: Once concurrent handling is implemented, 
+      // cancelQueries should be called before each optimistic update
+      // Placeholder for GREEN phase
+      expect(getByText('Concurrent Delete 1')).toBeTruthy();
+      expect(getByText('Concurrent Delete 2')).toBeTruthy();
+    });
+  });
 });

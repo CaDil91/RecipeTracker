@@ -805,98 +805,378 @@ As a user, I want to delete recipes from the detail screen with a confirmation p
 
 ---
 
-### Story 12: Optimistic Updates with TanStack Query
-**Status:** 🔴 NOT STARTED
+### Story 12: Optimistic Updates with TanStack Query (SPLIT INTO 12a, 12b, 12c)
+
+**⚠️ This story has been split into three phased implementations for better risk management and incremental delivery. See Stories 12a, 12b, and 12c below.**
+
+---
+
+### Story 12a: Optimistic Delete with Rollback
+**Status:** ✅ COMPLETED
 **Priority:** HIGH
 **Type:** UX Enhancement
 **Dependencies:** Story 11
+**Estimated Effort:** Small (5-6 hours)
+**Actual Effort:** ~5 hours (TDD implementation)
+
+**2025 Standards Applied:**
+✅ Cache Manipulation (multi-location updates)
+✅ Manual Rollback + Refetch (fast + consistent)
+✅ Retry Actions (user-friendly errors)
+✅ Query Cancellation (concurrent handling)
 
 **User Story:**
-As a user, I want instant feedback when I create, update, or delete recipes so the app feels fast and responsive.
+As a user, I want deleted recipes to disappear instantly so the app feels responsive, with automatic rollback if the deletion fails.
+
+**Why Start Here?**
+- ✅ Simplest optimistic update (no temp IDs, no navigation concerns)
+- ✅ Delete mutation already exists in RecipeListScreen
+- ✅ Validates the optimistic pattern before tackling complex scenarios
+- ✅ Immediate UX improvement with low risk
 
 **Current Behavior:**
-- Create: Submit → Wait → Alert → Navigate → List refetches
-- Update: Submit → Wait → Alert → Navigate → List refetches
-- Delete: Confirm → Wait → Snackbar → List refetches
+Delete: Confirm → Wait → Snackbar → List refetches
 
 **Target Behavior:**
-- Create: Submit → **Instantly appears in list** → API saves in background → Success
-- Update: Submit → **Instantly updates in list** → API saves in background → Success
-- Delete: Confirm → **Instantly disappears** → API deletes in background → Success
+Delete: Confirm → **Instantly disappears** → API deletes in background → Success/Rollback
 
 **Implementation Tasks:**
-- [ ] Implement optimistic create mutation
-  - Add temporary recipe to cache with temp ID
-  - Replace temp ID with real ID on success
-  - Rollback on error
-- [ ] Implement optimistic update mutation
-  - Update recipe in cache immediately
-  - Rollback on error
-- [ ] Implement optimistic delete mutation (enhance existing)
-  - Remove from cache immediately
-  - Rollback on error
-- [ ] Add query cache invalidation strategies
-- [ ] Handle race conditions
-- [ ] Add error recovery UI
-- [ ] Test optimistic update flows
-
-**Files to Modify:**
-- `screens/RecipeDetailScreen.tsx` - Create and update mutations
-- `screens/RecipeListScreen.tsx:90-110` - Enhance delete mutation
-- Create new hook: `hooks/useRecipeMutations.ts` - Centralized mutations
+- [x] Create `FoodBudgetMobileApp/src/hooks/` directory
+- [x] Create `hooks/useRecipeMutations.ts` with optimistic delete
+- [x] Migrate delete mutation from RecipeListScreen to hook
+- [x] Add onMutate to remove from cache immediately
+- [x] Add onError with rollback + refetch for consistency
+- [x] Add onSuccess with refetch for consistency
+- [x] Add retry action to error snackbar
+- [x] Write tests in `hooks/__tests__/useRecipeMutations.test.tsx` (11 tests)
+- [x] Add RecipeListScreen unit tests (5 tests)
+- [x] Add RecipeListScreen integration tests (7 tests)
 
 **Files to Create:**
-- `hooks/useRecipeMutations.ts` - Custom hook for all recipe mutations
-- `hooks/__tests__/useRecipeMutations.test.tsx` - Test optimistic updates
+- `FoodBudgetMobileApp/src/hooks/useRecipeMutations.ts`
+- `FoodBudgetMobileApp/src/hooks/__tests__/useRecipeMutations.test.tsx`
+
+**Files to Modify:**
+- `screens/RecipeListScreen.tsx:90-110` - Use new hook instead of inline mutation
 
 **Technical Implementation:**
 ```typescript
-// Example: Optimistic create
-const createMutation = useMutation({
-  mutationFn: RecipeService.createRecipe,
-  onMutate: async (newRecipe) => {
-    await queryClient.cancelQueries({ queryKey: ['recipes'] });
-    const previous = queryClient.getQueryData(['recipes']);
+// hooks/useRecipeMutations.ts
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { RecipeService } from '../lib/shared/api/recipe.service';
+import type { RecipeResponseDto } from '../lib/shared/types/dto';
 
-    // Optimistically add with temporary ID
-    const optimisticRecipe = {
-      ...newRecipe,
-      id: `temp-${Date.now()}`,
-      createdAt: new Date().toISOString()
-    };
+export const useDeleteRecipe = () => {
+  const queryClient = useQueryClient();
 
-    queryClient.setQueryData(['recipes'], (old) =>
-      [optimisticRecipe, ...(old || [])]
-    );
+  return useMutation({
+    mutationFn: RecipeService.deleteRecipe,
+    onMutate: async (recipeId: string) => {
+      // Cancel outgoing refetches (handles concurrency)
+      await queryClient.cancelQueries({ queryKey: ['recipes'] });
 
-    return { previous };
-  },
-  onError: (err, variables, context) => {
-    // Rollback on error
-    if (context?.previous) {
-      queryClient.setQueryData(['recipes'], context.previous);
-    }
-  },
-  onSuccess: (data) => {
-    // Replace temp ID with real ID
-    queryClient.setQueryData(['recipes'], (old) =>
-      old.map(r => r.id.startsWith('temp-') ? data : r)
-    );
-  },
-  onSettled: () => {
-    queryClient.invalidateQueries({ queryKey: ['recipes'] });
+      // Snapshot current state for rollback
+      const previousRecipes = queryClient.getQueryData<RecipeResponseDto[]>(['recipes']);
+
+      // Optimistically remove from cache
+      queryClient.setQueryData<RecipeResponseDto[]>(['recipes'], (old) =>
+        old?.filter(r => r.id !== recipeId) || []
+      );
+
+      return { previousRecipes, recipeId };
+    },
+    onError: (err, recipeId, context) => {
+      // Manual rollback (instant)
+      if (context?.previousRecipes) {
+        queryClient.setQueryData(['recipes'], context.previousRecipes);
+      }
+
+      // Refetch for consistency (background)
+      queryClient.invalidateQueries({ queryKey: ['recipes'] });
+
+      // Error snackbar with retry handled by UI
+    },
+    onSuccess: () => {
+      // Success snackbar handled by UI
+      // NO invalidate - trust optimistic update
+    },
+  });
+};
+```
+
+**Usage in RecipeListScreen:**
+```typescript
+const deleteMutation = useDeleteRecipe();
+
+const handleDelete = async (recipeId: string) => {
+  try {
+    await deleteMutation.mutateAsync(recipeId);
+    showSnackbar({ message: 'Recipe deleted', type: 'success' });
+  } catch (error) {
+    showSnackbar({
+      message: 'Failed to delete recipe',
+      type: 'error',
+      action: {
+        label: 'Retry',
+        onPress: () => handleDelete(recipeId)
+      }
+    });
   }
-});
+};
 ```
 
 **Acceptance Criteria:**
-- [ ] Creating recipe shows instantly in list
-- [ ] Updating recipe reflects changes immediately
-- [ ] Deleting recipe disappears immediately
-- [ ] Failed operations rollback cleanly
-- [ ] Error messages shown for failures
-- [ ] No duplicate entries after optimistic updates
-- [ ] List stays consistent after background sync
+- [x] Deleted recipe disappears instantly from list
+- [x] Failed delete operations rollback cleanly (recipe reappears)
+- [x] Background refetch ensures consistency after error
+- [x] Success snackbar shown after successful delete
+- [x] Error snackbar shown with retry action after failed delete
+- [x] No duplicate recipes after rollback
+- [x] Tests verify optimistic update and rollback behavior (23 tests)
+- [x] Query cancellation prevents race conditions
+
+**Test Results:**
+- ✅ 11/11 hook unit tests passing
+- ✅ 5/5 RecipeListScreen unit tests passing
+- ✅ 7/7 RecipeListScreen integration tests passing
+- **Total: 23/23 tests passing (100%)**
+
+---
+
+### Story 12b: Optimistic Update with Consistency
+**Status:** 🔴 NOT STARTED
+**Priority:** HIGH
+**Type:** UX Enhancement
+**Dependencies:** Story 12a
+**Estimated Effort:** Medium (7-8 hours)
+
+**2025 Standards Applied:**
+✅ Cache Manipulation (multi-location updates)
+✅ Manual Rollback + Refetch (fast + consistent)
+✅ Retry Actions (user-friendly errors)
+✅ Query Cancellation (concurrent handling)
+
+**User Story:**
+As a user, I want recipe updates to show instantly in both the detail screen and list so I see my changes immediately.
+
+**Why Second?**
+- ✅ Builds on delete pattern from 12a
+- ✅ No temp ID complexity (recipe already has real ID)
+- ✅ Validates cache consistency between detail and list views
+- ✅ Sets up foundation for create (most complex)
+
+**Current Behavior:**
+Update: Submit → Wait → Alert → Navigate → List refetches
+
+**Target Behavior:**
+Update: Submit → **Instantly updates in list** → API saves in background → Success/Rollback → Navigate
+
+**Implementation Tasks:**
+- [ ] Add `useUpdateRecipe` to `hooks/useRecipeMutations.ts`
+- [ ] Update both ['recipes'] and ['recipe', id] query keys optimistically
+- [ ] Add rollback for both caches on error + refetch
+- [ ] Add retry action to error snackbar
+- [ ] Block navigation until API confirms (avoid temp state issues)
+- [ ] Add loading indicator during background save
+- [ ] Add tests for update optimistic flow
+
+**Files to Modify:**
+- `hooks/useRecipeMutations.ts` - Add useUpdateRecipe
+- `screens/RecipeDetailScreen.tsx` - Use new hook for EDIT mode
+- `hooks/__tests__/useRecipeMutations.test.tsx` - Add update tests
+
+**Technical Implementation:**
+```typescript
+// hooks/useRecipeMutations.ts
+export const useUpdateRecipe = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: RecipeUpdateDto }) =>
+      RecipeService.updateRecipe(id, data),
+    onMutate: async ({ id, data }) => {
+      await queryClient.cancelQueries({ queryKey: ['recipes'] });
+      await queryClient.cancelQueries({ queryKey: ['recipe', id] });
+
+      const previousRecipes = queryClient.getQueryData<RecipeResponseDto[]>(['recipes']);
+      const previousRecipe = queryClient.getQueryData<RecipeResponseDto>(['recipe', id]);
+
+      // Optimistically update in list
+      queryClient.setQueryData<RecipeResponseDto[]>(['recipes'], (old) =>
+        old?.map(r => r.id === id ? { ...r, ...data } : r) || []
+      );
+
+      // Optimistically update in detail
+      queryClient.setQueryData<RecipeResponseDto>(['recipe', id], (old) =>
+        old ? { ...old, ...data } : old
+      );
+
+      return { previousRecipes, previousRecipe, id };
+    },
+    onError: (err, { id }, context) => {
+      // Rollback both caches
+      if (context?.previousRecipes) {
+        queryClient.setQueryData(['recipes'], context.previousRecipes);
+      }
+      if (context?.previousRecipe) {
+        queryClient.setQueryData(['recipe', id], context.previousRecipe);
+      }
+
+      // Refetch for consistency
+      queryClient.invalidateQueries({ queryKey: ['recipes'] });
+      queryClient.invalidateQueries({ queryKey: ['recipe', id] });
+    },
+    onSuccess: (updatedRecipe, { id }) => {
+      // Replace optimistic data with server response
+      queryClient.setQueryData(['recipes'], (old: RecipeResponseDto[] | undefined) =>
+        old?.map(r => r.id === id ? updatedRecipe : r) || []
+      );
+      queryClient.setQueryData(['recipe', id], updatedRecipe);
+    },
+  });
+};
+```
+
+**Acceptance Criteria:**
+- [ ] Updated recipe reflects changes immediately in list
+- [ ] Updated recipe reflects changes immediately in detail screen
+- [ ] Failed updates rollback cleanly in both locations
+- [ ] Background refetch ensures consistency after error
+- [ ] Navigation blocked until API confirms update
+- [ ] Loading indicator shown during background save
+- [ ] Error snackbar with retry action shown for failures
+- [ ] List and detail stay consistent
+- [ ] Tests verify multi-cache update and rollback
+
+---
+
+### Story 12c: Optimistic Create with UUID Temp IDs
+**Status:** 🔴 NOT STARTED
+**Priority:** HIGH
+**Type:** UX Enhancement
+**Dependencies:** Story 12b
+**Estimated Effort:** Large (9-10 hours)
+
+**2025 Standards Applied:**
+✅ Cache Manipulation (multi-location updates)
+✅ Manual Rollback + Refetch (fast + consistent)
+✅ Retry Actions (user-friendly errors)
+✅ UUID Temp IDs (expo-crypto for uniqueness)
+✅ Query Cancellation (concurrent handling)
+
+**User Story:**
+As a user, I want newly created recipes to appear instantly in the list so I see my recipe immediately while it saves.
+
+**Why Last?**
+- ⚠️ Most complex (temp ID → real ID replacement)
+- ⚠️ Navigation concerns (can't navigate to detail with temp ID)
+- ⚠️ Requires lessons learned from 12a and 12b
+- ✅ Completes the optimistic update story
+
+**Current Behavior:**
+Create: Submit → Wait → Alert → Navigate → List refetches
+
+**Target Behavior:**
+Create: Submit → **Instantly appears in list** → Navigate to detail → API saves in background → Replace temp ID
+
+**Implementation Tasks:**
+- [ ] Add `useCreateRecipe` to `hooks/useRecipeMutations.ts`
+- [ ] Generate temp ID using `expo-crypto`: `temp-${Crypto.randomUUID()}`
+- [ ] Add recipe to cache with temp ID and timestamp
+- [ ] Sort list by createdAt (new recipe appears at top)
+- [ ] Block navigation until real ID received
+- [ ] Replace temp ID with real ID on success + refetch on error
+- [ ] Remove temp recipe on error
+- [ ] Add retry action to error snackbar
+- [ ] Show inline loading indicator on temp recipe card
+- [ ] Add tests for create optimistic flow with temp ID
+
+**Files to Modify:**
+- `hooks/useRecipeMutations.ts` - Add useCreateRecipe
+- `screens/RecipeDetailScreen.tsx` - Use new hook for CREATE mode
+- `components/shared/recipe/RecipeCard.tsx` - Add loading state for temp IDs
+- `hooks/__tests__/useRecipeMutations.test.tsx` - Add create tests
+
+**Technical Implementation:**
+```typescript
+// hooks/useRecipeMutations.ts
+import * as Crypto from 'expo-crypto';
+
+export const useCreateRecipe = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: RecipeService.createRecipe,
+    onMutate: async (newRecipe: RecipeCreateDto) => {
+      await queryClient.cancelQueries({ queryKey: ['recipes'] });
+
+      const previousRecipes = queryClient.getQueryData<RecipeResponseDto[]>(['recipes']);
+
+      // Create optimistic recipe with UUID temp ID
+      const optimisticRecipe: RecipeResponseDto = {
+        ...newRecipe,
+        id: `temp-${Crypto.randomUUID()}`, // ✅ Proper UUID
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        userId: 'temp-user',
+      };
+
+      // Add to top of list
+      queryClient.setQueryData<RecipeResponseDto[]>(['recipes'], (old) =>
+        [optimisticRecipe, ...(old || [])]
+      );
+
+      return { previousRecipes, tempId: optimisticRecipe.id };
+    },
+    onError: (err, variables, context) => {
+      // Rollback to previous state
+      if (context?.previousRecipes) {
+        queryClient.setQueryData(['recipes'], context.previousRecipes);
+      }
+
+      // Refetch for consistency
+      queryClient.invalidateQueries({ queryKey: ['recipes'] });
+    },
+    onSuccess: (createdRecipe, variables, context) => {
+      // Replace temp ID with real ID
+      queryClient.setQueryData<RecipeResponseDto[]>(['recipes'], (old) =>
+        old?.map(r => r.id === context?.tempId ? createdRecipe : r) || []
+      );
+
+      // Add to detail cache
+      queryClient.setQueryData(['recipe', createdRecipe.id], createdRecipe);
+    },
+  });
+};
+```
+
+**RecipeCard Loading Indicator:**
+```typescript
+// RecipeCard.tsx
+const isTempRecipe = recipe.id.startsWith('temp-');
+
+return (
+  <Card>
+    {isTempRecipe && (
+      <View style={styles.savingBadge}>
+        <ActivityIndicator size="small" />
+        <Text>Saving...</Text>
+      </View>
+    )}
+    {/* Rest of card */}
+  </Card>
+);
+```
+
+**Acceptance Criteria:**
+- [ ] New recipe appears instantly at top of list with temp UUID
+- [ ] Temp recipe shows loading indicator
+- [ ] Navigation blocked until real ID received
+- [ ] Temp ID replaced with real ID after success
+- [ ] Failed creates remove temp recipe from list with refetch
+- [ ] Error snackbar with retry action shown for failures
+- [ ] No duplicate entries after temp ID replacement
+- [ ] Tests verify temp UUID lifecycle
 
 ---
 

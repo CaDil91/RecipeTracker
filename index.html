@@ -12,7 +12,7 @@
       html,
       body {
         height: 100%;
-        background-color: #FAFBFC;
+        background-color: #FAFBFC !important;
         margin: 0;
         padding: 0;
       }
@@ -25,7 +25,11 @@
         display: flex;
         height: 100%;
         flex: 1;
-        background-color: transparent;
+        background-color: transparent !important;
+      }
+      /* Force background on all potential containers */
+      #root > div {
+        background-color: transparent !important;
       }
     </style>
   <link rel="icon" href="/RecipeTracker/favicon.ico" /></head>

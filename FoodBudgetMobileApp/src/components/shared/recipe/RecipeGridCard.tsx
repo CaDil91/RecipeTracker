@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, Dimensions, Image, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { Text, IconButton, Chip, Surface, useTheme } from 'react-native-paper';
 import { RecipeResponseDto } from '../../../lib/shared';
 
@@ -7,25 +7,13 @@ const GRID_PADDING = 16;
 const CARD_GAP = 8;
 const ASPECT_RATIO = 1.3;
 
-const useWindowDimensions = () => {
-  const [dimensions, setDimensions] = React.useState(() => Dimensions.get('window'));
-
-  React.useEffect(() => {
-    const subscription = Dimensions.addEventListener('change', ({ window }) => {
-      setDimensions(window);
-    });
-    return () => subscription?.remove();
-  }, []);
-
-  return dimensions;
-};
-
 export interface RecipeGridCardProps {
   recipe: RecipeResponseDto;
   onPress?: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
   columns?: 2 | 3 | 4;
+  containerWidth?: number;
   testID?: string;
 }
 
@@ -33,21 +21,22 @@ export const RecipeGridCard: React.FC<RecipeGridCardProps> = ({
   recipe,
   onPress,
   columns = 2,
+  containerWidth,
   testID,
 }) => {
   const theme = useTheme();
-  const { width: screenWidth } = useWindowDimensions();
   const [imageError, setImageError] = React.useState(false);
 
   const { cardWidth, cardHeight } = React.useMemo(() => {
+    if (!containerWidth || containerWidth === 0) return { cardWidth: 0, cardHeight: 0 };
     const totalGaps = CARD_GAP * (columns - 1);
-    const availableWidth = screenWidth - GRID_PADDING - totalGaps;
+    const availableWidth = containerWidth - GRID_PADDING - totalGaps;
     const width = availableWidth / columns;
     return {
       cardWidth: width,
       cardHeight: width * ASPECT_RATIO,
     };
-  }, [screenWidth, columns]);
+  }, [containerWidth, columns]);
 
   const showImage = recipe.imageUrl && !imageError;
 

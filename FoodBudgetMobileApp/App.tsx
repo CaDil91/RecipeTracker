@@ -8,6 +8,7 @@ import { useFonts } from 'expo-font';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AppNavigator from './src/navigation/AppNavigator';
 import { getCustomTheme } from './src/theme/customTheme';
+import WebContainer from './src/components/WebContainer';
 2
 // Initialize MSW for development if enabled
 if (__DEV__ && process.env.EXPO_PUBLIC_USE_MSW === 'true') {
@@ -52,8 +53,10 @@ export default function App() {
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
         <PaperProvider theme={theme}>
-          <AppNavigator />
-          <StatusBar style="auto" />
+          <WebContainer>
+            <AppNavigator />
+            <StatusBar style="auto" />
+          </WebContainer>
         </PaperProvider>
       </QueryClientProvider>
     </SafeAreaProvider>

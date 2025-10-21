@@ -31,6 +31,7 @@ export const RecipeGrid: React.FC<RecipeGridProps> = ({
   testID,
 }) => {
   const theme = useTheme();
+  const [containerWidth, setContainerWidth] = React.useState(0);
 
   const renderRecipe = ({ item, index }: { item: RecipeResponseDto; index: number }) => (
     <RecipeGridCard
@@ -39,6 +40,7 @@ export const RecipeGrid: React.FC<RecipeGridProps> = ({
       onEdit={() => onRecipeEdit?.(item)}
       onDelete={() => onRecipeDelete?.(item)}
       columns={columns}
+      containerWidth={containerWidth}
       testID={`${testID}-recipe-${index}`}
     />
   );
@@ -55,27 +57,32 @@ export const RecipeGrid: React.FC<RecipeGridProps> = ({
   }
 
   return (
-    <FlatList
-      data={recipes}
-      renderItem={renderRecipe}
-      keyExtractor={(item) => item.id}
-      numColumns={columns}
-      key={`grid-${columns}`} // Force re-render when columns change
-      columnWrapperStyle={columns > 1 ? styles.row : undefined}
-      contentContainerStyle={styles.container}
-      ItemSeparatorComponent={() => <View style={{ height: 0 }} />} // Handled by card margins
-      refreshControl={
-        onRefresh ? (
-          <RefreshControl
-            refreshing={isRefreshing}
-            onRefresh={onRefresh}
-            colors={[theme.colors.primary]}
-            progressBackgroundColor={theme.colors.surface}
-          />
-        ) : undefined
-      }
-      testID={testID}
-    />
+    <View
+      style={{ flex: 1 }}
+      onLayout={(event) => setContainerWidth(event.nativeEvent.layout.width)}
+    >
+      <FlatList
+        data={recipes}
+        renderItem={renderRecipe}
+        keyExtractor={(item) => item.id}
+        numColumns={columns}
+        key={`grid-${columns}`} // Force re-render when columns change
+        columnWrapperStyle={columns > 1 ? styles.row : undefined}
+        contentContainerStyle={styles.container}
+        ItemSeparatorComponent={() => <View style={{ height: 0 }} />} // Handled by card margins
+        refreshControl={
+          onRefresh ? (
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={onRefresh}
+              colors={[theme.colors.primary]}
+              progressBackgroundColor={theme.colors.surface}
+            />
+          ) : undefined
+        }
+        testID={testID}
+      />
+    </View>
   );
 };
 

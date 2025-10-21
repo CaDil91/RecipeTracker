@@ -18,6 +18,7 @@ import { ActivityIndicator, useTheme, IconButton, Surface, Divider, Snackbar, FA
 import { RecipeDetailScreenNavigationProp, RecipeDetailScreenRouteProp } from '../types/navigation';
 import { RecipeService, RecipeRequestDto } from '../lib/shared';
 import { RecipeForm, RecipeFormRef } from '../components/shared';
+import { useUpdateRecipe } from '../hooks/useRecipeMutations';
 
 type RecipeDetailScreenProps = {
   navigation: RecipeDetailScreenNavigationProp;
@@ -118,40 +119,8 @@ const RecipeDetailScreen: React.FC<RecipeDetailScreenProps> = ({ navigation, rou
     },
   });
 
-  // EDIT mode mutation
-  const updateMutation = useMutation({
-    mutationFn: async (data: RecipeRequestDto) => {
-      if (!recipeId) {
-        throw new Error('Recipe ID is required for update');
-      }
-      const response = await RecipeService.updateRecipe(recipeId, data);
-      if (!response.success) {
-        throw new Error(
-          typeof response.error === 'string'
-            ? response.error
-            : response.error.title || 'Failed to update recipe'
-        );
-      }
-      return response.data;
-    },
-    onSuccess: () => {
-      // Show a success message
-      setSnackbarMessage('Recipe updated successfully!');
-      setSnackbarVisible(true);
-
-      // Invalidate caches
-      void queryClient.invalidateQueries({ queryKey: ['recipe', recipeId] });
-      void queryClient.invalidateQueries({ queryKey: ['recipes'] });
-
-      // Transition back to VIEW mode
-      setIsEditing(false);
-    },
-    onError: (error: Error) => {
-      // Show an error message (stay in EDIT mode)
-      setSnackbarMessage(error.message || 'Failed to update recipe. Please try again.');
-      setSnackbarVisible(true);
-    },
-  });
+  // Story 12b: Optimistic update mutation hook
+  const updateMutation = useUpdateRecipe();
 
   // DELETE mutation (Story 11)
   const deleteMutation = useMutation({
@@ -191,8 +160,23 @@ const RecipeDetailScreen: React.FC<RecipeDetailScreenProps> = ({ navigation, rou
     createMutation.mutate(data);
   };
 
-  const handleEditSubmit = (data: RecipeRequestDto) => {
-    updateMutation.mutate(data);
+  const handleEditSubmit = async (data: RecipeRequestDto) => {
+    if (!recipeId) return;
+
+    try {
+      await updateMutation.mutateAsync({ id: recipeId, data });
+      setSnackbarMessage('Recipe updated successfully!');
+      setSnackbarVisible(true);
+      setIsEditing(false); // Return to VIEW mode after a successful update
+    } catch (error) {
+      // Error snackbar with the original error message (preserves existing behavior)
+      const errorMessage = error instanceof Error
+        ? error.message
+        : 'Failed to update recipe. Please try again.';
+      setSnackbarMessage(errorMessage);
+      setSnackbarVisible(true);
+      // Note: Stays in EDIT mode to allow retry
+    }
   };
 
   // Handle cancel in EDIT mode - receives hasChanges from RecipeForm

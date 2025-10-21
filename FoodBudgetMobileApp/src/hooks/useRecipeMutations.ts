@@ -8,13 +8,13 @@
  * - Retry actions handled by UI layer
  *
  * Story 12a: Optimistic Delete
- * Story 12b: Optimistic Update (future)
+ * Story 12b: Optimistic Update
  * Story 12c: Optimistic Create (future)
  */
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { RecipeService } from '../lib/shared';
-import type { RecipeResponseDto } from '../lib/shared';
+import type { RecipeResponseDto, RecipeRequestDto } from '../lib/shared';
 
 /**
  * useDeleteRecipe Hook
@@ -49,7 +49,17 @@ export const useDeleteRecipe = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: RecipeService.deleteRecipe,
+    mutationFn: async (recipeId: string) => {
+      const response = await RecipeService.deleteRecipe(recipeId);
+      if (!response.success) {
+        throw new Error(
+          typeof response.error === 'string'
+            ? response.error
+            : response.error.title || 'Failed to delete recipe'
+        );
+      }
+      return response.data;
+    },
 
     onMutate: async (recipeId: string) => {
       // Cancel outgoing refetches to prevent race conditions
@@ -102,6 +112,114 @@ export const useDeleteRecipe = () => {
 
       // Note: Success snackbar is handled by the UI component
       // The component receives success and shows appropriate feedback
+    },
+  });
+};
+
+/**
+ * useUpdateRecipe Hook - Story 12b
+ *
+ * Provides optimistic update mutation with instant UI updates in both list and detail caches.
+ *
+ * Features:
+ * - Instant cache updates in BOTH list and detail views (multi-cache)
+ * - Automatic rollback on API failure for both caches
+ * - Background refetch for consistency after errors
+ * - Server response replaces optimistic data on success
+ * - Concurrent query cancellation for both caches
+ *
+ * @example
+ * ```tsx
+ * const updateMutation = useUpdateRecipe();
+ *
+ * const handleSave = async (recipeId: string, data: RecipeRequestDto) => {
+ *   try {
+ *     await updateMutation.mutateAsync({ id: recipeId, data });
+ *     showSnackbar('Recipe updated successfully', 'success');
+ *     navigation.goBack(); // Navigate only after API confirms
+ *   } catch (error) {
+ *     showSnackbar('Failed to update recipe', 'error', {
+ *       label: 'Retry',
+ *       onPress: () => handleSave(recipeId, data)
+ *     });
+ *   }
+ * };
+ * ```
+ */
+export const useUpdateRecipe = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: RecipeRequestDto }) => {
+      const response = await RecipeService.updateRecipe(id, data);
+      if (!response.success) {
+        throw new Error(
+          typeof response.error === 'string'
+            ? response.error
+            : response.error.title || 'Failed to update recipe'
+        );
+      }
+      return response.data;
+    },
+
+    onMutate: async ({ id, data }) => {
+      // Cancel outgoing refetches for BOTH list and detail caches
+      await queryClient.cancelQueries({ queryKey: ['recipes'] });
+      await queryClient.cancelQueries({ queryKey: ['recipe', id] });
+
+      // Snapshot current state for both caches
+      const previousRecipes = queryClient.getQueryData<RecipeResponseDto[]>(['recipes']);
+      const previousRecipe = queryClient.getQueryData<RecipeResponseDto>(['recipe', id]);
+
+      // Optimistically update LIST cache
+      queryClient.setQueryData<RecipeResponseDto[]>(['recipes'], (old) =>
+        old?.map((r) => (r.id === id ? { ...r, ...data } : r)) || []
+      );
+
+      // Optimistically update DETAIL cache
+      queryClient.setQueryData<RecipeResponseDto>(['recipe', id], (old) =>
+        old ? { ...old, ...data } : old
+      );
+
+      // Update category-specific caches
+      const categories = ['All', 'Breakfast', 'Lunch', 'Dinner', 'Dessert'];
+      categories.forEach((category) => {
+        queryClient.setQueryData<RecipeResponseDto[]>(['recipes', category], (old) =>
+          old?.map((r) => (r.id === id ? { ...r, ...data } : r)) || []
+        );
+      });
+
+      // Return context for rollback
+      return { previousRecipes, previousRecipe, id };
+    },
+
+    onError: (_err, { id }, context) => {
+      // Manual Rollback (instant) - restores BOTH caches
+      if (context?.previousRecipes) {
+        queryClient.setQueryData(['recipes'], context.previousRecipes);
+      }
+      if (context?.previousRecipe) {
+        queryClient.setQueryData(['recipe', id], context.previousRecipe);
+      }
+
+      // Background Refetch (eventual consistency) - ensures both caches are correct
+      void queryClient.invalidateQueries({ queryKey: ['recipes'] });
+      void queryClient.invalidateQueries({ queryKey: ['recipe', id] });
+
+      // Note: Error snackbar with retry action is handled by the UI component
+    },
+
+    onSuccess: (updatedRecipe, { id }) => {
+      // Replace optimistic data with server response for both caches
+      queryClient.setQueryData<RecipeResponseDto[]>(['recipes'], (old) =>
+        old?.map((r) => (r.id === id ? updatedRecipe : r)) || []
+      );
+      queryClient.setQueryData(['recipe', id], updatedRecipe);
+
+      // Refetch list for consistency (catches any server-side changes)
+      void queryClient.refetchQueries({ queryKey: ['recipes'] });
+
+      // Note: Success snackbar and navigation are handled by the UI component
     },
   });
 };

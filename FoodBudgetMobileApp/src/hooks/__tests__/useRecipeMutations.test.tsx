@@ -1,7 +1,7 @@
 import { renderHook, waitFor } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
-import { useDeleteRecipe } from '../useRecipeMutations';
+import { useDeleteRecipe, useUpdateRecipe } from '../useRecipeMutations';
 import { RecipeService, RecipeResponseDto } from '../../lib/shared';
 
 // Mock RecipeService
@@ -9,6 +9,7 @@ jest.mock('../../lib/shared', () => ({
   ...jest.requireActual('../../lib/shared'),
   RecipeService: {
     deleteRecipe: jest.fn(),
+    updateRecipe: jest.fn(),
   },
 }));
 
@@ -57,7 +58,10 @@ describe('useDeleteRecipe', () => {
       queryClient.setQueryData(['recipes'], mockRecipes);
       queryClient.setQueryData(['recipes', 'All'], mockRecipes);
 
-      (RecipeService.deleteRecipe as jest.Mock).mockResolvedValue(undefined);
+      (RecipeService.deleteRecipe as jest.Mock).mockResolvedValue({
+        success: true,
+        data: undefined
+      });
 
       const wrapper = ({ children }: { children: React.ReactNode }) => (
         <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
@@ -110,7 +114,10 @@ describe('useDeleteRecipe', () => {
       const mockRecipes = [createMockRecipe('recipe-1', 'Recipe 1')];
       queryClient.setQueryData(['recipes'], mockRecipes);
 
-      (RecipeService.deleteRecipe as jest.Mock).mockResolvedValue(undefined);
+      (RecipeService.deleteRecipe as jest.Mock).mockResolvedValue({
+        success: true,
+        data: undefined
+      });
 
       const refetchSpy = jest.spyOn(queryClient, 'refetchQueries');
 
@@ -170,7 +177,10 @@ describe('useDeleteRecipe', () => {
       const mockRecipes = [createMockRecipe('recipe-1', 'Recipe 1')];
       queryClient.setQueryData(['recipes'], mockRecipes);
 
-      (RecipeService.deleteRecipe as jest.Mock).mockResolvedValue(undefined);
+      (RecipeService.deleteRecipe as jest.Mock).mockResolvedValue({
+        success: true,
+        data: undefined
+      });
 
       const wrapper = ({ children }: { children: React.ReactNode }) => (
         <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
@@ -200,7 +210,10 @@ describe('useDeleteRecipe', () => {
       const mockRecipes = [createMockRecipe('recipe-1', 'Recipe 1')];
       queryClient.setQueryData(['recipes'], mockRecipes);
 
-      (RecipeService.deleteRecipe as jest.Mock).mockResolvedValue(undefined);
+      (RecipeService.deleteRecipe as jest.Mock).mockResolvedValue({
+        success: true,
+        data: undefined
+      });
 
       const wrapper = ({ children }: { children: React.ReactNode }) => (
         <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
@@ -224,7 +237,10 @@ describe('useDeleteRecipe', () => {
       // GIVEN: Empty cache
       queryClient.setQueryData(['recipes'], []);
 
-      (RecipeService.deleteRecipe as jest.Mock).mockResolvedValue(undefined);
+      (RecipeService.deleteRecipe as jest.Mock).mockResolvedValue({
+        success: true,
+        data: undefined
+      });
 
       const wrapper = ({ children }: { children: React.ReactNode }) => (
         <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
@@ -258,7 +274,10 @@ describe('useDeleteRecipe', () => {
       );
       queryClient.setQueryData(['recipes'], mockRecipes);
 
-      (RecipeService.deleteRecipe as jest.Mock).mockResolvedValue(undefined);
+      (RecipeService.deleteRecipe as jest.Mock).mockResolvedValue({
+        success: true,
+        data: undefined
+      });
 
       const wrapper = ({ children }: { children: React.ReactNode }) => (
         <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
@@ -286,7 +305,10 @@ describe('useDeleteRecipe', () => {
       const mockRecipes = [createMockRecipe('recipe-1', 'Last Recipe')];
       queryClient.setQueryData(['recipes'], mockRecipes);
 
-      (RecipeService.deleteRecipe as jest.Mock).mockResolvedValue(undefined);
+      (RecipeService.deleteRecipe as jest.Mock).mockResolvedValue({
+        success: true,
+        data: undefined
+      });
 
       const wrapper = ({ children }: { children: React.ReactNode }) => (
         <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
@@ -318,7 +340,10 @@ describe('useDeleteRecipe', () => {
       queryClient.setQueryData(['recipes', 'All'], [mockRecipe]);
       queryClient.setQueryData(['recipes', 'Dinner'], [mockRecipe]);
 
-      (RecipeService.deleteRecipe as jest.Mock).mockResolvedValue(undefined);
+      (RecipeService.deleteRecipe as jest.Mock).mockResolvedValue({
+        success: true,
+        data: undefined
+      });
 
       const wrapper = ({ children }: { children: React.ReactNode }) => (
         <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
@@ -369,6 +394,486 @@ describe('useDeleteRecipe', () => {
         const cachedRecipes = queryClient.getQueryData<RecipeResponseDto[]>(['recipes']);
         expect(cachedRecipes).toHaveLength(1);
         expect(cachedRecipes?.find((r) => r.id === 'recipe-1')).toBeDefined();
+      });
+    });
+  });
+});
+
+// ============================================================================
+// useUpdateRecipe Tests - Story 12b
+// ============================================================================
+
+describe('useUpdateRecipe', () => {
+  let queryClient: QueryClient;
+
+  beforeEach(() => {
+    queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+    jest.clearAllMocks();
+  });
+
+  // ==========================================
+  // SECTION 1: RISK-BASED PRIORITY
+  // Critical optimistic update logic for multi-cache updates
+  // ==========================================
+
+  describe('RISK-BASED PRIORITY: Multi-Cache Optimistic Updates', () => {
+    it('GIVEN recipe in both list and detail caches WHEN update mutation triggered THEN immediately updates both caches optimistically', async () => {
+      // GIVEN: Recipe exists in both caches
+      const mockRecipe = createMockRecipe('recipe-1', 'Original Title');
+      const mockRecipes = [mockRecipe, createMockRecipe('recipe-2', 'Recipe 2')];
+
+      queryClient.setQueryData(['recipes'], mockRecipes);
+      queryClient.setQueryData(['recipe', 'recipe-1'], mockRecipe);
+
+      (RecipeService.updateRecipe as jest.Mock) = jest.fn().mockResolvedValue({
+        success: true,
+        data: {
+          ...mockRecipe,
+          title: 'Updated Title',
+        }
+      });
+
+      const wrapper = ({ children }: { children: React.ReactNode }) => (
+        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      );
+
+      const { result } = renderHook(() => useUpdateRecipe(), { wrapper });
+
+      // WHEN: Trigger update mutation
+      const updateData = { title: 'Updated Title', servings: 4, instructions: 'Updated instructions' };
+      result.current.mutate({ id: 'recipe-1', data: updateData });
+
+      // THEN: Both caches should be updated immediately
+      await waitFor(() => {
+        const listCache = queryClient.getQueryData<RecipeResponseDto[]>(['recipes']);
+        const detailCache = queryClient.getQueryData<RecipeResponseDto>(['recipe', 'recipe-1']);
+
+        expect(listCache?.find(r => r.id === 'recipe-1')?.title).toBe('Updated Title');
+        expect(detailCache?.title).toBe('Updated Title');
+      });
+    });
+
+    it('GIVEN optimistic update in progress WHEN API call fails THEN rolls back both list and detail caches', async () => {
+      // GIVEN: Recipe in both caches
+      const mockRecipe = createMockRecipe('recipe-1', 'Original Title');
+      queryClient.setQueryData(['recipes'], [mockRecipe]);
+      queryClient.setQueryData(['recipe', 'recipe-1'], mockRecipe);
+
+      (RecipeService.updateRecipe as jest.Mock) = jest.fn().mockResolvedValue({
+        success: false,
+        error: 'Network error'
+      });
+
+      const wrapper = ({ children }: { children: React.ReactNode }) => (
+        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      );
+
+      const { result } = renderHook(() => useUpdateRecipe(), { wrapper });
+
+      // WHEN: Update fails
+      const updateData = { title: 'Failed Update', servings: 4, instructions: 'Test' };
+      result.current.mutate({ id: 'recipe-1', data: updateData });
+
+      // THEN: Both caches should be rolled back
+      await waitFor(() => {
+        const listCache = queryClient.getQueryData<RecipeResponseDto[]>(['recipes']);
+        const detailCache = queryClient.getQueryData<RecipeResponseDto>(['recipe', 'recipe-1']);
+
+        expect(listCache?.find(r => r.id === 'recipe-1')?.title).toBe('Original Title');
+        expect(detailCache?.title).toBe('Original Title');
+      });
+    });
+
+    it('GIVEN optimistic update succeeded WHEN API call succeeds THEN refetches both caches for consistency', async () => {
+      // GIVEN: Recipe in both caches
+      const mockRecipe = createMockRecipe('recipe-1', 'Original');
+      queryClient.setQueryData(['recipes'], [mockRecipe]);
+      queryClient.setQueryData(['recipe', 'recipe-1'], mockRecipe);
+
+      const serverResponse = { ...mockRecipe, title: 'Server Title' };
+      (RecipeService.updateRecipe as jest.Mock) = jest.fn().mockResolvedValue({
+        success: true,
+        data: serverResponse
+      });
+
+      const refetchSpy = jest.spyOn(queryClient, 'refetchQueries');
+
+      const wrapper = ({ children }: { children: React.ReactNode }) => (
+        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      );
+
+      const { result } = renderHook(() => useUpdateRecipe(), { wrapper });
+
+      // WHEN: Update succeeds
+      result.current.mutate({ id: 'recipe-1', data: { title: 'Updated', servings: 4, instructions: 'Test' } });
+
+      // THEN: Should refetch list cache for consistency
+      await waitFor(() => {
+        expect(refetchSpy).toHaveBeenCalledWith({ queryKey: ['recipes'] });
+      });
+    });
+
+    it('GIVEN multiple concurrent update mutations WHEN triggered simultaneously THEN cancels in-flight queries before optimistic update', async () => {
+      // GIVEN: Recipe in caches
+      const mockRecipe = createMockRecipe('recipe-1', 'Original');
+      queryClient.setQueryData(['recipes'], [mockRecipe]);
+      queryClient.setQueryData(['recipe', 'recipe-1'], mockRecipe);
+
+      (RecipeService.updateRecipe as jest.Mock) = jest.fn().mockImplementation(
+        () => new Promise((resolve) => setTimeout(() => resolve(mockRecipe), 100))
+      );
+
+      const cancelSpy = jest.spyOn(queryClient, 'cancelQueries');
+
+      const wrapper = ({ children }: { children: React.ReactNode }) => (
+        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      );
+
+      const { result } = renderHook(() => useUpdateRecipe(), { wrapper });
+
+      // WHEN: Trigger update
+      result.current.mutate({ id: 'recipe-1', data: { title: 'Updated', servings: 4, instructions: 'Test' } });
+
+      // THEN: Should cancel in-flight queries for both caches
+      await waitFor(() => {
+        expect(cancelSpy).toHaveBeenCalledWith({ queryKey: ['recipes'] });
+        expect(cancelSpy).toHaveBeenCalledWith({ queryKey: ['recipe', 'recipe-1'] });
+      });
+    });
+  });
+
+  // ==========================================
+  // SECTION 2: HAPPY PATH
+  // Primary use case - successful update flow
+  // ==========================================
+
+  describe('HAPPY PATH: Successful Update', () => {
+    it('GIVEN valid update data WHEN update is successful THEN calls RecipeService.updateRecipe with correct ID and data', async () => {
+      // GIVEN: Valid recipe
+      const mockRecipe = createMockRecipe('recipe-1', 'Original');
+      queryClient.setQueryData(['recipes'], [mockRecipe]);
+      queryClient.setQueryData(['recipe', 'recipe-1'], mockRecipe);
+
+      (RecipeService.updateRecipe as jest.Mock) = jest.fn().mockResolvedValue({
+        success: true,
+        data: mockRecipe
+      });
+
+      const wrapper = ({ children }: { children: React.ReactNode }) => (
+        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      );
+
+      const { result } = renderHook(() => useUpdateRecipe(), { wrapper });
+
+      const updateData = { title: 'Updated Title', servings: 6, instructions: 'New instructions' };
+
+      // WHEN: Update is triggered
+      result.current.mutate({ id: 'recipe-1', data: updateData });
+
+      // THEN: Service called with correct ID and data (first argument)
+      await waitFor(() => {
+        expect(RecipeService.updateRecipe).toHaveBeenCalled();
+        const callArgs = (RecipeService.updateRecipe as jest.Mock).mock.calls[0];
+        expect(callArgs[0]).toBe('recipe-1');
+        expect(callArgs[1]).toEqual(updateData);
+      });
+    });
+
+    it('GIVEN server returns updated recipe WHEN update succeeds THEN replaces optimistic data with server response', async () => {
+      // GIVEN: Recipe in caches
+      const mockRecipe = createMockRecipe('recipe-1', 'Original');
+      queryClient.setQueryData(['recipes'], [mockRecipe]);
+      queryClient.setQueryData(['recipe', 'recipe-1'], mockRecipe);
+
+      const serverResponse = { ...mockRecipe, title: 'Server Updated Title', servings: 8 };
+      (RecipeService.updateRecipe as jest.Mock) = jest.fn().mockResolvedValue({
+        success: true,
+        data: serverResponse
+      });
+
+      const wrapper = ({ children }: { children: React.ReactNode }) => (
+        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      );
+
+      const { result } = renderHook(() => useUpdateRecipe(), { wrapper });
+
+      // WHEN: Update succeeds
+      result.current.mutate({ id: 'recipe-1', data: { title: 'Client Update', servings: 6, instructions: 'Test' } });
+
+      // THEN: Server response should replace optimistic data
+      await waitFor(() => {
+        const listCache = queryClient.getQueryData<RecipeResponseDto[]>(['recipes']);
+        const detailCache = queryClient.getQueryData<RecipeResponseDto>(['recipe', 'recipe-1']);
+
+        expect(listCache?.find(r => r.id === 'recipe-1')?.title).toBe('Server Updated Title');
+        expect(listCache?.find(r => r.id === 'recipe-1')?.servings).toBe(8);
+        expect(detailCache?.title).toBe('Server Updated Title');
+        expect(detailCache?.servings).toBe(8);
+      });
+    });
+  });
+
+  // ==========================================
+  // SECTION 3: NULL/EMPTY/INVALID
+  // Edge cases with partial updates
+  // ==========================================
+
+  describe('NULL/EMPTY/INVALID: Partial Updates', () => {
+    it('GIVEN partial update (only some fields) WHEN update is triggered THEN merges with existing recipe data', async () => {
+      // GIVEN: Recipe with multiple fields
+      const mockRecipe = createMockRecipe('recipe-1', 'Original Title');
+      mockRecipe.servings = 4;
+      mockRecipe.category = 'Dinner';
+
+      queryClient.setQueryData(['recipes'], [mockRecipe]);
+      queryClient.setQueryData(['recipe', 'recipe-1'], mockRecipe);
+
+      (RecipeService.updateRecipe as jest.Mock) = jest.fn().mockResolvedValue({
+        success: true,
+        data: {
+          ...mockRecipe,
+          title: 'Updated Title',
+        }
+      });
+
+      const wrapper = ({ children }: { children: React.ReactNode }) => (
+        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      );
+
+      const { result } = renderHook(() => useUpdateRecipe(), { wrapper });
+
+      // WHEN: Update only title (partial update)
+      result.current.mutate({ id: 'recipe-1', data: { title: 'Updated Title', servings: 4, instructions: 'Test' } });
+
+      // THEN: Should merge with existing data
+      await waitFor(() => {
+        const detailCache = queryClient.getQueryData<RecipeResponseDto>(['recipe', 'recipe-1']);
+        expect(detailCache?.title).toBe('Updated Title');
+        expect(detailCache?.category).toBe('Dinner'); // Original field preserved
+      });
+    });
+
+    it('GIVEN recipe only in detail cache (not in list) WHEN update is triggered THEN handles gracefully', async () => {
+      // GIVEN: Recipe only in detail cache
+      const mockRecipe = createMockRecipe('recipe-1', 'Detail Only');
+      queryClient.setQueryData(['recipes'], []); // Empty list
+      queryClient.setQueryData(['recipe', 'recipe-1'], mockRecipe);
+
+      (RecipeService.updateRecipe as jest.Mock) = jest.fn().mockResolvedValue({
+        success: true,
+        data: {
+          ...mockRecipe,
+          title: 'Updated',
+        }
+      });
+
+      const wrapper = ({ children }: { children: React.ReactNode }) => (
+        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      );
+
+      const { result } = renderHook(() => useUpdateRecipe(), { wrapper });
+
+      // WHEN: Update recipe not in the list
+      expect(() => {
+        result.current.mutate({ id: 'recipe-1', data: { title: 'Updated', servings: 4, instructions: 'Test' } });
+      }).not.toThrow();
+
+      // THEN: Should still update the detail cache
+      await waitFor(() => {
+        const detailCache = queryClient.getQueryData<RecipeResponseDto>(['recipe', 'recipe-1']);
+        expect(detailCache?.title).toBe('Updated');
+      });
+    });
+  });
+
+  // ==========================================
+  // SECTION 4: BOUNDARIES
+  // Limit testing - list positions
+  // ==========================================
+
+  describe('BOUNDARIES: List Position Testing', () => {
+    it('GIVEN recipe at start of list WHEN updated THEN updates correctly without reordering', async () => {
+      // GIVEN: Recipe at index 0
+      const recipe1 = createMockRecipe('recipe-1', 'First Recipe');
+      const recipe2 = createMockRecipe('recipe-2', 'Second Recipe');
+      queryClient.setQueryData(['recipes'], [recipe1, recipe2]);
+      queryClient.setQueryData(['recipe', 'recipe-1'], recipe1);
+
+      (RecipeService.updateRecipe as jest.Mock) = jest.fn().mockResolvedValue({
+        success: true,
+        data: {
+          ...recipe1,
+          title: 'Updated First',
+        }
+      });
+
+      const wrapper = ({ children }: { children: React.ReactNode }) => (
+        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      );
+
+      const { result } = renderHook(() => useUpdateRecipe(), { wrapper });
+
+      // WHEN: Update first recipe
+      result.current.mutate({ id: 'recipe-1', data: { title: 'Updated First', servings: 4, instructions: 'Test' } });
+
+      // THEN: Should update at the same position
+      await waitFor(() => {
+        const listCache = queryClient.getQueryData<RecipeResponseDto[]>(['recipes']);
+        expect(listCache?.[0]?.title).toBe('Updated First');
+        expect(listCache?.[1]?.title).toBe('Second Recipe');
+      });
+    });
+
+    it('GIVEN recipe at end of list WHEN updated THEN updates correctly without reordering', async () => {
+      // GIVEN: Recipe at end
+      const recipe1 = createMockRecipe('recipe-1', 'First Recipe');
+      const recipe2 = createMockRecipe('recipe-2', 'Last Recipe');
+      queryClient.setQueryData(['recipes'], [recipe1, recipe2]);
+      queryClient.setQueryData(['recipe', 'recipe-2'], recipe2);
+
+      (RecipeService.updateRecipe as jest.Mock) = jest.fn().mockResolvedValue({
+        success: true,
+        data: {
+          ...recipe2,
+          title: 'Updated Last',
+        }
+      });
+
+      const wrapper = ({ children }: { children: React.ReactNode }) => (
+        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      );
+
+      const { result } = renderHook(() => useUpdateRecipe(), { wrapper });
+
+      // WHEN: Update last recipe
+      result.current.mutate({ id: 'recipe-2', data: { title: 'Updated Last', servings: 4, instructions: 'Test' } });
+
+      // THEN: Should update at the same position
+      await waitFor(() => {
+        const listCache = queryClient.getQueryData<RecipeResponseDto[]>(['recipes']);
+        expect(listCache?.[0]?.title).toBe('First Recipe');
+        expect(listCache?.[1]?.title).toBe('Updated Last');
+      });
+    });
+  });
+
+  // ==========================================
+  // SECTION 5: BUSINESS RULES
+  // Domain-specific rules for category changes
+  // ==========================================
+
+  describe('BUSINESS RULES: Category Changes', () => {
+    it('GIVEN recipe category changes WHEN updated THEN updates recipe in all relevant category caches', async () => {
+      // GIVEN: Recipe in Dinner category cache
+      const mockRecipe = createMockRecipe('recipe-1', 'Pasta');
+      mockRecipe.category = 'Dinner';
+
+      queryClient.setQueryData(['recipes'], [mockRecipe]);
+      queryClient.setQueryData(['recipes', 'All'], [mockRecipe]);
+      queryClient.setQueryData(['recipes', 'Dinner'], [mockRecipe]);
+      queryClient.setQueryData(['recipe', 'recipe-1'], mockRecipe);
+
+      (RecipeService.updateRecipe as jest.Mock) = jest.fn().mockResolvedValue({
+        success: true,
+        data: {
+          ...mockRecipe,
+          category: 'Lunch',
+        }
+      });
+
+      const wrapper = ({ children }: { children: React.ReactNode }) => (
+        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      );
+
+      const { result } = renderHook(() => useUpdateRecipe(), { wrapper });
+
+      // WHEN: Update category from Dinner to Lunch
+      result.current.mutate({
+        id: 'recipe-1',
+        data: { title: 'Pasta', servings: 4, instructions: 'Test', category: 'Lunch' }
+      });
+
+      // THEN: Should update in all category caches
+      await waitFor(() => {
+        const allCache = queryClient.getQueryData<RecipeResponseDto[]>(['recipes', 'All']);
+        const dinnerCache = queryClient.getQueryData<RecipeResponseDto[]>(['recipes', 'Dinner']);
+
+        expect(allCache?.find(r => r.id === 'recipe-1')?.category).toBe('Lunch');
+        expect(dinnerCache?.find(r => r.id === 'recipe-1')?.category).toBe('Lunch');
+      });
+    });
+  });
+
+  // ==========================================
+  // SECTION 6: ERROR HANDLING
+  // Exception behavior and recovery
+  // ==========================================
+
+  describe('ERROR HANDLING: Exception Behavior', () => {
+    it('GIVEN API failure WHEN update fails THEN rolls back both caches and allows screen to handle UI feedback', async () => {
+      // GIVEN: Recipe in both caches
+      const mockRecipe = createMockRecipe('recipe-1', 'Original');
+      queryClient.setQueryData(['recipes'], [mockRecipe]);
+      queryClient.setQueryData(['recipe', 'recipe-1'], mockRecipe);
+
+      (RecipeService.updateRecipe as jest.Mock) = jest.fn().mockRejectedValue(
+        new Error('Network error')
+      );
+
+      const wrapper = ({ children }: { children: React.ReactNode }) => (
+        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      );
+
+      const { result } = renderHook(() => useUpdateRecipe(), { wrapper });
+
+      // WHEN: Update fails
+      result.current.mutate({ id: 'recipe-1', data: { title: 'Failed', servings: 4, instructions: 'Test' } });
+
+      // THEN: Both caches should be rolled back
+      await waitFor(() => {
+        const listCache = queryClient.getQueryData<RecipeResponseDto[]>(['recipes']);
+        const detailCache = queryClient.getQueryData<RecipeResponseDto>(['recipe', 'recipe-1']);
+
+        expect(listCache?.find(r => r.id === 'recipe-1')?.title).toBe('Original');
+        expect(detailCache?.title).toBe('Original');
+      });
+    });
+
+    it('GIVEN retry after rollback WHEN user retries update THEN re-attempts mutation', async () => {
+      // GIVEN: Recipe in caches, API fails then succeeds
+      const mockRecipe = createMockRecipe('recipe-1', 'Original');
+      queryClient.setQueryData(['recipes'], [mockRecipe]);
+      queryClient.setQueryData(['recipe', 'recipe-1'], mockRecipe);
+
+      (RecipeService.updateRecipe as jest.Mock) = jest.fn()
+        .mockRejectedValueOnce(new Error('Network error'))
+        .mockResolvedValueOnce({ ...mockRecipe, title: 'Updated' });
+
+      const wrapper = ({ children }: { children: React.ReactNode }) => (
+        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      );
+
+      const { result } = renderHook(() => useUpdateRecipe(), { wrapper });
+
+      // WHEN: First attempt fails
+      result.current.mutate({ id: 'recipe-1', data: { title: 'Attempt 1', servings: 4, instructions: 'Test' } });
+
+      await waitFor(() => {
+        const listCache = queryClient.getQueryData<RecipeResponseDto[]>(['recipes']);
+        expect(listCache?.find(r => r.id === 'recipe-1')?.title).toBe('Original');
+      });
+
+      // WHEN: Retry (second attempt succeeds)
+      result.current.mutate({ id: 'recipe-1', data: { title: 'Attempt 2', servings: 4, instructions: 'Test' } });
+
+      // THEN: Should successfully update on retry
+      await waitFor(() => {
+        expect(RecipeService.updateRecipe).toHaveBeenCalledTimes(2);
       });
     });
   });

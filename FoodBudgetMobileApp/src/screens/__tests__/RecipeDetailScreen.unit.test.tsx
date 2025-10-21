@@ -965,6 +965,71 @@ describe('RecipeDetailScreen Unit Tests', () => {
       });
     });
 
+    /**
+     * Test 12: Optimistic update - Recipe updates instantly in cache (Story 12b - PRIORITY)
+     * RISK-BASED: Multi-cache update consistency
+     *
+     * Acceptance Criteria:
+     * - AC1: Form submission triggers optimistic update in BOTH list and detail caches
+     * - AC2: UI reflects changes immediately before API responds
+     */
+    it('Given user edits recipe When save button pressed Then recipe updates instantly in cache before API responds', async () => {
+      // Arrange - Mock slow API response to verify optimistic behavior
+      let resolveUpdate: (value: any) => void;
+      const updatePromise = new Promise((resolve) => {
+        resolveUpdate = resolve;
+      });
+
+      (RecipeService as any).updateRecipe = jest.fn().mockReturnValue(updatePromise);
+
+      const route = {
+        params: { recipeId: 'recipe-123' },
+        key: 'test-key',
+        name: 'RecipeDetail' as const,
+      };
+
+      const { queryClient } = renderWithProviders(
+        <RecipeDetailScreen
+          navigation={mockNavigation}
+          route={route}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeOnTheScreen();
+      });
+
+      // Enter EDIT mode
+      fireEvent.press(screen.getByTestId('recipe-detail-edit-fab'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-edit-mode')).toBeOnTheScreen();
+      });
+
+      // Act - Edit title and submit (API hasn't responded yet)
+      const titleInput = screen.getByTestId('recipe-detail-edit-form-title');
+      fireEvent.changeText(titleInput, 'Updated Recipe Title');
+
+      fireEvent.press(screen.getByTestId('recipe-detail-edit-form-submit'));
+
+      // Assert - Cache should be updated instantly (before API responds)
+      await waitFor(() => {
+        const cachedData = queryClient?.getQueryData(['recipe', 'recipe-123']);
+        expect(cachedData).toMatchObject({
+          title: 'Updated Recipe Title'
+        });
+      });
+
+      // API still hasn't responded - verify we haven't navigated yet
+      expect(mockGoBack).not.toHaveBeenCalled();
+
+      // Complete the API call
+      resolveUpdate!({
+        success: true,
+        data: { id: 'recipe-123', title: 'Updated Recipe Title', servings: 4 }
+      });
+    });
+
   });
 
   /**
@@ -1283,6 +1348,130 @@ describe('RecipeDetailScreen Unit Tests', () => {
       // Assert
       await waitFor(() => {
         expect(screen.getByText('Recipe updated successfully!')).toBeOnTheScreen();
+      });
+    });
+
+    /**
+     * Test 18: Success flow - Shows success snackbar and returns to VIEW mode (Story 12b)
+     * HAPPY PATH: Normal update flow with optimistic updates
+     *
+     * Acceptance Criteria:
+     * - AC6: Success snackbar displays "Recipe updated successfully!"
+     * - AC7: Automatically returns to VIEW mode after a successful save
+     */
+    it('Given recipe update succeeds When API confirms Then success snackbar shows and returns to VIEW mode', async () => {
+      // Arrange
+      (RecipeService as any).updateRecipe = jest.fn().mockResolvedValue({
+        success: true,
+        data: { id: 'recipe-123', title: 'Updated Title', servings: 6 }
+      });
+
+      const route = {
+        params: { recipeId: 'recipe-123' },
+        key: 'test-key',
+        name: 'RecipeDetail' as const,
+      };
+
+      renderWithProviders(
+        <RecipeDetailScreen
+          navigation={mockNavigation}
+          route={route}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeOnTheScreen();
+      });
+
+      // Enter EDIT mode
+      fireEvent.press(screen.getByTestId('recipe-detail-edit-fab'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-edit-mode')).toBeOnTheScreen();
+      });
+
+      // Act - Submit changes
+      const servingsInput = screen.getByTestId('recipe-detail-edit-form-servings');
+      fireEvent.changeText(servingsInput, '6');
+
+      fireEvent.press(screen.getByTestId('recipe-detail-edit-form-submit'));
+
+      // Assert - Success snackbar appears
+      await waitFor(() => {
+        expect(screen.getByText('Recipe updated successfully!')).toBeOnTheScreen();
+      });
+
+      // Assert - Returns to VIEW mode automatically
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeOnTheScreen();
+      });
+    });
+
+    /**
+     * Test 19: Loading indicator - Submit button shows loading state during save (Story 12b)
+     * HAPPY PATH: Visual feedback during async operation
+     *
+     * Acceptance Criteria:
+     * - AC5: Submit button shows loading spinner while the API call is in progress
+     * - AC5: Submit button is disabled during save to prevent double submission
+     */
+    it('Given save in progress When waiting for API Then submit button shows loading state and is disabled', async () => {
+      // Arrange - Mock slow API
+      let resolveUpdate: (value: any) => void;
+      const updatePromise = new Promise((resolve) => {
+        resolveUpdate = resolve;
+      });
+
+      (RecipeService as any).updateRecipe = jest.fn().mockReturnValue(updatePromise);
+
+      const route = {
+        params: { recipeId: 'recipe-123' },
+        key: 'test-key',
+        name: 'RecipeDetail' as const,
+      };
+
+      renderWithProviders(
+        <RecipeDetailScreen
+          navigation={mockNavigation}
+          route={route}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeOnTheScreen();
+      });
+
+      // Enter EDIT mode
+      fireEvent.press(screen.getByTestId('recipe-detail-edit-fab'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-edit-mode')).toBeOnTheScreen();
+      });
+
+      // Assert - Submit button initially not loading
+      const submitButton = screen.getByTestId('recipe-detail-edit-form-submit');
+      expect(submitButton).not.toBeDisabled();
+
+      // Act - Submit changes
+      const titleInput = screen.getByTestId('recipe-detail-edit-form-title');
+      fireEvent.changeText(titleInput, 'New Title');
+
+      fireEvent.press(submitButton);
+
+      // Assert - Submit button shows the loading state
+      await waitFor(() => {
+        expect(submitButton).toBeDisabled();
+      });
+
+      // Complete the API call
+      resolveUpdate!({
+        success: true,
+        data: { id: 'recipe-123', title: 'New Title', servings: 4 }
+      });
+
+      // Assert - Returns to VIEW mode after completion
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeOnTheScreen();
       });
     });
   });
@@ -2338,6 +2527,76 @@ describe('RecipeDetailScreen Unit Tests', () => {
       expect(deleteButton.props.accessibilityLabel).toMatch(/delete/i);
       expect(deleteButton.props.accessibilityRole).toBe('button');
     });
+
+    /**
+     * Test 47: Navigation blocking - User stays in EDIT mode during save (Story 12b)
+     * BUSINESS RULE: No navigation until API confirms
+     *
+     * Acceptance Criteria:
+     * - AC3: User cannot navigate away while save is in progress
+     * - AC4: Back button remains functional but forms blocks with unsaved changes dialog
+     */
+    it('Given save in progress When user presses back button Then navigation is blocked until complete', async () => {
+      // Arrange - Mock slow API to test blocking behavior
+      let resolveUpdate: (value: any) => void;
+      const updatePromise = new Promise((resolve) => {
+        resolveUpdate = resolve;
+      });
+
+      (RecipeService as any).updateRecipe = jest.fn().mockReturnValue(updatePromise);
+
+      const route = {
+        params: { recipeId: 'recipe-123' },
+        key: 'test-key',
+        name: 'RecipeDetail' as const,
+      };
+
+      renderWithProviders(
+        <RecipeDetailScreen
+          navigation={mockNavigation}
+          route={route}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeOnTheScreen();
+      });
+
+      // Enter EDIT mode
+      fireEvent.press(screen.getByTestId('recipe-detail-edit-fab'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-edit-mode')).toBeOnTheScreen();
+      });
+
+      // Act - Submit changes (API is slow, hasn't completed)
+      const titleInput = screen.getByTestId('recipe-detail-edit-form-title');
+      fireEvent.changeText(titleInput, 'Updating...');
+
+      fireEvent.press(screen.getByTestId('recipe-detail-edit-form-submit'));
+
+      // Try to navigate back while save is in progress
+      fireEvent.press(screen.getByTestId('recipe-detail-back-button'));
+
+      // Assert - Should show discard changes dialog (form is still dirty during save)
+      await waitFor(() => {
+        expect(screen.getByText(/discard changes/i)).toBeOnTheScreen();
+      });
+
+      // Assert - Still in EDIT mode
+      expect(screen.getByTestId('recipe-detail-edit-mode')).toBeOnTheScreen();
+
+      // Complete the API call
+      resolveUpdate!({
+        success: true,
+        data: { id: 'recipe-123', title: 'Updating...', servings: 4 }
+      });
+
+      // After completion, should automatically return to VIEW mode
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeOnTheScreen();
+      });
+    });
   });
 
   /**
@@ -3243,6 +3502,69 @@ describe('RecipeDetailScreen Unit Tests', () => {
       await waitFor(() => {
         expect(screen.getByText(/timeout|error/i)).toBeOnTheScreen();
       });
+    });
+
+    /**
+     * Test 62: Error handling - Failed update shows error snackbar with rollback (Story 12b - PRIORITY)
+     * ERROR: Rollback and retry handling
+     *
+     * Acceptance Criteria:
+     * - AC8: Failed update shows error snackbar "Failed to update recipe. Please try again."
+     * - AC9: Cache automatically rolls back to the previous state- * AC10: User stays in EDIT mode to retry
+     */
+    it('Given recipe update fails When API returns error Then error snackbar shows and cache rolls back', async () => {
+      // Arrange
+      (RecipeService as any).updateRecipe = jest.fn().mockResolvedValue({
+        success: false,
+        error: 'Failed to update recipe'
+      });
+
+      const route = {
+        params: { recipeId: 'recipe-123' },
+        key: 'test-key',
+        name: 'RecipeDetail' as const,
+      };
+
+      const { queryClient } = renderWithProviders(
+        <RecipeDetailScreen
+          navigation={mockNavigation}
+          route={route}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeOnTheScreen();
+      });
+
+      // Capture original title from cache
+      const originalData = queryClient?.getQueryData(['recipe', 'recipe-123']);
+
+      // Enter EDIT mode
+      fireEvent.press(screen.getByTestId('recipe-detail-edit-fab'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-edit-mode')).toBeOnTheScreen();
+      });
+
+      // Act - Submit changes that will fail
+      const titleInput = screen.getByTestId('recipe-detail-edit-form-title');
+      fireEvent.changeText(titleInput, 'Failed Update');
+
+      fireEvent.press(screen.getByTestId('recipe-detail-edit-form-submit'));
+
+      // Assert - Error snackbar appears
+      await waitFor(() => {
+        expect(screen.getByText(/failed to update recipe/i)).toBeOnTheScreen();
+      });
+
+      // Assert - Cache rolled back to original data
+      await waitFor(() => {
+        const rolledBackData = queryClient?.getQueryData(['recipe', 'recipe-123']);
+        expect(rolledBackData).toEqual(originalData);
+      });
+
+      // Assert - Still in EDIT mode (not navigated)
+      expect(screen.getByTestId('recipe-detail-edit-mode')).toBeOnTheScreen();
     });
   });
 });

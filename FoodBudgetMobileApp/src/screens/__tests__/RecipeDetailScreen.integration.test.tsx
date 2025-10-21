@@ -205,6 +205,100 @@ describe('RecipeDetailScreen Integration Tests - VIEW & CREATE Modes (Stories 8 
         expect(mockNavigation.goBack).toHaveBeenCalledTimes(1); // Navigation triggered
       }, { timeout: 3000 });
     });
+
+    /**
+     * NARROW TEST (EDIT Mode): useUpdateRecipe hook → Multi-cache update → Component (Story 12b)
+     *
+     * Integration Point: Hook updates BOTH list and detail caches simultaneously
+     * This test verifies the critical integration between useUpdateRecipe and QueryClient
+     */
+    it('Given update mutation When hook updates cache Then both list and detail caches sync', async () => {
+      // Arrange: Track API calls
+      let updateApiCalled = false;
+
+      server.use(
+        http.get('*/api/Recipe/550e8400-e29b-41d4-a716-446655440099', () => {
+          return HttpResponse.json({
+            id: '550e8400-e29b-41d4-a716-446655440099',
+            title: 'Original Title',
+            instructions: 'Test instructions',
+            servings: 4,
+            category: 'Dinner',
+            imageUrl: 'https://example.com/test.jpg',
+            createdAt: '2024-01-15T10:00:00Z',
+            userId: '550e8400-e29b-41d4-a716-446655440002'
+          });
+        }),
+        http.put('*/api/Recipe/:id', () => {
+          updateApiCalled = true;
+          return HttpResponse.json({
+            id: '550e8400-e29b-41d4-a716-446655440099',
+            title: 'Updated via Integration',
+            instructions: 'Test instructions',
+            servings: 8,
+            category: 'Dinner',
+            imageUrl: 'https://example.com/test.jpg',
+            createdAt: '2024-01-15T10:00:00Z',
+            userId: '550e8400-e29b-41d4-a716-446655440002'
+          });
+        })
+      );
+
+      const route = {
+        params: { recipeId: '550e8400-e29b-41d4-a716-446655440099' },
+        key: 'test-key',
+        name: 'RecipeDetail' as const,
+      };
+
+      const { queryClient } = renderWithProviders(<RecipeDetailScreen navigation={mockNavigation} route={route} />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeOnTheScreen();
+      });
+
+      // Pre-populate list cache to test multi-cache sync
+      queryClient?.setQueryData(['recipes'], [
+        {
+          id: '550e8400-e29b-41d4-a716-446655440099',
+          title: 'Original Title',
+          instructions: 'Test instructions',
+          servings: 4,
+          category: 'Dinner',
+          imageUrl: 'https://example.com/test.jpg',
+          createdAt: '2024-01-15T10:00:00Z',
+          userId: '550e8400-e29b-41d4-a716-446655440002'
+        }
+      ]);
+
+      // Enter EDIT mode
+      fireEvent.press(screen.getByTestId('recipe-detail-edit-fab'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-edit-mode')).toBeOnTheScreen();
+      });
+
+      // Act: Update recipe
+      const servingsInput = screen.getByTestId('recipe-detail-edit-form-servings');
+      fireEvent.changeText(servingsInput, '8');
+      fireEvent.press(screen.getByTestId('recipe-detail-edit-form-submit'));
+
+      // Assert: Integration layers communicated successfully
+      await waitFor(() => {
+        expect(updateApiCalled).toBe(true); // UPDATE API called
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeOnTheScreen(); // Returned to VIEW
+      }, { timeout: 3000 });
+
+      // Verify the hook updated both caches
+      const detailCache = queryClient?.getQueryData(['recipe', '550e8400-e29b-41d4-a716-446655440099']);
+      const listCache = queryClient?.getQueryData(['recipes']);
+
+      expect(detailCache).toMatchObject({ servings: 8 });
+      expect(listCache).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ id: '550e8400-e29b-41d4-a716-446655440099', servings: 8 })
+        ])
+      );
+    });
   });
 
   /**
@@ -348,6 +442,72 @@ describe('RecipeDetailScreen Integration Tests - VIEW & CREATE Modes (Stories 8 
         expect(getApiCalled).toBe(true);
         expect(screen.getByTestId('recipe-detail-view-mode')).toBeVisible();
       });
+    });
+
+    /**
+     * NARROW TEST (EDIT Mode): End-to-end update flow with navigation (Story 12b)
+     *
+     * Integration: Form → Hook → API → Cache → UI Feedback → Navigation
+     * Happy path verifies all integration layers work together seamlessly
+     */
+    it('Given successful edit flow When user saves changes Then complete integration cycle succeeds', async () => {
+      // Arrange
+      server.use(
+        http.get('*/api/Recipe/550e8400-e29b-41d4-a716-446655440099', () => {
+          return HttpResponse.json({
+            id: '550e8400-e29b-41d4-a716-446655440099',
+            title: 'Original Title',
+            instructions: 'Test instructions',
+            servings: 4,
+            category: 'Dinner',
+            imageUrl: 'https://example.com/test.jpg',
+            createdAt: '2024-01-15T10:00:00Z',
+            userId: '550e8400-e29b-41d4-a716-446655440002'
+          });
+        }),
+        http.put('*/api/Recipe/:id', async ({ request }) => {
+          const body: any = await request.json();
+          return HttpResponse.json({
+            id: '550e8400-e29b-41d4-a716-446655440099',
+            title: body.title,
+            instructions: body.instructions,
+            servings: body.servings,
+            category: body.category,
+            imageUrl: body.imageUrl || 'https://example.com/test.jpg',
+            createdAt: '2024-01-15T10:00:00Z',
+            userId: '550e8400-e29b-41d4-a716-446655440002'
+          });
+        })
+      );
+
+      const route = {
+        params: { recipeId: '550e8400-e29b-41d4-a716-446655440099' },
+        key: 'test-key',
+        name: 'RecipeDetail' as const,
+      };
+
+      renderWithProviders(<RecipeDetailScreen navigation={mockNavigation} route={route} />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeOnTheScreen();
+      });
+
+      // Act: Edit → Save → View cycle
+      fireEvent.press(screen.getByTestId('recipe-detail-edit-fab'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-edit-mode')).toBeOnTheScreen();
+      });
+
+      const titleInput = screen.getByTestId('recipe-detail-edit-form-title');
+      fireEvent.changeText(titleInput, 'End-to-End Updated Title');
+      fireEvent.press(screen.getByTestId('recipe-detail-edit-form-submit'));
+
+      // Assert: Complete integration cycle
+      await waitFor(() => {
+        expect(screen.getByText(/recipe updated successfully/i)).toBeOnTheScreen(); // UI feedback
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeOnTheScreen(); // Navigation
+      }, { timeout: 3000 });
     });
   });
 
@@ -553,6 +713,76 @@ describe('RecipeDetailScreen Integration Tests - VIEW & CREATE Modes (Stories 8 
         expect(putApiCalled).toBe(true);
         expect(putApiReceivedCorrectStructure).toBe(true); // Correct contract structure
         expect(screen.getByTestId('recipe-detail-view-mode')).toBeVisible(); // Returned to VIEW mode
+      }, { timeout: 3000 });
+    });
+
+    /**
+     * NARROW TEST (EDIT Mode): useUpdateRecipe hook contract validation (Story 12b)
+     *
+     * Integration: Verify hook interface matches TanStack Query v5 mutation contract
+     * Validates mutateAsync method signature and return type
+     */
+    it('Given useUpdateRecipe hook When invoked Then conforms to TanStack Query mutation contract', async () => {
+      // Arrange: Track mutateAsync call signature
+      let mutationPayload: any = null;
+
+      server.use(
+        http.get('*/api/Recipe/550e8400-e29b-41d4-a716-446655440099', () => {
+          return HttpResponse.json({
+            id: '550e8400-e29b-41d4-a716-446655440099',
+            title: 'Original Title',
+            instructions: 'Test instructions',
+            servings: 4,
+            category: 'Dinner',
+            imageUrl: 'https://example.com/test.jpg',
+            createdAt: '2024-01-15T10:00:00Z',
+            userId: '550e8400-e29b-41d4-a716-446655440002'
+          });
+        }),
+        http.put('*/api/Recipe/:id', async ({ request }) => {
+          mutationPayload = await request.json();
+          return HttpResponse.json({
+            id: '550e8400-e29b-41d4-a716-446655440099',
+            title: mutationPayload.title,
+            instructions: 'Test instructions',
+            servings: mutationPayload.servings,
+            category: 'Dinner',
+            imageUrl: 'https://example.com/test.jpg',
+            createdAt: '2024-01-15T10:00:00Z',
+            userId: '550e8400-e29b-41d4-a716-446655440002'
+          });
+        })
+      );
+
+      const route = {
+        params: { recipeId: '550e8400-e29b-41d4-a716-446655440099' },
+        key: 'test-key',
+        name: 'RecipeDetail' as const,
+      };
+
+      renderWithProviders(<RecipeDetailScreen navigation={mockNavigation} route={route} />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeOnTheScreen();
+      });
+
+      fireEvent.press(screen.getByTestId('recipe-detail-edit-fab'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-edit-mode')).toBeOnTheScreen();
+      });
+
+      // Act: Trigger mutation via hook
+      const titleInput = screen.getByTestId('recipe-detail-edit-form-title');
+      fireEvent.changeText(titleInput, 'Contract Test');
+      fireEvent.press(screen.getByTestId('recipe-detail-edit-form-submit'));
+
+      // Assert: Hook received the correct contract structure { id, data }
+      await waitFor(() => {
+        expect(mutationPayload).toMatchObject({
+          title: 'Contract Test'
+        });
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeOnTheScreen();
       }, { timeout: 3000 });
     });
   });
@@ -898,6 +1128,74 @@ describe('RecipeDetailScreen Integration Tests - VIEW & CREATE Modes (Stories 8 
         expect(mockNavigation.goBack).not.toHaveBeenCalled();
       }, { timeout: 3000 });
     });
+
+    /**
+     * NARROW TEST (EDIT Mode): Update error propagates from API through hook to UI (Story 12b)
+     *
+     * Integration: API Error → useUpdateRecipe → Error Snackbar → Stay in EDIT mode
+     * Verifies error propagation doesn't crash and UI shows appropriate feedback
+     */
+    it('Given update API error When mutation fails Then error propagates to UI without crash', async () => {
+      // Arrange: MSW returns error
+      let updateApiCalled = false;
+
+      server.use(
+        http.get('*/api/Recipe/550e8400-e29b-41d4-a716-446655440099', () => {
+          return HttpResponse.json({
+            id: '550e8400-e29b-41d4-a716-446655440099',
+            title: 'Original Title',
+            instructions: 'Test instructions',
+            servings: 4,
+            category: 'Dinner',
+            imageUrl: 'https://example.com/test.jpg',
+            createdAt: '2024-01-15T10:00:00Z',
+            userId: '550e8400-e29b-41d4-a716-446655440002'
+          });
+        }),
+        http.put('*/api/Recipe/:id', () => {
+          updateApiCalled = true;
+          return HttpResponse.json(
+            {
+              type: 'https://tools.ietf.org/html/rfc7231#section-6.6.1',
+              title: 'An error occurred while processing your request.',
+              status: 500,
+              detail: 'Internal server error during update'
+            },
+            { status: 500 }
+          );
+        })
+      );
+
+      const route = {
+        params: { recipeId: '550e8400-e29b-41d4-a716-446655440099' },
+        key: 'test-key',
+        name: 'RecipeDetail' as const,
+      };
+
+      renderWithProviders(<RecipeDetailScreen navigation={mockNavigation} route={route} />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeOnTheScreen();
+      });
+
+      fireEvent.press(screen.getByTestId('recipe-detail-edit-fab'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-edit-mode')).toBeOnTheScreen();
+      });
+
+      // Act: Trigger failing mutation
+      const titleInput = screen.getByTestId('recipe-detail-edit-form-title');
+      fireEvent.changeText(titleInput, 'Will Fail');
+      fireEvent.press(screen.getByTestId('recipe-detail-edit-form-submit'));
+
+      // Assert: Error propagated through layers
+      await waitFor(() => {
+        expect(updateApiCalled).toBe(true);
+        expect(screen.getByText(/an error occurred while processing your request/i)).toBeOnTheScreen(); // Error UI
+        expect(screen.getByTestId('recipe-detail-edit-mode')).toBeOnTheScreen(); // Stays in EDIT
+      }, { timeout: 3000 });
+    });
   });
 
   /**
@@ -996,6 +1294,74 @@ describe('RecipeDetailScreen Integration Tests - VIEW & CREATE Modes (Stories 8 
         expect(apiReceivedSpecialChars).toBe(true); // Special chars preserved
         expect(apiReceivedNewlines).toBe(true); // Newlines preserved
       });
+    });
+
+    /**
+     * NARROW TEST (EDIT Mode): Optimistic data vs. server response consistency (Story 12b)
+     *
+     * Integration: Verify server response replaces optimistic data in cache
+     * Ensures data integrity when server transforms/normalizes data
+     */
+    it('Given optimistic update When server returns modified data Then cache updates with server truth', async () => {
+      // Arrange: Server normalizes/transforms the data
+      server.use(
+        http.get('*/api/Recipe/550e8400-e29b-41d4-a716-446655440099', () => {
+          return HttpResponse.json({
+            id: '550e8400-e29b-41d4-a716-446655440099',
+            title: 'Original Title',
+            instructions: 'Test instructions',
+            servings: 4,
+            category: 'Dinner',
+            imageUrl: 'https://example.com/test.jpg',
+            createdAt: '2024-01-15T10:00:00Z',
+            userId: '550e8400-e29b-41d4-a716-446655440002'
+          });
+        }),
+        http.put('*/api/Recipe/:id', async ({ request }) => {
+          const body: any = await request.json();
+          return HttpResponse.json({
+            id: '550e8400-e29b-41d4-a716-446655440099',
+            title: body.title.trim().toUpperCase(), // Server normalizes: trim + uppercase
+            instructions: 'Test instructions',
+            servings: body.servings,
+            category: body.category,
+            imageUrl: 'https://example.com/test.jpg',
+            createdAt: '2024-01-15T10:00:00Z',
+            userId: '550e8400-e29b-41d4-a716-446655440002'
+          });
+        })
+      );
+
+      const route = {
+        params: { recipeId: '550e8400-e29b-41d4-a716-446655440099' },
+        key: 'test-key',
+        name: 'RecipeDetail' as const,
+      };
+
+      const { queryClient } = renderWithProviders(<RecipeDetailScreen navigation={mockNavigation} route={route} />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeOnTheScreen();
+      });
+
+      fireEvent.press(screen.getByTestId('recipe-detail-edit-fab'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-edit-mode')).toBeOnTheScreen();
+      });
+
+      // Act: Submit data that the server will transform
+      const titleInput = screen.getByTestId('recipe-detail-edit-form-title');
+      fireEvent.changeText(titleInput, '  lowercase title  '); // Has spaces, lowercase
+      fireEvent.press(screen.getByTestId('recipe-detail-edit-form-submit'));
+
+      // Assert: Cache eventually contains server-transformed data, not optimistic data
+      await waitFor(() => {
+        const cachedData = queryClient?.getQueryData(['recipe', '550e8400-e29b-41d4-a716-446655440099']);
+        expect(cachedData).toMatchObject({
+          title: 'LOWERCASE TITLE' // Server normalized: trimmed and uppercased
+        });
+      }, { timeout: 3000 });
     });
   });
 
@@ -1186,6 +1552,79 @@ describe('RecipeDetailScreen Integration Tests - VIEW & CREATE Modes (Stories 8 
         expect(screen.getByTestId('recipe-detail-view-mode')).toBeVisible(); // onSuccess transition to VIEW mode
       }, { timeout: 3000 });
     });
+
+    /**
+     * NARROW TEST (EDIT Mode): Network timeout recovery with rollback (Story 12b)
+     *
+     * Integration: Network Failure → Hook Rollback → Cache Restored → Stay in EDIT
+     * Verifies rollback mechanism restores cache integrity after network failure
+     */
+    it('Given network timeout When update fails Then cache rolls back and edit state preserved', async () => {
+      // Arrange: Simulate network timeout
+      let timeoutApiCalled = false;
+
+      server.use(
+        http.get('*/api/Recipe/550e8400-e29b-41d4-a716-446655440099', () => {
+          return HttpResponse.json({
+            id: '550e8400-e29b-41d4-a716-446655440099',
+            title: 'Original Title',
+            instructions: 'Test instructions',
+            servings: 4,
+            category: 'Dinner',
+            imageUrl: 'https://example.com/test.jpg',
+            createdAt: '2024-01-15T10:00:00Z',
+            userId: '550e8400-e29b-41d4-a716-446655440002'
+          });
+        }),
+        http.put('*/api/Recipe/:id', () => {
+          timeoutApiCalled = true;
+          return HttpResponse.json(
+            {
+              type: 'https://tools.ietf.org/html/rfc7231#section-6.5.8',
+              title: 'Request Timeout',
+              status: 408,
+              detail: 'The request timed out. Please try again.'
+            },
+            { status: 408 }
+          );
+        })
+      );
+
+      const route = {
+        params: { recipeId: '550e8400-e29b-41d4-a716-446655440099' },
+        key: 'test-key',
+        name: 'RecipeDetail' as const,
+      };
+
+      const { queryClient } = renderWithProviders(<RecipeDetailScreen navigation={mockNavigation} route={route} />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeOnTheScreen();
+      });
+
+      // Capture the original cache state
+      const originalData = queryClient?.getQueryData(['recipe', '550e8400-e29b-41d4-a716-446655440099']);
+
+      fireEvent.press(screen.getByTestId('recipe-detail-edit-fab'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-edit-mode')).toBeOnTheScreen();
+      });
+
+      // Act: Trigger timeout
+      const titleInput = screen.getByTestId('recipe-detail-edit-form-title');
+      fireEvent.changeText(titleInput, 'Timeout Test');
+      fireEvent.press(screen.getByTestId('recipe-detail-edit-form-submit'));
+
+      // Assert: Network failure → Rollback → Cache integrity restored
+      await waitFor(() => {
+        expect(timeoutApiCalled).toBe(true);
+        expect(screen.getByText(/request timeout/i)).toBeOnTheScreen(); // Error shown
+        const rolledBackData = queryClient?.getQueryData(['recipe', '550e8400-e29b-41d4-a716-446655440099']);
+        expect(rolledBackData).toEqual(originalData); // Cache rolled back
+        expect(screen.getByTestId('recipe-detail-edit-mode')).toBeOnTheScreen(); // Still in EDIT
+      }, { timeout: 3000 });
+    });
   });
 
   /**
@@ -1274,6 +1713,82 @@ describe('RecipeDetailScreen Integration Tests - VIEW & CREATE Modes (Stories 8 
         expect(apiWasCalled).toBe(true);
         expect(screen.getByTestId('recipe-detail-view-mode')).toBeVisible();
       });
+    });
+
+    /**
+     * NARROW TEST (EDIT Mode): useUpdateRecipe hook works with legacy API response (Story 12b)
+     *
+     * Integration: Legacy API → Hook Compatibility → Cache Update
+     * Verifies hook handles older API response formats gracefully
+     */
+    it('Given legacy API response format When update succeeds Then hook processes response correctly', async () => {
+      // Arrange: Server returns a response with extra legacy fields
+      let apiWasCalled = false;
+
+      server.use(
+        http.get('*/api/Recipe/550e8400-e29b-41d4-a716-446655440099', () => {
+          return HttpResponse.json({
+            id: '550e8400-e29b-41d4-a716-446655440099',
+            title: 'Original Title',
+            instructions: 'Test instructions',
+            servings: 4,
+            category: 'Dinner',
+            imageUrl: 'https://example.com/test.jpg',
+            createdAt: '2024-01-15T10:00:00Z',
+            userId: '550e8400-e29b-41d4-a716-446655440002'
+          });
+        }),
+        http.put('*/api/Recipe/:id', async ({ request }) => {
+          apiWasCalled = true;
+          const body: any = await request.json();
+          return HttpResponse.json({
+            id: '550e8400-e29b-41d4-a716-446655440099',
+            title: body.title,
+            instructions: 'Test instructions',
+            servings: body.servings,
+            category: body.category,
+            imageUrl: 'https://example.com/test.jpg',
+            createdAt: '2024-01-15T10:00:00Z',
+            userId: '550e8400-e29b-41d4-a716-446655440002',
+            // Legacy fields (maybe ignored but shouldn't break)
+            deprecated_field: 'old_value',
+            legacy_timestamp: '2024-01-01'
+          });
+        })
+      );
+
+      const route = {
+        params: { recipeId: '550e8400-e29b-41d4-a716-446655440099' },
+        key: 'test-key',
+        name: 'RecipeDetail' as const,
+      };
+
+      const { queryClient } = renderWithProviders(<RecipeDetailScreen navigation={mockNavigation} route={route} />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeOnTheScreen();
+      });
+
+      fireEvent.press(screen.getByTestId('recipe-detail-edit-fab'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-edit-mode')).toBeOnTheScreen();
+      });
+
+      // Act: Update with legacy API
+      const titleInput = screen.getByTestId('recipe-detail-edit-form-title');
+      fireEvent.changeText(titleInput, 'Legacy API Test');
+      fireEvent.press(screen.getByTestId('recipe-detail-edit-form-submit'));
+
+      // Assert: Integration successful despite legacy fields
+      await waitFor(() => {
+        expect(apiWasCalled).toBe(true);
+        expect(screen.getByTestId('recipe-detail-view-mode')).toBeOnTheScreen();
+      }, { timeout: 3000 });
+
+      // Verify the cache has updated data (legacy fields don't break integration)
+      const cachedData = queryClient?.getQueryData(['recipe', '550e8400-e29b-41d4-a716-446655440099']);
+      expect(cachedData).toMatchObject({ title: 'Legacy API Test' });
     });
   });
 });

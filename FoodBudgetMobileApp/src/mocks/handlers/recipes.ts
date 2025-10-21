@@ -14,7 +14,7 @@ export const recipeHandlers = [
   // GET /api/Recipe - Get all recipes
   http.get('*/api/Recipe', ({ request }) => {
     const url = new URL(request.url);
-    const userId = url.searchParams.get('userId');
+    url.searchParams.get('userId');
     const limit = url.searchParams.get('limit');
 
     let result = [...recipes];
@@ -62,8 +62,8 @@ export const recipeHandlers = [
     });
   }),
 
-  // GET /api/recipes/search - Search recipes by title
-  http.get('*/api/recipes/search', ({ request }) => {
+  // GET /api/Recipe/search - Search recipes by title
+  http.get('*/api/Recipe/search', ({ request }) => {
     const url = new URL(request.url);
     const title = url.searchParams.get('title');
 
@@ -84,7 +84,7 @@ export const recipeHandlers = [
     });
   }),
 
-  // POST /api/Recipe - Create new recipe
+  // POST /api/Recipe - Create a new recipe
   http.post('*/api/Recipe', async ({ request }) => {
     try {
       const newRecipeData = await request.json() as RecipeRequestDto;
@@ -208,7 +208,7 @@ export const recipeHandlers = [
 ];
 
 /**
- * Reset mock data to initial state
+ * Reset mock data to the initial state 
  * Useful for testing or development reset
  */
 export const resetMockRecipes = (): void => {

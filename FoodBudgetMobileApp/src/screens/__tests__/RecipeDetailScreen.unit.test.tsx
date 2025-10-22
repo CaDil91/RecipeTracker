@@ -1030,6 +1030,130 @@ describe('RecipeDetailScreen Unit Tests', () => {
       });
     });
 
+    /**
+     * Test 13: Navigation blocked until real ID received (Story 12c - CREATE mode - PRIORITY)
+     * RISK-BASED: Navigating with temp ID breaks detail view
+     *
+     * Acceptance Criteria:
+     * - AC1: Navigation does NOT occur until API returns real ID
+     * - AC2: User cannot interact with the back button during save
+     */
+    it('Given user creates recipe When save button pressed Then navigation blocked until API responds with real ID', async () => {
+      // Arrange - Mock slow API response to verify navigation blocking
+      let resolveCreate: (value: any) => void;
+      const createPromise = new Promise((resolve) => {
+        resolveCreate = resolve;
+      });
+
+      (RecipeService as any).createRecipe = jest.fn().mockReturnValue(createPromise);
+
+      const route = {
+        params: {},
+        key: 'test-key',
+        name: 'RecipeDetail' as const,
+      };
+
+      renderWithProviders(
+        <RecipeDetailScreen
+          navigation={mockNavigation}
+          route={route}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-create-form')).toBeOnTheScreen();
+      });
+
+      // Act - Fill form and submit (API hasn't responded yet)
+      const titleInput = screen.getByTestId('recipe-detail-create-form-title');
+      fireEvent.changeText(titleInput, 'New Recipe');
+
+      const submitButton = screen.getByTestId('recipe-detail-create-form-submit');
+      fireEvent.press(submitButton);
+
+      // Assert - Navigation should NOT have occurred yet (API still pending)
+      await waitFor(() => {
+        expect(RecipeService.createRecipe).toHaveBeenCalled();
+      });
+      expect(mockNavigate).not.toHaveBeenCalled();
+
+      // Complete the API call with real ID
+      resolveCreate!({
+        success: true,
+        data: { id: 'real-uuid-123', title: 'New Recipe', servings: 4 }
+      });
+
+      // Assert - NOW navigation should occur with real ID
+      await waitFor(() => {
+        expect(mockNavigate).toHaveBeenCalledWith('RecipeDetail', {
+          recipeId: 'real-uuid-123'
+        });
+      });
+    });
+
+    /**
+     * Test 14: useCreateRecipe hook integration (Story 12c - CREATE mode - PRIORITY)
+     * RISK-BASED: Using the wrong mutation pattern breaks optimistic updates
+     *
+     * Acceptance Criteria:
+     * - AC1: Component uses useCreateRecipe hook (not inline mutation)
+     * - AC2: Hook handles temp ID generation and replacement
+     */
+    it('Given CREATE mode When component renders Then uses useCreateRecipe hook for optimistic behavior', async () => {
+      // Arrange - Delay API response to check optimistic update
+      (RecipeService.createRecipe as jest.Mock).mockImplementation(
+        () => new Promise((resolve) => {
+          setTimeout(() => resolve({
+            success: true,
+            data: {
+              id: 'real-id-123',
+              title: 'Optimistic Recipe',
+              servings: 4,
+              instructions: '',
+              category: 'Dinner',
+              imageUrl: null,
+              createdAt: new Date().toISOString(),
+              userId: 'user-123',
+            },
+          }), 100);
+        })
+      );
+
+      const route = {
+        params: {},
+        key: 'test-key',
+        name: 'RecipeDetail' as const,
+      };
+
+      const { queryClient } = renderWithProviders(
+        <RecipeDetailScreen
+          navigation={mockNavigation}
+          route={route}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-create-form')).toBeOnTheScreen();
+      });
+
+      // Act - Submit form
+      const titleInput = screen.getByTestId('recipe-detail-create-form-title');
+      fireEvent.changeText(titleInput, 'Optimistic Recipe');
+
+      const submitButton = screen.getByTestId('recipe-detail-create-form-submit');
+      fireEvent.press(submitButton);
+
+      // Assert - Recipe should appear instantly in cache with temp ID (before API responds)
+      await waitFor(() => {
+        const listCache = queryClient?.getQueryData<any[]>(['recipes']);
+        const tempRecipe = listCache?.[0];
+
+        expect(tempRecipe).toBeDefined();
+        expect(tempRecipe?.id.startsWith('temp-')).toBe(true);
+        expect(tempRecipe?.title).toBe('Optimistic Recipe');
+      });
+    });
+
   });
 
   /**
@@ -1472,6 +1596,70 @@ describe('RecipeDetailScreen Unit Tests', () => {
       // Assert - Returns to VIEW mode after completion
       await waitFor(() => {
         expect(screen.getByTestId('recipe-detail-view-mode')).toBeOnTheScreen();
+      });
+    });
+
+    /**
+     * Test 20: Complete CREATE flow - Valid form → save → navigate with real ID (Story 12c)
+     * HAPPY PATH: Normal create flow with optimistic updates
+     *
+     * Acceptance Criteria:
+     * - AC1: Form submission triggers optimistic add to recipe list
+     * - AC2: Navigation occurs with REAL ID (not temp ID) after API success
+     * - AC3: Success snackbar displays "Recipe created successfully!"
+     */
+    it('Given valid form data in CREATE mode When user submits Then recipe created and navigates to VIEW with real ID', async () => {
+      // Arrange - Delay API response to check optimistic update
+      (RecipeService as any).createRecipe = jest.fn().mockImplementation(
+        () => new Promise((resolve) => {
+          setTimeout(() => resolve({
+            success: true,
+            data: { id: 'real-uuid-456', title: 'New Recipe', servings: 4, createdAt: new Date().toISOString() }
+          }), 100);
+        })
+      );
+
+      const route = {
+        params: {},
+        key: 'test-key',
+        name: 'RecipeDetail' as const,
+      };
+
+      const { queryClient } = renderWithProviders(
+        <RecipeDetailScreen
+          navigation={mockNavigation}
+          route={route}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-create-form')).toBeOnTheScreen();
+      });
+
+      // Act - Fill form and submit
+      const titleInput = screen.getByTestId('recipe-detail-create-form-title');
+      fireEvent.changeText(titleInput, 'New Recipe');
+
+      const submitButton = screen.getByTestId('recipe-detail-create-form-submit');
+      fireEvent.press(submitButton);
+
+      // Assert - Recipe appears instantly in cache with temp ID (optimistic)
+      await waitFor(() => {
+        const listCache = queryClient?.getQueryData<any[]>(['recipes']);
+        const tempRecipe = listCache?.[0];
+        expect(tempRecipe?.id.startsWith('temp-')).toBe(true);
+      });
+
+      // Assert - Success snackbar appears
+      await waitFor(() => {
+        expect(screen.getByText('Recipe created successfully!')).toBeOnTheScreen();
+      });
+
+      // Assert - Navigates to VIEW mode with REAL ID (not temp)
+      await waitFor(() => {
+        expect(mockNavigate).toHaveBeenCalledWith('RecipeDetail', {
+          recipeId: 'real-uuid-456' // Real ID from a server
+        });
       });
     });
   });
@@ -3076,7 +3264,146 @@ describe('RecipeDetailScreen Unit Tests', () => {
     });
 
     /**
-     * Test 53: API 500 error (EDIT mode)
+     * Test 52: API error with rollback - Temp recipe removed from cache (Story 12c - CREATE mode)
+     * ERROR: Optimistic create rollback on failure
+     *
+     * Acceptance Criteria:
+     * - AC1: API failure removes temp recipe from cache (rollback)
+     * - AC2: Error snackbar displays "Failed to create recipe. Please try again."
+     * - AC3: User stays in CREATE mode to retry
+     */
+    it('Given API error When create fails Then temp recipe removed and user stays in CREATE mode', async () => {
+      // Arrange
+      (RecipeService.createRecipe as jest.Mock).mockResolvedValue({
+        success: false,
+        error: 'Failed to create recipe'
+      });
+
+      const route = {
+        params: {},
+        key: 'test-key',
+        name: 'RecipeDetail' as const,
+      };
+
+      const { queryClient } = renderWithProviders(
+        <RecipeDetailScreen
+          navigation={mockNavigation}
+          route={route}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-create-form')).toBeOnTheScreen();
+      });
+
+      // Act - Fill form and submit
+      const titleInput = screen.getByTestId('recipe-detail-create-form-title');
+      fireEvent.changeText(titleInput, 'Rollback Recipe');
+
+      const submitButton = screen.getByTestId('recipe-detail-create-form-submit');
+      fireEvent.press(submitButton);
+
+      // Assert - Error snackbar appears
+      await waitFor(() => {
+        expect(screen.getByText(/failed to create recipe/i)).toBeOnTheScreen();
+      });
+
+      // Assert - Temp recipe removed from cache (rollback)
+      await waitFor(() => {
+        const listCache = queryClient?.getQueryData<any[]>(['recipes']);
+        const hasTempRecipe = listCache?.some(r => r.id.startsWith('temp-'));
+        expect(hasTempRecipe).toBe(false); // No temp recipes in the cache
+      });
+
+      // Assert - Still in CREATE mode (not navigated)
+      expect(screen.getByTestId('recipe-detail-create-form')).toBeOnTheScreen();
+      expect(mockNavigate).not.toHaveBeenCalled();
+    });
+
+    /**
+     * Test 53: Retry after error succeeds with new temp ID (Story 12c - CREATE mode)
+     * ERROR: Retry generates fresh temp ID
+     *
+     * Acceptance Criteria:
+     * - AC1: First attempt fails and removes temp recipe
+     * - AC2: Second attempt generates NEW temp ID
+     * - AC3: Second attempt succeeds and navigates with real ID
+     */
+    it('Given previous error When user retries Then second attempt generates new temp ID and succeeds', async () => {
+      // Arrange - First call fails instantly, second succeeds with delay
+      (RecipeService.createRecipe as jest.Mock)
+        .mockResolvedValueOnce({
+          success: false,
+          error: 'Server error',
+        })
+        .mockImplementationOnce(
+          () => new Promise((resolve) => {
+            setTimeout(() => resolve({
+              success: true,
+              data: { id: 'real-uuid-789', title: 'Retry Success', servings: 4, createdAt: new Date().toISOString() },
+            }), 100);
+          })
+        );
+
+      const route = {
+        params: {},
+        key: 'test-key',
+        name: 'RecipeDetail' as const,
+      };
+
+      const { queryClient } = renderWithProviders(
+        <RecipeDetailScreen
+          navigation={mockNavigation}
+          route={route}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recipe-detail-create-form')).toBeOnTheScreen();
+      });
+
+      const titleInput = screen.getByTestId('recipe-detail-create-form-title');
+      fireEvent.changeText(titleInput, 'Retry Success');
+
+      const submitButton = screen.getByTestId('recipe-detail-create-form-submit');
+
+      // Act - First submission (fails)
+      fireEvent.press(submitButton);
+
+      await waitFor(() => {
+        expect(RecipeService.createRecipe).toHaveBeenCalledTimes(1);
+      });
+
+      // Capture temp ID from the first attempt (should be removed after error)
+      let firstTempId: string | undefined;
+      await waitFor(() => {
+        const listCache = queryClient?.getQueryData<any[]>(['recipes']);
+        firstTempId = listCache?.find(r => r.id.startsWith('temp-'))?.id;
+        expect(firstTempId).toBeUndefined(); // Temp recipe removed after error
+      });
+
+      // Act - Second submission (succeeds with delay)
+      fireEvent.press(submitButton);
+
+      // Assert - NEW temp ID generated (different from the first)
+      await waitFor(() => {
+        const listCache = queryClient?.getQueryData<any[]>(['recipes']);
+        const secondTempRecipe = listCache?.find(r => r.id.startsWith('temp-'));
+        expect(secondTempRecipe).toBeDefined();
+        expect(secondTempRecipe?.id).not.toBe(firstTempId); // New temp ID
+      });
+
+      // Assert - Success and navigation with real ID
+      await waitFor(() => {
+        expect(screen.getByText('Recipe created successfully!')).toBeOnTheScreen();
+        expect(mockNavigate).toHaveBeenCalledWith('RecipeDetail', {
+          recipeId: 'real-uuid-789'
+        });
+      });
+    });
+
+    /**
+     * Test 54: API 500 error (EDIT mode)
      */
     it('Given API returns 500 When update fails Then shows Snackbar error and stays in EDIT mode', async () => {
       // Arrange

@@ -7,12 +7,13 @@
  * - Query Cancellation (concurrent handling)
  * - Retry actions handled by UI layer
  *
- * Story 12a: Optimistic Delete
+ * Story 12a: Optimistically Delete
  * Story 12b: Optimistic Update
- * Story 12c: Optimistic Create (future)
+ * Story 12c: Optimistically Create
  */
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import * as Crypto from 'expo-crypto';
 import { RecipeService } from '../lib/shared';
 import type { RecipeResponseDto, RecipeRequestDto } from '../lib/shared';
 
@@ -24,9 +25,9 @@ import type { RecipeResponseDto, RecipeRequestDto } from '../lib/shared';
  * Features:
  * - Instant cache removal (optimistic update)
  * - Automatic rollback on API failure
- * - Background refetch for consistency after errors
+ * - Background refetch for consistency (on both success and error)
  * - Concurrent query cancellation
- * - No refetch on success (trust optimistic update)
+ * - Scalable category cache handling via invalidation
  *
  * @example
  * ```tsx
@@ -68,24 +69,13 @@ export const useDeleteRecipe = () => {
       // Snapshot current state for potential rollback
       const previousRecipes = queryClient.getQueryData<RecipeResponseDto[]>(['recipes']);
 
-      // Optimistically remove recipe from all cache locations
+      // Optimistically remove recipe from main cache
       // This makes the UI update instantly before the API responds
       queryClient.setQueryData<RecipeResponseDto[]>(['recipes'], (old) =>
         old?.filter((r) => r.id !== recipeId) || []
       );
 
-      queryClient.setQueryData<RecipeResponseDto[]>(['recipes', 'All'], (old) =>
-        old?.filter((r) => r.id !== recipeId) || []
-      );
-
-      // Remove from category-specific caches
-      // Note: We don't know which category the recipe belongs to, so we update all possible categories
-      const categories = ['Breakfast', 'Lunch', 'Dinner', 'Dessert'];
-      categories.forEach((category) => {
-        queryClient.setQueryData<RecipeResponseDto[]>(['recipes', category], (old) =>
-          old?.filter((r) => r.id !== recipeId) || []
-        );
-      });
+      // Category caches will be handled by invalidateQueries (supports custom categories)
 
       // Return context for rollback
       return { previousRecipes, recipeId };
@@ -181,13 +171,7 @@ export const useUpdateRecipe = () => {
         old ? { ...old, ...data } : old
       );
 
-      // Update category-specific caches
-      const categories = ['All', 'Breakfast', 'Lunch', 'Dinner', 'Dessert'];
-      categories.forEach((category) => {
-        queryClient.setQueryData<RecipeResponseDto[]>(['recipes', category], (old) =>
-          old?.map((r) => (r.id === id ? { ...r, ...data } : r)) || []
-        );
-      });
+      // Category caches will be handled by invalidateQueries (supports custom categories)
 
       // Return context for rollback
       return { previousRecipes, previousRecipe, id };
@@ -220,6 +204,133 @@ export const useUpdateRecipe = () => {
       void queryClient.refetchQueries({ queryKey: ['recipes'] });
 
       // Note: Success snackbar and navigation are handled by the UI component
+    },
+  });
+};
+
+/**
+ * useCreateRecipe Hook - Story 12c
+ *
+ * Provides optimistic create mutation with temp UUID and instant UI updates.
+ *
+ * Features:
+ * - Temp UUID generation with "temp-" prefix (expo-crypto)
+ * - Instant cache addition to TOP of list (newest first)
+ * - Temp ID → Real ID replacement on API success
+ * - Automatic rollback on API failure (removes temp recipe)
+ * - Multi-cache updates (list, detail, category)
+ * - Concurrent query cancellation
+ * - Returns real recipe for navigation
+ *
+ * @example
+ * ```tsx
+ * const createMutation = useCreateRecipe();
+ *
+ * const handleCreate = async (data: RecipeRequestDto) => {
+ *   try {
+ *     const createdRecipe = await createMutation.mutateAsync(data);
+ *     showSnackbar('Recipe created successfully!', 'success');
+ *     // Navigate with real ID from server
+ *     navigation.navigate('RecipeDetail', { recipeId: createdRecipe. I'd });
+ *   } catch (error) {
+ *     showSnackbar('Failed to create recipe', 'error', {
+ *       label: 'Retry',
+ *       onPress: () => handleCreate(data)
+ *     });
+ *   }
+ * };
+ * ```
+ */
+export const useCreateRecipe = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: RecipeRequestDto) => {
+      const response = await RecipeService.createRecipe(data);
+      if (!response.success) {
+        throw new Error(
+          typeof response.error === 'string'
+            ? response.error
+            : response.error.title || 'Failed to create recipe'
+        );
+      }
+      return response.data;
+    },
+
+    onMutate: async (data: RecipeRequestDto) => {
+      // Generate temp UUID with "temp-" prefix
+      const tempId = `temp-${Crypto.randomUUID()}`;
+
+      // Create temp recipe for optimistic update
+      const tempRecipe: RecipeResponseDto = {
+        id: tempId,
+        title: data.title,
+        instructions: data.instructions || '',
+        servings: data.servings,
+        category: data.category,
+        imageUrl: data.imageUrl,
+        createdAt: new Date().toISOString(),
+        userId: 'temp-user', // Placeholder - will be replaced by server response
+      };
+
+      // Cancel outgoing refetches to prevent race conditions
+      await queryClient.cancelQueries({ queryKey: ['recipes'] });
+
+      // Snapshot current state for potential rollback
+      const previousRecipes = queryClient.getQueryData<RecipeResponseDto[]>(['recipes']);
+
+      // Optimistically add recipe to TOP of main list (newest first)
+      queryClient.setQueryData<RecipeResponseDto[]>(['recipes'], (old) =>
+        [tempRecipe, ...(old || [])]
+      );
+
+      // Populate the detail cache for instant navigation (if needed)
+      queryClient.setQueryData(['recipe', tempId], tempRecipe);
+
+      // Category caches will be handled by invalidateQueries (supports custom categories)
+
+      // Return context for rollback
+      return { previousRecipes, tempId, tempRecipe };
+    },
+
+    onError: (_err, _data, context) => {
+      const tempId = context?.tempId;
+
+      if (!tempId) return;
+
+      // Manual Rollback (instant) - removes temp recipe from main cache
+      queryClient.setQueryData<RecipeResponseDto[]>(['recipes'], (old) =>
+        old?.filter((r) => r.id !== tempId) || []
+      );
+
+      // Remove from the detail cache
+      queryClient.removeQueries({ queryKey: ['recipe', tempId] });
+
+      // Background Refetch (eventual consistency) - ensures the cache is correct
+      void queryClient.invalidateQueries({ queryKey: ['recipes'] });
+
+      // Note: Error snackbar with retry action is handled by the UI component
+    },
+
+    onSuccess: (serverRecipe, _data, context) => {
+      const tempId = context?.tempId;
+
+      if (!tempId) return;
+
+      // Replace temp recipe with server response in the main list cache
+      queryClient.setQueryData<RecipeResponseDto[]>(['recipes'], (old) =>
+        old?.map((r) => (r.id === tempId ? serverRecipe : r)) || []
+      );
+
+      // Remove temp detail cache and add real detail cache
+      queryClient.removeQueries({ queryKey: ['recipe', tempId] });
+      queryClient.setQueryData(['recipe', serverRecipe.id], serverRecipe);
+
+      // Background refetch for consistency (catches any server-side changes)
+      void queryClient.refetchQueries({ queryKey: ['recipes'] });
+
+      // Note: Success snackbar and navigation are handled by the UI component
+      // The component uses the returned serverRecipe.id for navigation
     },
   });
 };

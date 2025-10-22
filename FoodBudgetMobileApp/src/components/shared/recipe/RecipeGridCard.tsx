@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, Image, TouchableOpacity } from 'react-native';
-import { Text, IconButton, Chip, Surface, useTheme } from 'react-native-paper';
+import { Text, IconButton, Chip, Surface, useTheme, ActivityIndicator } from 'react-native-paper';
 import { RecipeResponseDto } from '../../../lib/shared';
 
 const GRID_PADDING = 16;
@@ -40,6 +40,9 @@ export const RecipeGridCard: React.FC<RecipeGridCardProps> = ({
 
   const showImage = recipe.imageUrl && !imageError;
 
+  // Story 12c: Check if recipe has temp ID (optimistic create in progress)
+  const isTempRecipe = recipe.id.startsWith('temp-');
+
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -64,6 +67,13 @@ export const RecipeGridCard: React.FC<RecipeGridCardProps> = ({
               size={32}
               iconColor={theme.colors.onSurfaceVariant}
             />
+          </View>
+        )}
+
+        {/* Story 12c: Loading indicator for temp recipes */}
+        {isTempRecipe && (
+          <View style={styles.loadingOverlay} testID={`${testID}-loading-indicator`}>
+            <ActivityIndicator size="small" color="white" />
           </View>
         )}
 
@@ -112,6 +122,16 @@ const styles = StyleSheet.create({
   placeholder: {
     width: '100%',
     height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.3)',
     justifyContent: 'center',
     alignItems: 'center',
   },

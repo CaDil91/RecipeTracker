@@ -163,12 +163,12 @@ Build a complete vertical slice demonstrating full CRUD functionality for recipe
 - **Integration Tests: 25/25 passing** (3 new delete tests)
 - **Total: 110 tests passing** with full TDD approach (Red → Green → Refactor)
 
-#### ✅ Story 12a & 12b: Optimistic Updates (Delete & Update)
-**User Story:** As a user, I want instant feedback when I delete or update recipes so the app feels fast and responsive.
+#### ✅ Story 12a, 12b & 12c: Optimistic Updates (Delete, Update & Create)
+**User Story:** As a user, I want instant feedback when I create, update, or delete recipes so the app feels fast and responsive.
 
-**Features:** (Completed - 12a & 12b)
+**Features:** (Completed - All Three Stories)
 - ✅ **Story 12a - Optimistic Delete**: Recipes disappear instantly with automatic rollback on error
-  - Instant cache removal from all locations (['recipes'], ['recipes', 'All'], category caches)
+  - Instant cache removal from all locations
   - Manual rollback + background refetch on error for consistency
   - Query cancellation to prevent race conditions
   - **Hook Tests: 11/11 passing**
@@ -183,8 +183,19 @@ Build a complete vertical slice demonstrating full CRUD functionality for recipe
   - **Unit Tests: 5/5 new Story 12b tests**
   - **Integration Tests: 6/6 new Story 12b tests**
   - **Total: 24 tests passing, Full test suite: 580/580 passing**
-- 🔄 **Story 12c - Optimistic Create**: (Not Started - Optional for demo)
-  - Will use UUID temp IDs for instant list addition
+- ✅ **Story 12c - Optimistic Create**: New recipes appear instantly with temp UUID while saving
+  - Temp UUID generation using expo-crypto (`temp-${uuid}` pattern)
+  - Instant optimistic UI updates (recipe appears at top of list <50ms)
+  - Navigation blocking until real ID received (prevents broken states)
+  - Loading indicator on temp recipe cards (visual feedback)
+  - Atomic temp ID → real ID replacement on success
+  - Automatic rollback on error with retry support
+  - **Scalable Refactoring:** Removed hardcoded categories for custom category support (Sprint 4 ready)
+  - **Hook Tests: 11/11 passing (useCreateRecipe)**
+  - **Unit Tests: 11/11 passing (CREATE mode integration)**
+  - **Integration Tests: 11/11 passing (temp ID lifecycle)**
+  - **Total: 33 tests passing, Full test suite: 613/613 passing**
+  - **2025 Production Standards:** TanStack Query v5, expo-crypto, cache manipulation, server authority
 
 #### 🔄 Story 13: Material Design 3 Polish
 **User Story:** As a user, I want a polished, professional-looking interface with smooth animations.

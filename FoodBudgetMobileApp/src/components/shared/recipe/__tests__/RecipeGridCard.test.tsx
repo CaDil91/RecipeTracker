@@ -243,6 +243,82 @@ describe('RecipeGridCard', () => {
         );
       }).not.toThrow();
     });
+
+    /**
+     * Test: Loading indicator for temp ID (Story 12c - Optimistic Create)
+     * Given: Recipe with temp ID (starts with "temp-")
+     * When: Card renders
+     * Then: Displays loading indicator
+     */
+    it('given recipe with temp ID, when rendered, then shows loading indicator', () => {
+      // Arrange
+      const tempRecipe = {
+        ...mockRecipe,
+        id: 'temp-550e8400-e29b-41d4-a716-446655440001',
+      };
+
+      // Act
+      const { getByTestId } = render(
+        <TestWrapper>
+          <RecipeGridCard recipe={tempRecipe} testID="recipe-card" />
+        </TestWrapper>
+      );
+
+      // Assert
+      expect(getByTestId('recipe-card-loading-indicator')).toBeTruthy();
+    });
+
+    /**
+     * Test: No loading indicator for real ID (Story 12c - Optimistic Create)
+     * Given: Recipe with real ID (UUID without "temp-" prefix)
+     * When: Card renders
+     * Then: Does not display loading indicator
+     */
+    it('given recipe with real ID, when rendered, then does not show loading indicator', () => {
+      // Arrange
+      const realRecipe = {
+        ...mockRecipe,
+        id: '550e8400-e29b-41d4-a716-446655440001',
+      };
+
+      // Act
+      const { queryByTestId } = render(
+        <TestWrapper>
+          <RecipeGridCard recipe={realRecipe} testID="recipe-card" />
+        </TestWrapper>
+      );
+
+      // Assert
+      expect(queryByTestId('recipe-card-loading-indicator')).toBeNull();
+    });
+
+    /**
+     * Test: Loading indicator over image (Story 12c - Optimistic Create)
+     * Given: Recipe with temp ID and imageUrl
+     * When: Card renders
+     * Then: Shows both image and loading indicator
+     */
+    it('given temp recipe with image, when rendered, then shows loading over image', () => {
+      // Arrange
+      const tempRecipeWithImage = {
+        ...mockRecipe,
+        id: 'temp-with-image-123',
+        imageUrl: 'https://example.com/temp-recipe.jpg',
+      };
+
+      // Act
+      const { getByTestId, UNSAFE_getByType } = render(
+        <TestWrapper>
+          <RecipeGridCard recipe={tempRecipeWithImage} testID="recipe-card" />
+        </TestWrapper>
+      );
+
+      // Assert
+      const { Image } = require('react-native');
+      const imageElement = UNSAFE_getByType(Image);
+      expect(imageElement.props.source.uri).toBe('https://example.com/temp-recipe.jpg');
+      expect(getByTestId('recipe-card-loading-indicator')).toBeTruthy();
+    });
   });
 
   describe('Props Pass-through', () => {
@@ -353,6 +429,105 @@ describe('RecipeGridCard', () => {
       const { Image } = require('react-native');
       const imageElement = UNSAFE_getByType(Image);
       expect(typeof imageElement.props.onError).toBe('function');
+    });
+
+    /**
+     * Test: Empty ID string (Story 12c - Optimistic Create)
+     * Given: Recipe with empty ID string
+     * When: Card renders
+     * Then: Does not show loading indicator (treats as real ID)
+     */
+    it('given recipe with empty ID, when rendered, then does not show loading indicator', () => {
+      // Arrange
+      const emptyIdRecipe = {
+        ...mockRecipe,
+        id: '',
+      };
+
+      // Act
+      const { queryByTestId } = render(
+        <TestWrapper>
+          <RecipeGridCard recipe={emptyIdRecipe} testID="recipe-card" />
+        </TestWrapper>
+      );
+
+      // Assert
+      expect(queryByTestId('recipe-card-loading-indicator')).toBeNull();
+    });
+
+    /**
+     * Test: Exact "temp-" ID (Story 12c - Optimistic Create)
+     * Given: Recipe with ID exactly "temp-" (boundary case)
+     * When: Card renders
+     * Then: Shows loading indicator
+     */
+    it('given recipe with ID exactly temp-, when rendered, then shows loading indicator', () => {
+      // Arrange
+      const tempPrefixRecipe = {
+        ...mockRecipe,
+        id: 'temp-',
+      };
+
+      // Act
+      const { getByTestId } = render(
+        <TestWrapper>
+          <RecipeGridCard recipe={tempPrefixRecipe} testID="recipe-card" />
+        </TestWrapper>
+      );
+
+      // Assert
+      expect(getByTestId('recipe-card-loading-indicator')).toBeTruthy();
+    });
+
+    /**
+     * Test: Uppercase TEMP-prefix (Story 12c - Optimistic Create)
+     * Given: Recipe with ID "TEMP-123" (uppercase)
+     * When: Card renders
+     * Then: Does not show loading (temp - must be lowercase)
+     */
+    it('given recipe with uppercase TEMP- ID, when rendered, then does not show loading', () => {
+      // Arrange
+      const uppercaseTempRecipe = {
+        ...mockRecipe,
+        id: 'TEMP-123',
+      };
+
+      // Act
+      const { queryByTestId } = render(
+        <TestWrapper>
+          <RecipeGridCard recipe={uppercaseTempRecipe} testID="recipe-card" />
+        </TestWrapper>
+      );
+
+      // Assert
+      expect(queryByTestId('recipe-card-loading-indicator')).toBeNull();
+    });
+
+    /**
+     * Test: Loading doesn't break layout (Story 12c - Optimistic Create)
+     * Given: Recipe with temp ID
+     * When: Card renders with loading indicator
+     * Then: Card content remains visible (title, servings)
+     */
+    it('given temp recipe, when rendered with loading, then card content still visible', () => {
+      // Arrange
+      const tempRecipe = {
+        ...mockRecipe,
+        id: 'temp-abc-123',
+        title: 'Loading Recipe',
+      };
+
+      // Act
+      const { getByText, getByTestId } = render(
+        <TestWrapper>
+          <RecipeGridCard recipe={tempRecipe} testID="recipe-card" />
+        </TestWrapper>
+      );
+
+      // Assert
+      expect(getByTestId('recipe-card-loading-indicator')).toBeTruthy();
+      expect(getByText('Loading Recipe')).toBeTruthy();
+      expect(getByText('4')).toBeTruthy();
     });
   });
 });

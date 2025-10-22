@@ -18,7 +18,7 @@ import { ActivityIndicator, useTheme, IconButton, Surface, Divider, Snackbar, FA
 import { RecipeDetailScreenNavigationProp, RecipeDetailScreenRouteProp } from '../types/navigation';
 import { RecipeService, RecipeRequestDto } from '../lib/shared';
 import { RecipeForm, RecipeFormRef } from '../components/shared';
-import { useUpdateRecipe } from '../hooks/useRecipeMutations';
+import { useUpdateRecipe, useCreateRecipe } from '../hooks/useRecipeMutations';
 
 type RecipeDetailScreenProps = {
   navigation: RecipeDetailScreenNavigationProp;
@@ -88,36 +88,8 @@ const RecipeDetailScreen: React.FC<RecipeDetailScreenProps> = ({ navigation, rou
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [snackbarVisible, setSnackbarVisible] = useState(false);
 
-  // CREATE mode mutation
-  const createMutation = useMutation({
-    mutationFn: async (data: RecipeRequestDto) => {
-      const response = await RecipeService.createRecipe(data);
-      if (!response.success) {
-        throw new Error(
-          typeof response.error === 'string'
-            ? response.error
-            : response.error.title || 'Failed to create recipe'
-        );
-      }
-      return response.data;
-    },
-    onSuccess: (data) => {
-      // Show a success message
-      setSnackbarMessage('Recipe created successfully!');
-      setSnackbarVisible(true);
-
-      // Invalidate recipe list cache
-      void queryClient.invalidateQueries({ queryKey: ['recipes'] });
-
-      // Navigate to VIEW mode with a new recipe ID
-      navigation.navigate('RecipeDetail', { recipeId: data.id });
-    },
-    onError: (error: Error) => {
-      // Show error message
-      setSnackbarMessage(error.message || 'Failed to create recipe. Please try again.');
-      setSnackbarVisible(true);
-    },
-  });
+  // Story 12c: Optimistic create mutation hook
+  const createMutation = useCreateRecipe();
 
   // Story 12b: Optimistic update mutation hook
   const updateMutation = useUpdateRecipe();
@@ -156,8 +128,24 @@ const RecipeDetailScreen: React.FC<RecipeDetailScreenProps> = ({ navigation, rou
   });
 
   // Handle form submissions
-  const handleCreateSubmit = (data: RecipeRequestDto) => {
-    createMutation.mutate(data);
+  // Story 12c: Optimistic create with navigation blocking by real ID
+  const handleCreateSubmit = async (data: RecipeRequestDto) => {
+    try {
+      // Use mutateAsync to wait for real ID before navigation
+      const createdRecipe = await createMutation.mutateAsync(data);
+      setSnackbarMessage('Recipe created successfully!');
+      setSnackbarVisible(true);
+      // Navigate with real ID from server (not temp ID)
+      navigation.navigate('RecipeDetail', { recipeId: createdRecipe.id });
+    } catch (error) {
+      // Error snackbar (user stays in CREATE mode to allow retry)
+      const errorMessage = error instanceof Error
+        ? error.message
+        : 'Failed to create recipe. Please try again.';
+      setSnackbarMessage(errorMessage);
+      setSnackbarVisible(true);
+      // Note: Stays in CREATE mode to allow retry
+    }
   };
 
   const handleEditSubmit = async (data: RecipeRequestDto) => {

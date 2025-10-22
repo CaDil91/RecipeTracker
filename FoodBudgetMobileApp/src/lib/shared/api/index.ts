@@ -4,3 +4,4 @@
 
 export * from './config';
 export * from './recipe.service';
+export * from './fetch-client';

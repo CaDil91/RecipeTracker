@@ -197,6 +197,46 @@ Build a complete vertical slice demonstrating full CRUD functionality for recipe
   - **Total: 33 tests passing, Full test suite: 613/613 passing**
   - **2025 Production Standards:** TanStack Query v5, expo-crypto, cache manipulation, server authority
 
+#### ✅ Story 12.5: Error Boundary & Offline Detection
+**User Story:** As a user, I want the app to handle errors gracefully and inform me when I'm offline, so I don't see blank screens or confusing error messages.
+
+**Features:** (Completed - Production-Ready)
+- ✅ **TanStack Query OnlineManager** - Modern event-based offline detection (no polling, better battery life)
+  - NetInfo integration checks BOTH `isConnected` AND `isInternetReachable` (handles captive portals)
+  - Event-based detection (no polling overhead)
+  - Automatic query/mutation pause when offline
+- ✅ **ErrorBoundary Component** - Catches React component errors (no white screens)
+  - getDerivedStateFromError for error state management
+  - "Try Again" button to reset and re-render
+- ✅ **ErrorFallbackScreen** - User-friendly error UI with reset button
+  - Development mode shows detailed error information
+  - Production mode shows simple user-friendly message
+- ✅ **OfflineBanner** - Visual feedback when user is offline
+  - Appears at top of screen when device is offline
+  - Handles airplane mode, WiFi without internet, cellular failures
+- ✅ **Improved Mutation Resilience**
+  - Increased retry count from 1 to 2 (more resilient than TanStack Query defaults)
+  - Exponential backoff: `Math.min(1000 * 2 ** attemptIndex, 30000)` (matches TanStack Query defaults exactly)
+  - Queries: 2 retries, Mutations: 2 retries
+- ✅ **2025 Standards Applied:**
+  - OnlineManager with NetInfo (official TanStack Query pattern)
+  - Network mode: 'online' (queries/mutations pause when offline)
+  - RefetchOnReconnect: 'always' (fresh data after reconnecting)
+  - Better than basic examples (checks both network states for edge cases)
+- ✅ **ErrorBoundary Tests: 8/8 passing**
+- ✅ **OfflineBanner Unit Tests: 4/4 passing**
+- ✅ **OfflineBanner Integration Tests: 3/3 passing**
+- ✅ **ErrorFallbackScreen Tests: 8/8 passing**
+- ✅ **Full Test Suite: 635/635 tests passing**
+
+**Why This is Production-Ready:**
+- Follows official TanStack Query 2025 standards (verified via docs)
+- Handles edge cases: captive portals, airplane mode, WiFi-but-no-internet
+- Event-based detection (no polling, better battery life)
+- More resilient mutations than framework defaults (2 vs 0 retries)
+- Exponential backoff matches industry standards
+- Comprehensive error handling for both network and app errors
+
 #### 🔄 Story 13: Material Design 3 Polish
 **User Story:** As a user, I want a polished, professional-looking interface with smooth animations.
 

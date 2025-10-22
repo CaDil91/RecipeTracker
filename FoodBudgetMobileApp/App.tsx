@@ -2,20 +2,37 @@ import React from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { PaperProvider } from 'react-native-paper';
-import { useColorScheme, View, ActivityIndicator } from 'react-native';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useColorScheme, View, ActivityIndicator, Platform } from 'react-native';
+import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query';
+import NetInfo from '@react-native-community/netinfo';
 import { useFonts } from 'expo-font';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AppNavigator from './src/navigation/AppNavigator';
 import { getCustomTheme } from './src/theme/customTheme';
 import WebContainer from './src/components/WebContainer';
-2
+import { ErrorBoundary } from './src/components/ErrorBoundary';
+import { ErrorFallbackScreen } from './src/screens/ErrorFallbackScreen';
+import { OfflineBanner } from './src/components/OfflineBanner';
+
 // Initialize MSW for development if enabled
 if (__DEV__ && process.env.EXPO_PUBLIC_USE_MSW === 'true') {
   require('./src/mocks/browser');
 }
 
-// Query db client with optimized settings for React Native
+// Configure TanStack Query to use NetInfo for offline detection (2025 standard)
+// This replaces manual health checks - let TanStack Query handle retries and pausing
+onlineManager.setEventListener((setOnline) => {
+  return NetInfo.addEventListener((state) => {
+    // Check BOTH connected AND internet reachable (consistent with OfflineBanner)
+    // isInternetReachable can be: true, false, or null (unknown/checking)
+    // null = optimistically assume online, false = confirmed no internet
+    const hasInternet = state.isConnected === true &&
+                       state.isInternetReachable !== false;
+    setOnline(hasInternet);
+  });
+});
+
+// Query client with optimized settings for React Native
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -24,9 +41,12 @@ const queryClient = new QueryClient({
       gcTime: 10 * 60 * 1000, // Keep cached data for 10 minutes
       refetchOnWindowFocus: false, // Disabled for React Native
       refetchOnReconnect: 'always', // Refetch when the network reconnects
+      networkMode: 'online', // Pause queries when offline, resume on reconnect
     },
     mutations: {
-      retry: 1,
+      retry: 2, // Increased from 1 - mutations are critical (data loss risk)
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff: 1 s, 2 s, max 30s
+      networkMode: 'online', // Pause mutations when offline
     },
   },
 });
@@ -50,15 +70,31 @@ export default function App() {
   }
 
   return (
-    <SafeAreaProvider>
-      <QueryClientProvider client={queryClient}>
-        <PaperProvider theme={theme}>
-          <WebContainer>
-            <AppNavigator />
-            <StatusBar style="auto" />
-          </WebContainer>
-        </PaperProvider>
-      </QueryClientProvider>
-    </SafeAreaProvider>
+    <ErrorBoundary
+      fallback={
+        <ErrorFallbackScreen
+          error={null}
+          errorInfo={null}
+          onReset={() => {
+            // Reload the app
+            if (Platform.OS === 'web') {
+              window.location.reload();
+            }
+          }}
+        />
+      }
+    >
+      <SafeAreaProvider>
+        <QueryClientProvider client={queryClient}>
+          <PaperProvider theme={theme}>
+            <OfflineBanner />
+            <WebContainer>
+              <AppNavigator />
+              <StatusBar style="auto" />
+            </WebContainer>
+          </PaperProvider>
+        </QueryClientProvider>
+      </SafeAreaProvider>
+    </ErrorBoundary>
   );
 }

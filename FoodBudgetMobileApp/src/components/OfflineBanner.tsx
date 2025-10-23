@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Platform } from 'react-native';
 import { Text, useTheme } from 'react-native-paper';
 import { useNetInfo } from '@react-native-community/netinfo';
 
@@ -7,10 +7,13 @@ import { useNetInfo } from '@react-native-community/netinfo';
  * OfflineBanner component
  *
  * Displays a banner at the top of the screen when the device is offline.
- * Uses hybrid offline detection (netinfo + internet reachability check).
+ * Uses platform-specific offline detection to match App.tsx configuration.
+ *
+ * Web: Uses navigator.onLine only (isConnected)
+ * Native: Uses both connection and internet reachability (handles captive portals)
  *
  * Handles edge cases:
- * - Wi-Fi connected but no internet (captive portal)
+ * - Wi-Fi connected but no internet (captive portal) - Native only
  * - Airplane mode
  * - Cellular with no data
  *
@@ -26,9 +29,12 @@ export const OfflineBanner: React.FC = () => {
   const theme = useTheme();
   const netInfo = useNetInfo();
 
-  // Check if offline: either not connected OR connected but no internet access
-  const isOffline =
-    netInfo.isConnected === false || netInfo.isInternetReachable === false;
+  // Check if offline: must match the inverse of the online detection logic in App.tsx
+  // Web: Only check isConnected (navigator.onLine is sufficient with proper NetInfo config)
+  // Native: Check both isConnected AND isInternetReachable (handles captive portals)
+  const isOffline = Platform.OS === 'web'
+    ? netInfo.isConnected !== true
+    : netInfo.isConnected !== true || netInfo.isInternetReachable === false;
 
   if (!isOffline) {
     return null;

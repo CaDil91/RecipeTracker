@@ -19,15 +19,30 @@ if (__DEV__ && process.env.EXPO_PUBLIC_USE_MSW === 'true') {
   require('./src/mocks/browser');
 }
 
+// Configure NetInfo for web platform
+// Web: Use Google's connectivity check endpoint (industry standard, avoids 404 errors)
+// This is the same endpoint used by Android/Chrome OS for internet reachability
+// Native: Use default reachability checks (handles captive portals properly)
+if (Platform.OS === 'web') {
+  NetInfo.configure({
+    reachabilityUrl: 'https://clients3.google.com/generate_204',
+    reachabilityTest: async (response) => response.status === 204,
+    reachabilityShortTimeout: 5 * 1000, // 5s
+    reachabilityLongTimeout: 60 * 1000, // 60s - Check every 60s when online
+    reachabilityRequestTimeout: 15 * 1000, // 15s timeout for the check itself
+    useNativeReachability: false,
+  });
+}
+
 // Configure TanStack Query to use NetInfo for offline detection (2025 standard)
 // This replaces manual health checks - let TanStack Query handle retries and pausing
 onlineManager.setEventListener((setOnline) => {
   return NetInfo.addEventListener((state) => {
-    // Check BOTH connected AND internet reachable (consistent with OfflineBanner)
-    // isInternetReachable can be: true, false, or null (unknown/checking)
-    // null = optimistically assume online, false = confirmed no internet
-    const hasInternet = state.isConnected === true &&
-                       state.isInternetReachable !== false;
+    // Web: Only check isConnected (navigator.onLine) since reachability is now properly configured
+    // Native: Check both isConnected AND isInternetReachable (handles captive portals)
+    const hasInternet = Platform.OS === 'web'
+      ? state.isConnected === true
+      : state.isConnected === true && state.isInternetReachable !== false;
     setOnline(hasInternet);
   });
 });

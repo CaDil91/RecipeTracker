@@ -21,11 +21,11 @@ if (__DEV__ && process.env.EXPO_PUBLIC_USE_MSW === 'true') {
 
 // Configure NetInfo for web platform
 // Web: Use same-origin URL to avoid CORS issues with clients3.google.com on GitHub Pages
-// Using favicon.ico is a lightweight same-origin resource that's always available
+// Using root path (/) which returns index.html - guaranteed to exist
 // Native: Use default reachability checks (handles captive portals properly)
 if (Platform.OS === 'web') {
   NetInfo.configure({
-    reachabilityUrl: `${window.location.origin}/favicon.ico`,
+    reachabilityUrl: `${window.location.origin}/`,
     reachabilityTest: async (response) => response.status >= 200 && response.status < 400,
     reachabilityShortTimeout: 2 * 1000, // 2s
     reachabilityLongTimeout: 5 * 1000, // 5s - Check every 5s when online

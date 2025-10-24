@@ -948,6 +948,7 @@ const handleDelete = async (recipeId: string) => {
 
 ### Story 12b: Optimistic Update with Consistency
 **Status:** ✅ COMPLETED
+**Commit:** [d2f490c](../../commit/d2f490c)
 **Priority:** HIGH
 **Type:** UX Enhancement
 **Dependencies:** Story 12a
@@ -1082,6 +1083,7 @@ export const useUpdateRecipe = () => {
 
 ### Story 12c: Optimistic Create with UUID Temp IDs
 **Status:** ✅ COMPLETED
+**Commit:** [a069fe3](../../commit/a069fe3)
 **Priority:** HIGH
 **Type:** UX Enhancement
 **Dependencies:** Story 12b
@@ -1176,6 +1178,9 @@ Create: Submit → **Instantly appears in list** → Navigate to detail → API 
 
 ### Story 12.5: Error Boundary & Offline Detection
 **Status:** ✅ COMPLETED
+**Commits:**
+- [4d7efdb](../../commit/4d7efdb) - Production-ready error handling and offline detection
+- [18b7342](../../commit/18b7342) - Platform-specific offline detection for web and native
 **Priority:** CRITICAL
 **Type:** Reliability & UX
 **Dependencies:** Story 11

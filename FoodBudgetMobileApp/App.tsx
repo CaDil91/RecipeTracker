@@ -20,32 +20,47 @@ if (__DEV__ && process.env.EXPO_PUBLIC_USE_MSW === 'true') {
 }
 
 // Configure NetInfo for web platform
-// Web: Use Google's connectivity check endpoint (industry standard, avoids 404 errors)
-// This is the same endpoint used by Android/Chrome OS for internet reachability
+// Web: Use same-origin URL to avoid CORS issues with clients3.google.com on GitHub Pages
+// Using favicon.ico is a lightweight same-origin resource that's always available
 // Native: Use default reachability checks (handles captive portals properly)
 if (Platform.OS === 'web') {
   NetInfo.configure({
-    reachabilityUrl: 'https://clients3.google.com/generate_204',
-    reachabilityTest: async (response) => response.status === 204,
-    reachabilityShortTimeout: 5 * 1000, // 5s
-    reachabilityLongTimeout: 60 * 1000, // 60s - Check every 60s when online
-    reachabilityRequestTimeout: 15 * 1000, // 15s timeout for the check itself
+    reachabilityUrl: `${window.location.origin}/favicon.ico`,
+    reachabilityTest: async (response) => response.status >= 200 && response.status < 400,
+    reachabilityShortTimeout: 2 * 1000, // 2s
+    reachabilityLongTimeout: 5 * 1000, // 5s - Check every 5s when online
+    reachabilityRequestTimeout: 3 * 1000, // 3s timeout for the check itself
     useNativeReachability: false,
   });
 }
 
-// Configure TanStack Query to use NetInfo for offline detection (2025 standard)
+// Configure TanStack Query to use NetInfo + navigator.onLine for offline detection (2025 standard)
 // This replaces manual health checks - let TanStack Query handle retries and pausing
 onlineManager.setEventListener((setOnline) => {
-  return NetInfo.addEventListener((state) => {
-    // Web: Only check isConnected (navigator.onLine) since reachability is now properly configured
+  const handleState = (state: any) => {
+    // Combine navigator.onLine (instant) with NetInfo (authoritative)
+    const navOnline = typeof navigator !== 'undefined' && 'onLine' in navigator ? navigator.onLine : true;
+    const netInfoOnline = state?.isInternetReachable ?? state?.isConnected ?? true;
+
+    // Web: Prefer navigator.onLine combined with NetInfo reachability
     // Native: Check both isConnected AND isInternetReachable (handles captive portals)
     const hasInternet = Platform.OS === 'web'
-      ? state.isConnected === true
+      ? navOnline && netInfoOnline
       : state.isConnected === true && state.isInternetReachable !== false;
-    setOnline(hasInternet);
+
+    setOnline(Boolean(hasInternet));
+  };
+
+  const unsubscribe = NetInfo.addEventListener(handleState);
+
+  // Fetch initial state
+  NetInfo.fetch().then(handleState).catch(() => {
+    // Fallback to navigator.onLine if NetInfo fails
+    setOnline(Boolean(navigator?.onLine));
   });
-});
+
+  return () => unsubscribe();
+});   
 
 // Query client with optimized settings for React Native
 const queryClient = new QueryClient({

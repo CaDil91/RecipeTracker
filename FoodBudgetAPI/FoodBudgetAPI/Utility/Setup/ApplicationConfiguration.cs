@@ -1,4 +1,5 @@
 using Asp.Versioning.ApiExplorer;
+using AspNetCoreRateLimit;
 using FoodBudgetAPI.Middleware;
 
 namespace FoodBudgetAPI.Utility.Setup;
@@ -37,8 +38,11 @@ public static class ApplicationConfiguration
         // 4. Security and routing middleware
         app.UseHttpsRedirection();
         app.UseCors("MobileApp");
-        
-        // 5. Authentication and authorization would go here if implemented
+
+        // 5. Rate limiting
+        app.UseIpRateLimiting();
+
+        // 6. Authentication and authorization would go here if implemented
         // app.UseAuthentication();
         // app.UseAuthorization();
 

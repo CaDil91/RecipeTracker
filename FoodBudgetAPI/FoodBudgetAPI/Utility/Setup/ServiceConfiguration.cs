@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using Asp.Versioning;
+using AspNetCoreRateLimit;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using Swashbuckle.AspNetCore.SwaggerGen;
@@ -25,7 +26,13 @@ public static class ServiceConfiguration
         
         // Logging
         ConfigureLogging(builder);
-        
+
+        // Memory cache (required for rate limiting)
+        builder.Services.AddMemoryCache();
+
+        // Rate limiting
+        ConfigureRateLimiting(builder);
+
         // Core services
         builder.Services.RegisterServices(builder.Configuration);
         builder.Services.AddControllers()
@@ -40,11 +47,13 @@ public static class ServiceConfiguration
                         Title = "Validation Error",
                         Status = StatusCodes.Status400BadRequest,
                         Detail = "One or more validation errors occurred.",
-                        Instance = context.HttpContext.Request.Path
+                        Instance = context.HttpContext.Request.Path,
+                        Extensions =
+                        {
+                            ["timestamp"] = DateTimeOffset.UtcNow,
+                            ["traceId"] = context.HttpContext.TraceIdentifier
+                        }
                     };
-
-                    problemDetails.Extensions["timestamp"] = DateTimeOffset.UtcNow;
-                    problemDetails.Extensions["traceId"] = context.HttpContext.TraceIdentifier;
 
                     return new BadRequestObjectResult(problemDetails)
                     {
@@ -117,5 +126,17 @@ public static class ServiceConfiguration
         });
         
         services.AddTransient<IConfigureOptions<SwaggerGenOptions>, ConfigureSwaggerOptions>();
+    }
+
+    private static void ConfigureRateLimiting(WebApplicationBuilder builder)
+    {
+        // Load configuration from appsettings.json
+        builder.Services.Configure<IpRateLimitOptions>(builder.Configuration.GetSection("IpRateLimiting"));
+
+        // Inject counter and rules stores
+        builder.Services.AddSingleton<IIpPolicyStore, MemoryCacheIpPolicyStore>();
+        builder.Services.AddSingleton<IRateLimitCounterStore, MemoryCacheRateLimitCounterStore>();
+        builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
+        builder.Services.AddSingleton<IProcessingStrategy, AsyncKeyLockProcessingStrategy>();
     }
 }

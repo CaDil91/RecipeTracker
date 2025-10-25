@@ -10,8 +10,9 @@ import * as ExpoImagePicker from 'expo-image-picker';
 
 export interface ImagePickerProps {
   value: string | null | undefined;
-  onChange: (uri: string | null) => void;
+  onChange?: (uri: string | null) => void;
   disabled?: boolean;
+  readOnly?: boolean;
   testID?: string;
 
   // Sprint 4 extensibility props (not implemented yet)
@@ -25,13 +26,14 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({
   value,
   onChange,
   disabled = false,
+  readOnly = false,
   testID = 'image-picker',
 }) => {
   const theme = useTheme();
   const hasImage = Boolean(value && value.trim());
 
   const handlePickImage = async () => {
-    if (disabled) return;
+    if (disabled || !onChange) return;
 
     try {
       const result = await ExpoImagePicker.launchImageLibraryAsync({
@@ -51,9 +53,42 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({
   };
 
   const handleRemoveImage = () => {
-    onChange(null);
+    if (onChange) {
+      onChange(null);
+    }
   };
 
+  // ReadOnly mode: Display image without edit buttons
+  if (readOnly) {
+    return (
+      <View style={styles.container}>
+        {hasImage ? (
+          <View style={styles.readOnlyContainer}>
+            <Text variant="labelMedium" style={styles.readOnlyLabel}>
+              Recipe Image
+            </Text>
+            <Image
+              source={{ uri: value as string }}
+              style={styles.preview}
+              testID={`${testID}-readonly-image`}
+              resizeMode="cover"
+            />
+          </View>
+        ) : (
+          <View style={styles.readOnlyContainer}>
+            <Text variant="labelMedium" style={styles.readOnlyLabel}>
+              Recipe Image
+            </Text>
+            <Text variant="bodyMedium" style={styles.readOnlyPlaceholder}>
+              No image
+            </Text>
+          </View>
+        )}
+      </View>
+    );
+  }
+
+  // Editable mode: Standard image picker with buttons
   return (
     <View style={styles.container}>
       {hasImage ? (
@@ -138,5 +173,18 @@ const styles = StyleSheet.create({
   },
   selectButtonContent: {
     minHeight: 56,
+  },
+  // ReadOnly mode styles
+  readOnlyContainer: {
+    width: '100%',
+  },
+  readOnlyLabel: {
+    marginBottom: 8,
+    opacity: 0.7,
+  },
+  readOnlyPlaceholder: {
+    opacity: 0.5,
+    fontStyle: 'italic',
+    marginTop: 8,
   },
 });

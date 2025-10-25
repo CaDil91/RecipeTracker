@@ -6,6 +6,12 @@ import { useColorScheme, View, ActivityIndicator, Platform } from 'react-native'
 import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query';
 import NetInfo from '@react-native-community/netinfo';
 import { useFonts } from 'expo-font';
+import {
+  Poppins_400Regular,
+  Poppins_500Medium,
+  Poppins_600SemiBold,
+  Poppins_700Bold,
+} from '@expo-google-fonts/poppins';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AppNavigator from './src/navigation/AppNavigator';
 import { getCustomTheme } from './src/theme/customTheme';
@@ -84,8 +90,12 @@ export default function App() {
   const colorScheme = useColorScheme();
   const theme = getCustomTheme(colorScheme);
 
-  // Load MaterialCommunityIcons font - Expo handles web bundling automatically
+  // Load custom fonts (Poppins) and icon fonts
   const [fontsLoaded] = useFonts({
+    Poppins_400Regular,
+    Poppins_500Medium,
+    Poppins_600SemiBold,
+    Poppins_700Bold,
     ...MaterialCommunityIcons.font,
   });
 

@@ -20,11 +20,13 @@ The web demo is connected to a live Azure-hosted API with a SQL Server database.
 - **MSW (Mock Service Worker)** - API mocking for offline development
 
 ### Backend
-- **C# ASP.NET Core** - RESTful API with Entity Framework Core
+- **C# ASP.NET Core 8.0** - RESTful API with Entity Framework Core
 - **SQL Server** - Relational database with migrations
 - **Azure App Service** - Cloud hosting with CI/CD
+- **AspNetCoreRateLimit** - Multi-tier IP-based rate limiting (60/min, 200/15min, 600/hr, 2000/12hr)
 - **Swagger/OpenAPI** - Interactive API documentation
 - **Repository Pattern** - Clean architecture principles
+- **RFC 9457 Problem Details** - Standardized error responses
 
 ### DevOps & Testing
 - **GitHub Actions** - Automated build and deployment pipelines
@@ -236,6 +238,31 @@ Build a complete vertical slice demonstrating full CRUD functionality for recipe
 - More resilient mutations than framework defaults (2 vs 0 retries)
 - Exponential backoff matches industry standards
 - Comprehensive error handling for both network and app errors
+
+#### ✅ Story 12.6: API Rate Limiting (Partial)
+**User Story:** As the API owner, I want to protect the demo API from abuse so it remains available for portfolio viewers.
+
+**Features:** (Completed - Rate Limiting Only)
+- ✅ **Multi-Tier IP-Based Rate Limiting** - AspNetCoreRateLimit 5.0.0
+  - 60 requests per minute (prevents burst attacks)
+  - 200 requests per 15 minutes
+  - 600 requests per hour
+  - 2,000 requests per 12 hours (prevents sustained abuse)
+  - Returns 429 Too Many Requests when limits exceeded
+- ✅ **Health Endpoint Whitelisted** - `/health` excluded from rate limiting
+- ✅ **Automatic Logging** - Rate limit violations logged with IP address
+- ✅ **Production-Grade Protection** - Multi-tier strategy better than single-limit approach
+- ⚠️ **CORS Not Restricted** - Still uses `AllowAnyOrigin()` (security risk, needs to be addressed)
+
+**Why Multi-Tier is Better:**
+- Prevents both burst attacks (60/min) and sustained abuse (2000/12hr)
+- More sophisticated than single-tier limiting
+- Allows normal users to burst occasionally without hitting limits
+- Production-grade protection against various attack patterns
+
+**Security Note:**
+- CORS restriction deferred to avoid breaking demo during development
+- Must be restricted to `https://cadil91.github.io` + `localhost` before production release
 
 #### 🔄 Story 13: Material Design 3 Polish
 **User Story:** As a user, I want a polished, professional-looking interface with smooth animations.

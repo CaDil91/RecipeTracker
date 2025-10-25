@@ -3,7 +3,7 @@ import { TextInput, TextInputProps } from './TextInput';
 
 export interface NumberInputProps extends Omit<TextInputProps, 'value' | 'onChangeText' | 'keyboardType'> {
   value: number | string;
-  onChangeValue: (value: number | undefined) => void;
+  onChangeValue?: (value: number | undefined) => void;
   min?: number;
   max?: number;
   integer?: boolean;
@@ -19,6 +19,8 @@ export const NumberInput: React.FC<NumberInputProps> = ({
   ...props
 }) => {
   const handleChangeText = (text: string) => {
+    if (!onChangeValue) return; // ReadOnly mode
+
     if (text === '') {
       onChangeValue(undefined);
       return;

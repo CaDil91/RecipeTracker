@@ -1,80 +1,154 @@
-import { MD3LightTheme, MD3DarkTheme } from 'react-native-paper';
+import { MD3LightTheme, MD3DarkTheme, configureFonts } from 'react-native-paper';
 import type { MD3Theme } from 'react-native-paper';
+import { fontConfig } from './typography';
 
-// Custom brand colors with complementary chromatic grays
+/**
+ * Earthy Natural Color Palette
+ * Forest green primary with warm chromatic grays - perfect for a food app
+ */
 const customColors = {
   light: {
-    // Main background - very light warm gray
-    background: '#FAFBFC',
+    // Main background - soft warm white
+    background: '#FAFAF9',
 
-    // Card surfaces - light chromatic gray with subtle blue undertones
-    surface: '#F4F6F8',
-    surfaceVariant: '#E8EAED',
+    // Card surfaces - light warm neutral
+    surface: '#F5F4F2',
+    surfaceVariant: '#E7E5E2',
 
-    // Keep MD3 primary for consistency
-    primary: MD3LightTheme.colors.primary,
+    // Primary - Deep forest green (main brand color)
+    primary: '#304529',
+    primaryContainer: '#B8CCB0',
+    onPrimary: '#FFFFFF',
+    onPrimaryContainer: '#0D1F0A',
 
-    // Elevation levels for consistent depth
+    // Secondary - Warm medium gray for secondary actions
+    secondary: '#6E6C69',
+    secondaryContainer: '#E5E3E0',
+    onSecondary: '#FFFFFF',
+    onSecondaryContainer: '#272624',
+
+    // Tertiary - Warm charcoal gray (chromatic, subtle warmth)
+    tertiary: '#4A4745',
+    tertiaryContainer: '#D1CFCC',
+    onTertiary: '#FFFFFF',
+    onTertiaryContainer: '#1B1918',
+
+    // Error - Material Design default (remains accessible)
+    error: '#BA1A1A',
+    errorContainer: '#FFDAD6',
+    onError: '#FFFFFF',
+    onErrorContainer: '#410002',
+
+    // Surface tones
+    surfaceDisabled: 'rgba(28, 27, 31, 0.12)',
+    onSurfaceDisabled: 'rgba(28, 27, 31, 0.38)',
+    backdrop: 'rgba(47, 48, 55, 0.4)',
+
+    // Outline - warm neutral
+    outline: '#787673',
+    outlineVariant: '#C8C6C3',
+
+    // Elevation levels for consistent depth (subtle warm tint)
     elevation: {
       level0: 'transparent',
-      level1: '#F6F7F9',
-      level2: '#F2F4F6',
-      level3: '#EDEEF1',
-      level4: '#E9EAED',
-      level5: '#E5E6E9',
+      level1: '#F7F6F4',
+      level2: '#F3F2EF',
+      level3: '#EFEEE9',
+      level4: '#EAE9E4',
+      level5: '#E6E5DF',
     },
   },
   dark: {
+    // Main background - deep warm black
+    background: '#131312',
 
-    // Main background - deep cool gray
-    background: '#0F1013',
+    // Card surfaces - dark warm neutral
+    surface: '#1C1C1A',
+    surfaceVariant: '#46444F',
 
-    // Card surfaces - medium chromatic gray with warm undertones
-    surface: '#1A1C20',
-    surfaceVariant: '#252830',
+    // Primary - Light sage green for dark mode
+    primary: '#9CB892',
+    primaryContainer: '#1E3118',
+    onPrimary: '#0A1608',
+    onPrimaryContainer: '#B8CCB0',
 
-    // Keep MD3 primary for consistency
-    primary: MD3DarkTheme.colors.primary,
+    // Secondary - Light warm gray for dark mode
+    secondary: '#C9C7C4',
+    secondaryContainer: '#515050',
+    onSecondary: '#1E1D1C',
+    onSecondaryContainer: '#E5E3E0',
 
-    // Elevation levels for consistent depth
+    // Tertiary - Light warm gray (chromatic) for dark mode accents
+    tertiary: '#B8B6B3',
+    tertiaryContainer: '#353331',
+    onTertiary: '#161514',
+    onTertiaryContainer: '#D1CFCC',
+
+    // Error - Material Design default (dark mode)
+    error: '#FFB4AB',
+    errorContainer: '#93000A',
+    onError: '#690005',
+    onErrorContainer: '#FFDAD6',
+
+    // Surface tones
+    surfaceDisabled: 'rgba(231, 224, 236, 0.12)',
+    onSurfaceDisabled: 'rgba(231, 224, 236, 0.38)',
+    backdrop: 'rgba(47, 48, 55, 0.4)',
+
+    // Outline - warm neutral for dark mode
+    outline: '#918F8C',
+    outlineVariant: '#47454F',
+
+    // Elevation levels for consistent depth (subtle warm tint)
     elevation: {
       level0: 'transparent',
-      level1: '#1E2024',
-      level2: '#22252A',
-      level3: '#262A30',
-      level4: '#2A2E35',
-      level5: '#2E323A',
+      level1: '#201F1E',
+      level2: '#252423',
+      level3: '#2A2927',
+      level4: '#2F2D2B',
+      level5: '#34322F',
     },
   },
 };
 
-// Create a custom light theme
+// Configure Poppins fonts for react-native-paper
+const fonts = configureFonts({ config: fontConfig });
+
+/**
+ * Create custom light theme with:
+ * - Minimal neutral color palette
+ * - Poppins typography
+ * - MD3 elevation system
+ */
 export const customLightTheme: MD3Theme = {
   ...MD3LightTheme,
+  fonts,
   colors: {
     ...MD3LightTheme.colors,
-    background: customColors.light.background,
-    surface: customColors.light.surface,
-    surfaceVariant: customColors.light.surfaceVariant,
-    primary: customColors.light.primary,
-    elevation: customColors.light.elevation,
+    ...customColors.light,
   },
 };
 
-// Create a custom dark theme
+/**
+ * Create custom dark theme with:
+ * - Minimal neutral color palette (dark mode optimized)
+ * - Poppins typography
+ * - MD3 elevation system
+ */
 export const customDarkTheme: MD3Theme = {
   ...MD3DarkTheme,
+  fonts,
   colors: {
     ...MD3DarkTheme.colors,
-    background: customColors.dark.background,
-    surface: customColors.dark.surface,
-    surfaceVariant: customColors.dark.surfaceVariant,
-    primary: customColors.dark.primary,
-    elevation: customColors.dark.elevation,
+    ...customColors.dark,
   },
 };
 
-// Helper function to get the appropriate theme based on a color scheme
+/**
+ * Helper function to get the appropriate theme based on a color scheme
+ * @param colorScheme - 'light', 'dark', null, or undefined
+ * @returns The appropriate theme (defaults to light theme)
+ */
 export const getCustomTheme = (colorScheme: 'light' | 'dark' | null | undefined): MD3Theme => {
   return colorScheme === 'dark' ? customDarkTheme : customLightTheme;
 };

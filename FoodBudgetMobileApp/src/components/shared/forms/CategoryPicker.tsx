@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Menu, Button, useTheme } from 'react-native-paper';
+import { Menu, Button, useTheme, Chip, Text } from 'react-native-paper';
 
 /**
  * Sprint 3: Hardcoded categories with single-select
@@ -10,8 +10,9 @@ const DEFAULT_CATEGORIES = ['Breakfast', 'Lunch', 'Dinner', 'Dessert'] as const;
 
 export interface CategoryPickerProps {
   value: string | null | undefined;
-  onChange: (category: string) => void;
+  onChange?: (category: string) => void;
   disabled?: boolean;
+  readOnly?: boolean;
   testID?: string;
 
   // Sprint 4 extensibility props (not implemented yet)
@@ -24,6 +25,7 @@ export const CategoryPicker: React.FC<CategoryPickerProps> = ({
   value,
   onChange,
   disabled = false,
+  readOnly = false,
   testID = 'category-picker',
 }) => {
   const theme = useTheme();
@@ -38,13 +40,43 @@ export const CategoryPicker: React.FC<CategoryPickerProps> = ({
   const closeMenu = () => setVisible(false);
 
   const handleSelect = (category: string) => {
-    onChange(category);
+    if (onChange) {
+      onChange(category);
+    }
     closeMenu();
   };
 
   const displayValue = value || 'Select Category';
   const hasValue = Boolean(value && value.trim());
 
+  // ReadOnly mode: Display category as chip
+  if (readOnly) {
+    return (
+      <View style={styles.container}>
+        <Text variant="labelMedium" style={styles.readOnlyLabel}>
+          Category
+        </Text>
+        <View style={styles.readOnlyContainer}>
+          {hasValue ? (
+            <Chip
+              mode="flat"
+              testID={`${testID}-chip`}
+              style={styles.chip}
+              textStyle={styles.chipText}
+            >
+              {value}
+            </Chip>
+          ) : (
+            <Text variant="bodyMedium" style={styles.readOnlyPlaceholder}>
+              No category selected
+            </Text>
+          )}
+        </View>
+      </View>
+    );
+  }
+
+  // Editable mode: Standard menu picker
   return (
     <View style={styles.container}>
       <Menu
@@ -126,5 +158,24 @@ const styles = StyleSheet.create({
   },
   menuItemTitle: {
     fontSize: 16,
+  },
+  // ReadOnly mode styles
+  readOnlyLabel: {
+    marginBottom: 8,
+    opacity: 0.7,
+  },
+  readOnlyContainer: {
+    minHeight: 40,
+    justifyContent: 'center',
+  },
+  chip: {
+    alignSelf: 'flex-start',
+  },
+  chipText: {
+    fontFamily: 'Poppins_500Medium',
+  },
+  readOnlyPlaceholder: {
+    opacity: 0.5,
+    fontStyle: 'italic',
   },
 });

@@ -6,6 +6,12 @@ import { useColorScheme, View, ActivityIndicator, Platform } from 'react-native'
 import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query';
 import NetInfo from '@react-native-community/netinfo';
 import { useFonts } from 'expo-font';
+import {
+  Poppins_400Regular,
+  Poppins_500Medium,
+  Poppins_600SemiBold,
+  Poppins_700Bold,
+} from '@expo-google-fonts/poppins';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AppNavigator from './src/navigation/AppNavigator';
 import { getCustomTheme } from './src/theme/customTheme';
@@ -28,7 +34,7 @@ if (Platform.OS === 'web') {
     reachabilityTest: async (response) => response.status >= 200 && response.status < 400,
     reachabilityShortTimeout: 2 * 1000, // 2s
     reachabilityLongTimeout: 5 * 1000, // 5s - Check every 5s when online
-    reachabilityRequestTimeout: 3 * 1000, // 3s timeout for the check itself
+    reachabilityRequestTimeout: 3 * 1000, // 3 s timeout for the check itself
     useNativeReachability: false,
   });
 }
@@ -84,8 +90,12 @@ export default function App() {
   const colorScheme = useColorScheme();
   const theme = getCustomTheme(colorScheme);
 
-  // Load MaterialCommunityIcons font - Expo handles web bundling automatically
+  // Load custom fonts (Poppins) and icon fonts
   const [fontsLoaded] = useFonts({
+    Poppins_400Regular,
+    Poppins_500Medium,
+    Poppins_600SemiBold,
+    Poppins_700Bold,
     ...MaterialCommunityIcons.font,
   });
 

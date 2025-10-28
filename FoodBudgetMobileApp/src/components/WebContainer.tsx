@@ -6,7 +6,7 @@ interface WebContainerProps {
 }
 
 /**
- * WebContainer - Constrains the app to a phone-like aspect ratio on the desktop web 
+ * WebContainer - Constrains the app to a phone-like aspect ratio on the desktop web
  * while maintaining full-screen on mobile devices and native platforms.
  *
  * Modern approach for demo/portfolio pages showing mobile apps on the web.
@@ -50,7 +50,7 @@ const styles = StyleSheet.create({
     maxHeight: 926, // iPhone 14 Pro Max height
     backgroundColor: '#ffffff',
     borderRadius: 20,
-    overflow: 'hidden',
+    // Note: overflow removed to allow Portal dialogs to render above the frame
     // Modern shadow for depth
     shadowColor: '#000',
     shadowOffset: {

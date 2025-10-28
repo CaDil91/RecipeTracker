@@ -25,5 +25,9 @@ export const coveragePathIgnorePatterns = [
     '/src/types/.*\\.ts$',
     '/src/lib/shared/types/.*\\.ts$',
     '/src/navigation/AppNavigator\\.tsx$',
-    '/src/test/.*\\.(ts|tsx)$'
+    '/src/test/.*\\.(ts|tsx)$',
+    '/src/mocks/.*\\.(ts|tsx)$',           // MSW mock setup files
+    '/src/data/mockRecipes\\.ts$',          // Test fixtures
+    '/src/theme/customTheme\\.ts$',         // Theme configuration/constants
+    '/src/components/WebContainer\\.tsx$'   // Web platform-specific code
 ];

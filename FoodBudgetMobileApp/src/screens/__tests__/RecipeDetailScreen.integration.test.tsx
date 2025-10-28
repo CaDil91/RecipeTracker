@@ -444,7 +444,7 @@ describe('RecipeDetailScreen Integration Tests - VIEW & CREATE Modes (Stories 8 
       // Assert: Integration - imageUrl propagated from API to component props
       await waitFor(() => {
         expect(apiReturnedImageUrl).toBe(true);
-        const imageComponent = screen.getByTestId('recipe-detail-image');
+        const imageComponent = screen.getByTestId('recipe-detail-view-form-image');
         expect(imageComponent.props.source.uri).toBe('https://example.com/test-pasta.jpg');
       });
     });
@@ -713,7 +713,7 @@ describe('RecipeDetailScreen Integration Tests - VIEW & CREATE Modes (Stories 8 
       // Note: Category would be set by picker, assuming default or set value
       fireEvent.press(submitButton);
 
-      // Assert: Temp recipe appears in main cache (optimistic update)
+      // Assert: Temp recipe appears in the main cache (optimistic update)
       await waitFor(() => {
         const mainCache = queryClient?.getQueryData<any[]>(['recipes']);
         const tempRecipe = mainCache?.find(r => r.id.startsWith('temp-'));
@@ -721,7 +721,7 @@ describe('RecipeDetailScreen Integration Tests - VIEW & CREATE Modes (Stories 8 
         expect(tempRecipe?.title).toBe('Breakfast Recipe');
       });
 
-      // Assert: After API success, real ID in main cache
+      // Assert: After API success, real ID in the main cache 
       // (category caches populated via refetch, which is triggered automatically)
       await waitFor(() => {
         const mainCache = queryClient?.getQueryData<any[]>(['recipes']);

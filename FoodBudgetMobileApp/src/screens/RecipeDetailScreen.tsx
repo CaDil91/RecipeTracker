@@ -12,13 +12,14 @@
  */
 
 import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ActivityIndicator, useTheme, IconButton, Surface, Divider, Snackbar, FAB, Portal, Dialog, Button } from 'react-native-paper';
+import { ActivityIndicator, useTheme, IconButton, Surface, Snackbar, FAB, Portal, Dialog, Button } from 'react-native-paper';
 import { RecipeDetailScreenNavigationProp, RecipeDetailScreenRouteProp } from '../types/navigation';
 import { RecipeService, RecipeRequestDto } from '../lib/shared';
 import { RecipeForm, RecipeFormRef } from '../components/shared';
 import { useUpdateRecipe, useCreateRecipe } from '../hooks/useRecipeMutations';
+import { spacing } from '../theme/typography';
 
 type RecipeDetailScreenProps = {
   navigation: RecipeDetailScreenNavigationProp;
@@ -207,7 +208,7 @@ const RecipeDetailScreen: React.FC<RecipeDetailScreenProps> = ({ navigation, rou
     }
   };
 
-  // Dynamic styles using theme
+  // Dynamic styles using theme (MD3 8px grid spacing system)
   const dynamicStyles = StyleSheet.create({
     container: {
       flex: 1,
@@ -224,7 +225,7 @@ const RecipeDetailScreen: React.FC<RecipeDetailScreenProps> = ({ navigation, rou
       justifyContent: 'center',
       alignItems: 'center',
       backgroundColor: theme.colors.background,
-      padding: 24,
+      padding: spacing.lg,
     },
     errorText: {
       fontSize: 16,
@@ -234,46 +235,13 @@ const RecipeDetailScreen: React.FC<RecipeDetailScreenProps> = ({ navigation, rou
     header: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingHorizontal: 8,
-      paddingVertical: 8,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.sm,
       backgroundColor: theme.colors.surface,
       elevation: 2,
     },
     contentContainer: {
-      padding: 16,
-    },
-    image: {
-      width: '100%',
-      height: 240,
-      borderRadius: 12,
-      marginBottom: 16,
-    },
-    titleContainer: {
-      marginBottom: 16,
-    },
-    title: {
-      fontSize: 28,
-      fontWeight: 'bold',
-      color: theme.colors.onBackground,
-    },
-    sectionContainer: {
-      marginBottom: 16,
-    },
-    sectionLabel: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: theme.colors.onSurfaceVariant,
-      marginBottom: 4,
-      textTransform: 'uppercase',
-      letterSpacing: 0.5,
-    },
-    sectionContent: {
-      fontSize: 16,
-      color: theme.colors.onBackground,
-      lineHeight: 24,
-    },
-    divider: {
-      marginVertical: 16,
+      padding: spacing.md,
     },
   });
 
@@ -303,7 +271,7 @@ const RecipeDetailScreen: React.FC<RecipeDetailScreenProps> = ({ navigation, rou
     );
   }
 
-  // VIEW mode - display recipe
+  // VIEW mode - display recipe using RecipeForm in readOnly mode (Story 13: Seamless transitions)
   if (currentMode === 'view' && recipe) {
     return (
       <View style={dynamicStyles.container} testID="recipe-detail-view-mode">
@@ -328,61 +296,23 @@ const RecipeDetailScreen: React.FC<RecipeDetailScreenProps> = ({ navigation, rou
           />
         </Surface>
 
-        {/* Scrollable content */}
+        {/* Scrollable content - using RecipeForm in readOnly mode */}
         <ScrollView
           style={dynamicStyles.container}
           contentContainerStyle={dynamicStyles.contentContainer}
           testID="recipe-detail-scroll-view"
         >
-          {/* Recipe image */}
-          {recipe.imageUrl && (
-            <Image
-              source={{ uri: recipe.imageUrl }}
-              style={dynamicStyles.image}
-              resizeMode="cover"
-              testID="recipe-detail-image"
-              accessibilityLabel={`${recipe.title} image`}
-            />
-          )}
-
-          {/* Title */}
-          <View style={dynamicStyles.titleContainer}>
-            <Text
-              style={dynamicStyles.title}
-              accessibilityLabel="Recipe title"
-            >
-              {recipe.title}
-            </Text>
-          </View>
-
-          {/* Category */}
-          {recipe.category && (
-            <View style={dynamicStyles.sectionContainer}>
-              <Text style={dynamicStyles.sectionLabel}>Category</Text>
-              <Text style={dynamicStyles.sectionContent}>{recipe.category}</Text>
-            </View>
-          )}
-
-          {/* Servings */}
-          <View style={dynamicStyles.sectionContainer}>
-            <Text style={dynamicStyles.sectionLabel}>Servings</Text>
-            <Text
-              style={dynamicStyles.sectionContent}
-              accessibilityLabel={`Servings: ${recipe.servings}`}
-            >
-              {recipe.servings}
-            </Text>
-          </View>
-
-          <Divider style={dynamicStyles.divider} />
-
-          {/* Instructions */}
-          {recipe.instructions && (
-            <View style={dynamicStyles.sectionContainer}>
-              <Text style={dynamicStyles.sectionLabel}>Instructions</Text>
-              <Text style={dynamicStyles.sectionContent}>{recipe.instructions}</Text>
-            </View>
-          )}
+          <RecipeForm
+            initialValues={{
+              title: recipe.title,
+              servings: recipe.servings,
+              category: recipe.category,
+              instructions: recipe.instructions,
+              imageUrl: recipe.imageUrl,
+            }}
+            readOnly={true}
+            testID="recipe-detail-view-form"
+          />
         </ScrollView>
 
         {/* Edit FAB - Story 10 */}

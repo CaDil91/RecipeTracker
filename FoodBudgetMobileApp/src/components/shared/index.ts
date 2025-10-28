@@ -1,11 +1,6 @@
 // UI Components
 export { Button, type ButtonProps } from './ui/Button';
 
-// Form Components
-export { TextInput, type TextInputProps } from './forms/TextInput';
-export { TextArea, type TextAreaProps } from './forms/TextArea';
-export { NumberInput, type NumberInputProps } from './forms/NumberInput';
-
 // Layout Components
 export { Container, type ContainerProps } from './layout/Container';
 export { Card, type CardProps } from './layout/Card';

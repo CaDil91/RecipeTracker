@@ -166,9 +166,9 @@ describe('RecipeDetailScreen Unit Tests', () => {
       await waitFor(() => {
         expect(screen.getByText('Pasta Carbonara')).toBeVisible(); // title
         expect(screen.getByText('Cook pasta. Mix eggs with cheese. Combine with hot pasta.')).toBeVisible(); // instructions
-        expect(screen.getByText('4')).toBeVisible(); // servings
+        expect(screen.getByText('4 servings')).toBeVisible(); // servings
         expect(screen.getByText('Dinner')).toBeVisible(); // category
-        expect(screen.getByTestId('recipe-detail-image')).toBeOnTheScreen(); // image component
+        expect(screen.getByTestId('recipe-detail-view-form-image')).toBeOnTheScreen(); // image component
       });
     });
 
@@ -470,7 +470,7 @@ describe('RecipeDetailScreen Unit Tests', () => {
       // Assert - Form pre-populated with existing recipe data
       await waitFor(() => {
         expect(screen.getByDisplayValue('Pasta Carbonara')).toBeVisible(); // title
-        expect(screen.getByDisplayValue('4')).toBeVisible(); // servings
+        expect(screen.getByText('4 servings')).toBeVisible(); // servings (uses stepper, not input)
         expect(screen.getByDisplayValue('Cook pasta. Mix eggs with cheese. Combine with hot pasta.')).toBeVisible(); // instructions
       });
     });
@@ -1709,8 +1709,8 @@ describe('RecipeDetailScreen Unit Tests', () => {
       // Assert - Required fields shown, optional fields handled
       await waitFor(() => {
         expect(screen.getByText('Minimal Recipe')).toBeVisible();
-        expect(screen.getByText('2')).toBeVisible(); // servings
-        expect(screen.queryByTestId('recipe-detail-image')).toBeNull(); // no image when null
+        expect(screen.getByText('2 servings')).toBeVisible(); // servings
+        expect(screen.queryByTestId('recipe-detail-view-form-image')).toBeNull(); // no image when null
       });
     });
 
@@ -1840,9 +1840,9 @@ describe('RecipeDetailScreen Unit Tests', () => {
         />
       );
 
-      // Assert - Should display 0 servings (valid edge case)
+      // Assert - Should default to 1 serving when servings are 0 (graceful handling)
       await waitFor(() => {
-        expect(screen.getByText('0')).toBeVisible();
+        expect(screen.getByText('1 serving')).toBeVisible();
       });
     });
 
@@ -2290,12 +2290,12 @@ describe('RecipeDetailScreen Unit Tests', () => {
       // Assert - Required fields always visible
       await waitFor(() => {
         expect(screen.getByText('Pasta Carbonara')).toBeVisible(); // title (required)
-        expect(screen.getByText('4')).toBeVisible(); // servings (required)
+        expect(screen.getByText('4 servings')).toBeVisible(); // servings (required)
       });
 
       // Optional fields shown when present
       expect(screen.getByText('Dinner')).toBeVisible(); // category (optional)
-      expect(screen.getByTestId('recipe-detail-image')).toBeOnTheScreen(); // imageUrl (optional)
+      expect(screen.getByTestId('recipe-detail-view-form-image')).toBeOnTheScreen(); // imageUrl (optional)
     });
 
     /**
@@ -2466,7 +2466,7 @@ describe('RecipeDetailScreen Unit Tests', () => {
 
       // Assert - Image has an accessibility label
       await waitFor(() => {
-        const image = screen.getByTestId('recipe-detail-image');
+        const image = screen.getByTestId('recipe-detail-view-form-image');
         expect(image.props.accessibilityLabel).toBeTruthy();
         expect(image.props.accessibilityLabel).toContain('Pasta Carbonara');
       });
@@ -2565,7 +2565,7 @@ describe('RecipeDetailScreen Unit Tests', () => {
       // Assert - RecipeForm receives initialValues matching the existing recipe
       await waitFor(() => {
         expect(screen.getByDisplayValue('Pasta Carbonara')).toBeVisible();
-        expect(screen.getByDisplayValue('4')).toBeVisible();
+        expect(screen.getByText('4 servings')).toBeVisible(); // servings (uses stepper, not input)
         expect(screen.getByDisplayValue('Cook pasta. Mix eggs with cheese. Combine with hot pasta.')).toBeVisible();
       });
     });

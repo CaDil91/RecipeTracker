@@ -13,8 +13,11 @@ export const RecipeRequestSchema = z.object({
 
   instructions: z
     .string()
-    .max(5000, 'Instructions cannot exceed 5000 characters')
+    .transform((val) => (val === '' ? null : val))
     .nullable()
+    .refine((val) => val === null || (val.length <= 5000), {
+      message: 'Instructions cannot exceed 5000 characters',
+    })
     .optional(),
 
   servings: z
@@ -25,19 +28,37 @@ export const RecipeRequestSchema = z.object({
 
   category: z
     .string()
-    .max(100, 'Category cannot exceed 100 characters')
+    .transform((val) => (val === '' ? null : val))
     .nullable()
+    .refine((val) => val === null || (val.length <= 100), {
+      message: 'Category cannot exceed 100 characters',
+    })
     .optional(),
 
   imageUrl: z
     .string()
-    .url('Invalid image URL format')
+    .transform((val) => (val === '' ? null : val))
     .nullable()
+    .refine(
+      (val) => {
+        if (val === null) return true;
+        try {
+          new URL(val);
+          return true;
+        } catch {
+          return false;
+        }
+      },
+      { message: 'Invalid image URL format' }
+    )
     .optional(),
 
   userId: z
     .string()
-    .uuid('Invalid user ID format')
+    .refine(
+      (val) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val),
+      { message: 'Invalid user ID format' }
+    )
     .nullable()
     .optional(),
 });
@@ -46,7 +67,12 @@ export const RecipeRequestSchema = z.object({
  * Validation schema for RecipeResponseDto
  */
 export const RecipeResponseSchema = z.object({
-  id: z.string().uuid('Invalid recipe ID format'),
+  id: z
+    .string()
+    .refine(
+      (val) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val),
+      { message: 'Invalid recipe ID format' }
+    ),
 
   title: z.string().min(1).max(200),
 
@@ -56,7 +82,21 @@ export const RecipeResponseSchema = z.object({
 
   category: z.string().max(100).nullable().optional(),
 
-  imageUrl: z.string().url('Invalid image URL format').nullable().optional(),
+  imageUrl: z
+    .string()
+    .refine(
+      (val) => {
+        try {
+          new URL(val);
+          return true;
+        } catch {
+          return false;
+        }
+      },
+      { message: 'Invalid image URL format' }
+    )
+    .nullable()
+    .optional(),
 
   createdAt: z
     .string()
@@ -73,7 +113,14 @@ export const RecipeResponseSchema = z.object({
       return date.toISOString();
     }),
 
-  userId: z.string().uuid('Invalid user ID format').nullable().optional(),
+  userId: z
+    .string()
+    .refine(
+      (val) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val),
+      { message: 'Invalid user ID format' }
+    )
+    .nullable()
+    .optional(),
 });
 
 /**

@@ -1,19 +1,23 @@
 import React, { useImperativeHandle, forwardRef } from 'react';
-import { View, StyleSheet, Image } from 'react-native';
-import { HelperText, Text, useTheme, Chip } from 'react-native-paper';
+import { View, StyleSheet } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { RecipeRequestDto, RecipeResponseDto } from '../../../lib/shared';
 import { RecipeRequestSchema } from '../../../lib/shared';
-import { TextInput } from '../forms/TextInput';
-import { TextArea } from '../forms/TextArea';
-import { NumberInput } from '../forms/NumberInput';
-import { CategoryPicker } from '../forms/CategoryPicker';
-import { ImagePicker } from '../forms/ImagePicker';
 import { Button } from '../ui/Button';
-import { Card } from '../layout/Card';
-import { spacing, fontConfig } from '../../../theme/typography';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { spacing } from '../../../theme/typography';
+import {
+  ViewRecipeImage,
+  EditableRecipeImage,
+  ViewRecipeTitle,
+  EditableRecipeTitle,
+  ViewRecipeInstructions,
+  EditableRecipeInstructions,
+  ViewRecipeCategory,
+  EditableRecipeCategory,
+  ViewRecipeServings,
+  EditableRecipeServings,
+} from './index';
 
 export interface RecipeFormProps {
   initialValues?: Partial<RecipeResponseDto>;
@@ -38,10 +42,13 @@ const RecipeFormComponent = forwardRef<RecipeFormRef, RecipeFormProps>(({
   readOnly = false,
   testID = 'recipe-form',
 }, ref) => {
-  const theme = useTheme();
-
-  // React Hook Form setup - Only initialize in EDIT mode
-  const formMethods = !readOnly ? useForm<RecipeRequestDto>({
+  // React Hook Form setup - Always call hooks (Rules of Hooks)
+  // Note: We always initialize useForm to avoid hook count changes between renders
+  const {
+    control,
+    handleSubmit: rhfHandleSubmit,
+    formState,
+  } = useForm<RecipeRequestDto>({
     resolver: zodResolver(RecipeRequestSchema),
     defaultValues: {
       title: initialValues?.title || '',
@@ -51,16 +58,10 @@ const RecipeFormComponent = forwardRef<RecipeFormRef, RecipeFormProps>(({
       imageUrl: initialValues?.imageUrl || '',
     },
     mode: 'onSubmit', // Only validate on submit (progressive validation)
-  }) : null;
+  });
 
-  const {
-    control,
-    handleSubmit: rhfHandleSubmit,
-    formState,
-  } = formMethods || {};
-
-  const isDirty = formState?.isDirty || false;
-  const isSubmitting = formState?.isSubmitting || false;
+  const isDirty = formState.isDirty;
+  const isSubmitting = formState.isSubmitting;
 
   // Expose hasFormChanges via ref (2025 pattern: useImperativeHandle)
   useImperativeHandle(ref, () => ({
@@ -68,11 +69,11 @@ const RecipeFormComponent = forwardRef<RecipeFormRef, RecipeFormProps>(({
   }));
 
   // Handle form submission
-  const handleFormSubmit = rhfHandleSubmit ? rhfHandleSubmit(async (data) => {
+  const handleFormSubmit = rhfHandleSubmit(async (data) => {
     if (onSubmit) {
       await onSubmit(data);
     }
-  }) : () => {};
+  });
 
   const handleCancel = () => {
     if (onCancel) {
@@ -96,250 +97,168 @@ const RecipeFormComponent = forwardRef<RecipeFormRef, RecipeFormProps>(({
    * create wrapper components like ControlledTextInput, ControlledNumberInput, etc.
    */
 
-  // ReadOnly mode: Content-focused VIEW layout
+  // VIEW mode: Direct rendering from initialValues using View* components
   if (readOnly) {
     return (
-      <View style={styles.viewContainer} testID={testID}>
+      <View style={styles.container} testID={testID}>
         {/* Recipe Image - Full width, prominent */}
-        {initialValues?.imageUrl && (
-          <Image
-            source={{ uri: initialValues.imageUrl }}
-            style={styles.viewImage}
-            resizeMode="cover"
-            testID={`${testID}-image`}
-          />
-        )}
+        <ViewRecipeImage
+          imageUrl={initialValues?.imageUrl || ''}
+          testID={`${testID}-image`}
+          accessibilityLabel={`Recipe image for ${initialValues?.title || 'Untitled Recipe'}`}
+        />
 
         {/* Title - Large headline */}
-        <Text variant="headlineLarge" style={styles.viewTitle}>
-          {initialValues?.title || 'Untitled Recipe'}
-        </Text>
+        <ViewRecipeTitle
+          title={initialValues?.title || 'Untitled Recipe'}
+          testID={`${testID}-title`}
+        />
 
         {/* Metadata Row - Category + Servings */}
         <View style={styles.metadataRow}>
-          {initialValues?.category && (
-            <Chip
-              mode="flat"
-              style={styles.categoryChip}
-              textStyle={styles.categoryChipText}
-            >
-              {initialValues.category}
-            </Chip>
-          )}
-          <View style={styles.servingsContainer}>
-            <MaterialCommunityIcons
-              name="account-group"
-              size={20}
-              color={theme.colors.onSurfaceVariant}
-            />
-            <Text variant="bodyLarge" style={styles.servingsText}>
-              {`${initialValues?.servings || 1} ${initialValues?.servings === 1 ? 'serving' : 'servings'}`}
-            </Text>
-          </View>
+          <ViewRecipeCategory
+            category={initialValues?.category || ''}
+            testID={`${testID}-category`}
+          />
+          <ViewRecipeServings
+            servings={initialValues?.servings || 1}
+            testID={`${testID}-servings`}
+          />
         </View>
 
         {/* Instructions */}
-        {initialValues?.instructions && (
-          <View style={styles.instructionsSection}>
-            <Text variant="titleMedium" style={styles.sectionTitle}>
-              Instructions
-            </Text>
-            <Text variant="bodyLarge" style={styles.instructionsText}>
-              {initialValues.instructions || ''}
-            </Text>
-          </View>
-        )}
+        <ViewRecipeInstructions
+          instructions={initialValues?.instructions || ''}
+          testID={`${testID}-instructions`}
+        />
       </View>
     );
   }
 
-  // EDIT mode: Form layout with Card
+  // EDIT mode: Controlled components (visually identical to VIEW, but will be editable)
   return (
     <View style={styles.container} testID={testID}>
-      <Card style={styles.card}>
-        <Controller
-          control={control}
-          name="title"
-          render={({ field: { onChange, value }, fieldState: { error } }) => (
-            <TextInput
-              label="Recipe Title"
-              value={value || ''}
-              onChangeText={onChange}
-              error={error}
-              placeholder="Enter recipe name"
-              maxLength={200}
-              testID={`${testID}-title`}
-              style={styles.input}
-            />
-          )}
-        />
+      {/* Recipe Image - Editable with overlay controls and bounce animation */}
+      <Controller
+        control={control}
+        name="imageUrl"
+        render={({ field: { onChange, value } }) => (
+          <EditableRecipeImage
+            value={value as string}
+            onChange={onChange}
+            testID={`${testID}-image`}
+          />
+        )}
+      />
 
-        <Controller
-          control={control}
-          name="servings"
-          render={({ field: { onChange, value }, fieldState: { error } }) => (
-            <NumberInput
-              label="Servings"
-              value={value ?? 1}
-              onChangeValue={onChange}
-              error={error}
-              min={1}
-              max={100}
-              integer={true}
-              placeholder="Number of servings"
-              testID={`${testID}-servings`}
-              style={styles.input}
-            />
-          )}
-        />
+      {/* Title - Editable with bounce animation */}
+      <Controller
+        control={control}
+        name="title"
+        render={({ field: { onChange, value } }) => (
+          <EditableRecipeTitle
+            value={value as string}
+            onChange={onChange}
+            testID={`${testID}-title`}
+          />
+        )}
+      />
 
+      {/* Metadata Row - Category + Servings */}
+      <View style={styles.metadataRow}>
+        {/* Category - Editable with bounce animation and modal picker */}
         <Controller
           control={control}
           name="category"
-          render={({ field: { onChange, value }, fieldState: { error } }) => (
-            <View style={styles.input} testID={`${testID}-category-picker`}>
-              <CategoryPicker
-                value={value || ''}
-                onChange={onChange}
-                disabled={isFormLoading}
-                testID={`${testID}-category-picker`}
-              />
-              {error?.message && (
-                <HelperText type="error" visible={true}>
-                  {error.message}
-                </HelperText>
-              )}
-            </View>
-          )}
-        />
-
-        <Controller
-          control={control}
-          name="imageUrl"
           render={({ field: { onChange, value } }) => (
-            <View style={styles.input} testID={`${testID}-image-picker`}>
-              <ImagePicker
-                value={value || null}
-                onChange={onChange}
-                disabled={isFormLoading}
-                testID={`${testID}-image-picker`}
-              />
-            </View>
-          )}
-        />
-
-        <Controller
-          control={control}
-          name="instructions"
-          render={({ field: { onChange, value }, fieldState: { error } }) => (
-            <TextArea
-              label="Instructions"
-              value={value || ''}
-              onChangeText={onChange}
-              error={error}
-              placeholder="Enter cooking instructions (optional)"
-              rows={8}
-              maxLength={5000}
-              testID={`${testID}-instructions`}
-              style={styles.input}
+            <EditableRecipeCategory
+              value={value as string}
+              onChange={onChange}
+              testID={`${testID}-category`}
             />
           )}
         />
-      </Card>
 
-      {!readOnly && (
-        <View style={styles.buttonContainer}>
+        {/* Servings - Editable with bounce animation and stepper controls */}
+        <Controller
+          control={control}
+          name="servings"
+          render={({ field: { onChange, value } }) => (
+            <EditableRecipeServings
+              value={value as number}
+              onChange={onChange}
+              testID={`${testID}-servings`}
+            />
+          )}
+        />
+      </View>
+
+      {/* Instructions - Editable with bounce animation (label stays static) */}
+      <Controller
+        control={control}
+        name="instructions"
+        render={({ field: { onChange, value } }) => (
+          <EditableRecipeInstructions
+            value={value as string}
+            onChange={onChange}
+            testID={`${testID}-instructions`}
+          />
+        )}
+      />
+
+      {/* Action Buttons - Only show in EDIT mode */}
+      <View style={styles.buttonContainer}>
+        <Button
+          title={submitLabel}
+          variant="primary"
+          onPress={handleFormSubmit}
+          loading={isFormLoading}
+          disabled={isFormLoading}
+          fullWidth
+          testID={`${testID}-submit`}
+          style={styles.submitButton}
+        />
+
+        {onCancel && (
           <Button
-            title={submitLabel}
-            variant="primary"
-            onPress={handleFormSubmit}
-            loading={isFormLoading}
+            title="Cancel"
+            variant="secondary"
+            onPress={handleCancel}
             disabled={isFormLoading}
             fullWidth
-            testID={`${testID}-submit`}
-            style={styles.submitButton}
+            testID={`${testID}-cancel`}
           />
-
-          {onCancel && (
-            <Button
-              title="Cancel"
-              variant="secondary"
-              onPress={handleCancel}
-              disabled={isFormLoading}
-              fullWidth
-              testID={`${testID}-cancel`}
-            />
-          )}
-        </View>
-      )}
+        )}
+      </View>
     </View>
   );
 });
 
+/**
+ * RecipeForm Styles
+ *
+ * Component-specific styles have been extracted to co-located component files.
+ * This StyleSheet now contains only form-level layout styles.
+ */
 const styles = StyleSheet.create({
-  // EDIT mode styles
+  // Main container - Used by both VIEW and EDIT modes
   container: {
     flex: 1,
   },
-  card: {
-    marginBottom: spacing.md,
-  },
-  input: {
-    marginBottom: spacing.md,
-  },
-  buttonContainer: {
-    gap: spacing.md, // MD3 8px grid system
-  },
-  submitButton: {
-    marginBottom: spacing.sm,
-  },
-
-  // VIEW mode styles - Content-focused layout
-  viewContainer: {
-    flex: 1,
-  },
-  viewImage: {
-    width: '100%',
-    height: 240, // 30 * 8px grid
-    borderRadius: 12,
-    marginBottom: spacing.lg,
-  },
-  viewTitle: {
-    marginBottom: spacing.md,
-    fontFamily: fontConfig.headlineLarge.fontFamily,
-  },
+  // Metadata row - Contains category and servings in horizontal layout
   metadataRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: spacing.lg,
     gap: spacing.md,
   },
-  categoryChip: {
-    alignSelf: 'flex-start',
+  // Action buttons - EDIT mode only
+  buttonContainer: {
+    marginTop: spacing.lg,
+    gap: spacing.md,
   },
-  categoryChipText: {
-    fontFamily: fontConfig.labelLarge.fontFamily,
-  },
-  servingsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  servingsText: {
-    fontFamily: fontConfig.bodyLarge.fontFamily,
-  },
-  instructionsSection: {
-    marginTop: spacing.md,
-  },
-  sectionTitle: {
+  submitButton: {
     marginBottom: spacing.sm,
-    fontFamily: fontConfig.titleMedium.fontFamily,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  instructionsText: {
-    fontFamily: fontConfig.bodyLarge.fontFamily,
-    lineHeight: 24,
   },
 });
 

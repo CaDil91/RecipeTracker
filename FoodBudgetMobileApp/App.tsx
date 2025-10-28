@@ -34,7 +34,7 @@ if (Platform.OS === 'web') {
     reachabilityTest: async (response) => response.status >= 200 && response.status < 400,
     reachabilityShortTimeout: 2 * 1000, // 2s
     reachabilityLongTimeout: 5 * 1000, // 5s - Check every 5s when online
-    reachabilityRequestTimeout: 3 * 1000, // 3s timeout for the check itself
+    reachabilityRequestTimeout: 3 * 1000, // 3 s timeout for the check itself
     useNativeReachability: false,
   });
 }

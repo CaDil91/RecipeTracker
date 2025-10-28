@@ -48,6 +48,10 @@ const customColors = {
     outline: '#787673',
     outlineVariant: '#C8C6C3',
 
+    // Editable text - deep espresso brown for edit mode (earthy, warm)
+    editableText: '#3E2723',
+    editableContainer: '#E8E6E3',
+
     // Elevation levels for consistent depth (subtle warm tint)
     elevation: {
       level0: 'transparent',
@@ -99,6 +103,10 @@ const customColors = {
     outline: '#918F8C',
     outlineVariant: '#47454F',
 
+    // Editable text - light espresso for edit mode (dark mode)
+    editableText: '#D7CCC8',
+    editableContainer: '#2C2A28',
+
     // Elevation levels for consistent depth (subtle warm tint)
     elevation: {
       level0: 'transparent',
@@ -115,12 +123,22 @@ const customColors = {
 const fonts = configureFonts({ config: fontConfig });
 
 /**
- * Create custom light theme with:
+ * Custom theme type that extends MD3Theme with our additional colors
+ */
+export type CustomTheme = MD3Theme & {
+  colors: MD3Theme['colors'] & {
+    editableText: string;
+    editableContainer: string;
+  };
+};
+
+/**
+ * Create a custom light theme with:
  * - Minimal neutral color palette
  * - Poppins typography
  * - MD3 elevation system
  */
-export const customLightTheme: MD3Theme = {
+export const customLightTheme: CustomTheme = {
   ...MD3LightTheme,
   fonts,
   colors: {
@@ -130,12 +148,12 @@ export const customLightTheme: MD3Theme = {
 };
 
 /**
- * Create custom dark theme with:
+ * Create a custom dark theme with:
  * - Minimal neutral color palette (dark mode optimized)
  * - Poppins typography
  * - MD3 elevation system
  */
-export const customDarkTheme: MD3Theme = {
+export const customDarkTheme: CustomTheme = {
   ...MD3DarkTheme,
   fonts,
   colors: {
@@ -149,6 +167,6 @@ export const customDarkTheme: MD3Theme = {
  * @param colorScheme - 'light', 'dark', null, or undefined
  * @returns The appropriate theme (defaults to light theme)
  */
-export const getCustomTheme = (colorScheme: 'light' | 'dark' | null | undefined): MD3Theme => {
+export const getCustomTheme = (colorScheme: 'light' | 'dark' | null | undefined): CustomTheme => {
   return colorScheme === 'dark' ? customDarkTheme : customLightTheme;
 };

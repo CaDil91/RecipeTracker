@@ -2,6 +2,7 @@ import React from 'react';
 import { View, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { Text, IconButton, Chip, Surface, useTheme, ActivityIndicator } from 'react-native-paper';
 import { RecipeResponseDto } from '../../../lib/shared';
+import { CustomTheme } from '../../../theme/customTheme';
 
 const GRID_PADDING = 16;
 const CARD_GAP = 8;
@@ -24,7 +25,8 @@ export const RecipeGridCard: React.FC<RecipeGridCardProps> = ({
   containerWidth,
   testID,
 }) => {
-  const theme = useTheme();
+  const theme = useTheme<CustomTheme>();
+  const styles = createStyles(theme);
   const [imageError, setImageError] = React.useState(false);
 
   const { cardWidth, cardHeight } = React.useMemo(() => {
@@ -109,7 +111,7 @@ export const RecipeGridCard: React.FC<RecipeGridCardProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: CustomTheme) => StyleSheet.create({
   card: {
     marginBottom: 8,
     overflow: 'hidden',
@@ -131,7 +133,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.3)',
+    backgroundColor: theme.colors.backdrop,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -140,13 +142,13 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)', // Dark overlay for readability over images
   },
   content: {
     padding: 12,
   },
   title: {
-    color: 'white',
+    color: '#FFFFFF', // Always white for readability over dark overlay
     fontWeight: 'bold',
     marginBottom: 8,
   },

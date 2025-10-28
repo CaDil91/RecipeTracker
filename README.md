@@ -36,9 +36,19 @@ The web demo is connected to a live Azure-hosted API with a SQL Server database.
 
 ## 🎯 Current Sprint Goal
 
-**Sprint 3: Complete Vertical Slice - Recipe Management Demo**
+**Sprint 4: User Management & Authentication** *(CURRENT)*
 
-Build a complete vertical slice demonstrating full CRUD functionality for recipe management with a unified interface for viewing, editing, and creating recipes. Deploy a working demo for portfolio presentation.
+Add user authentication and data isolation to enable personal recipe collections. Users will be able to register accounts, log in securely, and manage their own private recipe collections.
+
+📖 **Full Sprint Documentation:** [`docs/sprint-4.md`](./docs/sprint-4.md) - Complete user stories, technical details, and acceptance criteria
+
+---
+
+## ✅ Sprint 3: Complete Vertical Slice - Recipe Management Demo *(COMPLETED)*
+
+**Goal:** Build a complete vertical slice demonstrating full CRUD functionality for recipe management with a unified interface for viewing, editing, and creating recipes. Deploy a working demo for portfolio presentation.
+
+**Status:** ✅ All stories completed (October 2025)
 
 📖 **Full Sprint Documentation:** [`docs/Sprint-3.md`](./docs/sprint-3.md) - Complete user stories, technical details, and acceptance criteria
 
@@ -73,225 +83,95 @@ Build a complete vertical slice demonstrating full CRUD functionality for recipe
 - Proper async Promise handling
 
 #### ✅ Quality Improvements: Error Handling & Type Safety
-**Improvements:** Enhance user experience and code reliability across the application.
+**User Story:** As a user, I want clear error messages and the ability to retry when something goes wrong.
 
-**Features:** (Completed October 2025)
-- Comprehensive error state UI in RecipeListScreen
-  - User-friendly error messages
-  - Retry button for failed API requests
-  - Consistent error handling patterns
-- Enhanced TypeScript type safety
-  - Fixed navigation prop types in test utilities
-  - Eliminated compiler warnings
-- Improved debugging capabilities
-  - Console logging for unexpected errors
-  - Better developer experience
-- Proper Promise handling in TanStack Query mutations
-  - Prevents race conditions
-  - Ensures cache consistency
+**Features:**
+- User-friendly error messages with retry buttons
+- Consistent error handling across the app
+- TypeScript type safety improvements
 
-#### ✅ Story 7: Enhanced Recipe Data Model (Category + Image)
-**User Story:** As a developer, I need the recipe data model to support category and image fields so users can better organize and visualize their recipes.
+#### ✅ Story 7: Enhanced Recipe Data Model
+**User Story:** As a user, I want to add categories and images to my recipes for better organization.
 
-**Features:** (Completed October 13, 2025)
-- Category field with dropdown picker (Breakfast, Lunch, Dinner, Dessert) - 19 tests passing
-- Image URL field with gallery selection and preview - 19 tests passing
-- CategoryPicker component with extensible architecture for Sprint 4
-- ImagePicker component (gallery selection via expo-image-picker)
-- Updated DTOs, schemas, and validation (category nullable/optional per backend API)
-- RecipeForm integration with both pickers - 31 tests passing
-- **Total: 69 tests passing across all components**
+**Features:**
+- Category dropdown picker (Breakfast, Lunch, Dinner, etc.)
+- Image selection from photo gallery
+- Image preview and management
 
-#### ✅ Story 8: RecipeDetailScreen - VIEW Mode
+#### ✅ Story 8: Recipe Detail - VIEW Mode
 **User Story:** As a user, I want to tap a recipe card and see all recipe details in a beautiful, read-only view.
 
-**Features:** (Completed October 15, 2025)
-- RecipeDetailScreen structure with mode state (view/edit/create)
-- VIEW mode with Material Design 3 styling (read-only display)
-- TanStack Query integration for data fetching by ID
-- Navigation from RecipeListScreen (tap recipe card)
-- Display all fields including category and image
-- Loading and error states with accessibility support
-- Scrollable content with responsive layout
-- Back navigation with IconButton
-- **Unit Tests: 26/26 passing**
-- **Integration Tests: 13/13 passing**
-- **Total: 39 tests passing with comprehensive coverage**
+**Features:**
+- Full recipe display with all fields
+- Material Design 3 styling
+- Loading and error states
+- Back navigation
 
-#### ✅ Story 9: RecipeDetailScreen - CREATE Mode
+#### ✅ Story 9: Recipe Detail - CREATE Mode
 **User Story:** As a user, I want to create new recipes with all fields through an intuitive form.
 
 **Features:**
-- CREATE mode with empty form (no recipeId in route params)
-- All fields editable (including category picker and image picker)
-- Create mutation with TanStack Query
-- Navigate from FAB in RecipeListScreen
-- Success shows Snackbar and navigates to VIEW mode with new recipe
-- Error handling with user feedback
-- Form validation with progressive error display
-- **Unit Tests: 51/51 passing**
-- **Integration Tests: 19/19 passing**
-- **Total: 101 tests passing** (70 comprehensive tests with 2025 RTL patterns)
+- Empty form with all fields editable
+- Form validation
+- Success feedback and navigation
+- Error handling
 
-#### ✅ Story 10: RecipeDetailScreen - EDIT Mode & Transitions
+#### ✅ Story 10: Recipe Detail - EDIT Mode
 **User Story:** As a user, I want to edit existing recipes and have smooth transitions between viewing and editing.
 
 **Features:**
-- EDIT mode with pre-populated form from existing recipe data
-- Edit FAB in VIEW mode for easy mode transition
-- Update mutation with TanStack Query and cache invalidation
-- Smooth VIEW ↔ EDIT transitions using local state
-- Cancel button with confirmation dialog (only if form has changes)
-- Back button mode-aware behavior (returns to VIEW mode in EDIT)
-- **2025 Best Practices:** `forwardRef` + `useImperativeHandle` for form state access
-- Dirty tracking prevents accidental data loss
-- Success returns to VIEW mode with Snackbar feedback
-- Error handling keeps form editable with Snackbar
-- **All 73 tests passing** with TDD approach (Red → Green → Refactor)
+- Pre-populated form with existing data
+- Smooth VIEW ↔ EDIT mode transitions
+- Cancel with unsaved changes confirmation
+- Success and error feedback
 
 #### ✅ Story 11: Delete Functionality
 **User Story:** As a user, I want to delete recipes from the detail screen with a confirmation prompt.
 
-**Features:** (Completed)
-- ✅ Delete button in header (VIEW and EDIT modes, excluded from CREATE)
-- ✅ Confirmation dialog before deletion ("Delete Recipe? Are you sure...")
-- ✅ DELETE mutation with TanStack Query
-- ✅ Success: navigate back to list with "Recipe deleted successfully!" snackbar
-- ✅ Error: stay on screen with error snackbar
-- ✅ Cache invalidation on successful deletion
-- ✅ Comprehensive error handling (API 500/404, network failures)
-- ✅ Old AddRecipeScreen removed (completed in Story 9)
-- **Unit Tests: 85/85 passing** (13 new delete tests)
-- **Integration Tests: 25/25 passing** (3 new delete tests)
-- **Total: 110 tests passing** with full TDD approach (Red → Green → Refactor)
+**Features:**
+- Delete button in header
+- Confirmation dialog before deletion
+- Success feedback and navigation
+- Error handling
 
-#### ✅ Story 12a, 12b & 12c: Optimistic Updates (Delete, Update & Create)
+#### ✅ Story 12: Optimistic Updates
 **User Story:** As a user, I want instant feedback when I create, update, or delete recipes so the app feels fast and responsive.
 
-**Features:** (Completed - All Three Stories)
-- ✅ **Story 12a - Optimistic Delete**: Recipes disappear instantly with automatic rollback on error
-  - Instant cache removal from all locations
-  - Manual rollback + background refetch on error for consistency
-  - Query cancellation to prevent race conditions
-  - **Hook Tests: 11/11 passing**
-  - **Integration Tests: 12/12 passing**
-  - **Total: 23 tests passing**
-- ✅ **Story 12b - Optimistic Update**: Recipe edits appear instantly in both list and detail views
-  - Multi-cache optimistic updates (list + detail + all categories)
-  - Server response replaces optimistic data on success
-  - Automatic rollback in all caches on error
-  - Manual retry by staying in EDIT mode after error
-  - **Hook Tests: 13/13 passing (useUpdateRecipe)**
-  - **Unit Tests: 5/5 new Story 12b tests**
-  - **Integration Tests: 6/6 new Story 12b tests**
-  - **Total: 24 tests passing, Full test suite: 580/580 passing**
-- ✅ **Story 12c - Optimistic Create**: New recipes appear instantly with temp UUID while saving
-  - Temp UUID generation using expo-crypto (`temp-${uuid}` pattern)
-  - Instant optimistic UI updates (recipe appears at top of list <50ms)
-  - Navigation blocking until real ID received (prevents broken states)
-  - Loading indicator on temp recipe cards (visual feedback)
-  - Atomic temp ID → real ID replacement on success
-  - Automatic rollback on error with retry support
-  - **Scalable Refactoring:** Removed hardcoded categories for custom category support (Sprint 4 ready)
-  - **Hook Tests: 11/11 passing (useCreateRecipe)**
-  - **Unit Tests: 11/11 passing (CREATE mode integration)**
-  - **Integration Tests: 11/11 passing (temp ID lifecycle)**
-  - **Total: 33 tests passing, Full test suite: 613/613 passing**
-  - **2025 Production Standards:** TanStack Query v5, expo-crypto, cache manipulation, server authority
+**Features:**
+- Instant UI updates for create, update, and delete operations
+- Automatic rollback on errors
+- Smooth UX with no loading delays
+- Server reconciliation on success
 
 #### ✅ Story 12.5: Error Boundary & Offline Detection
-**User Story:** As a user, I want the app to handle errors gracefully and inform me when I'm offline, so I don't see blank screens or confusing error messages.
+**User Story:** As a user, I want the app to handle errors gracefully and inform me when I'm offline.
 
-**Features:** (Completed - Production-Ready)
-- ✅ **TanStack Query OnlineManager** - Modern event-based offline detection (no polling, better battery life)
-  - NetInfo integration checks BOTH `isConnected` AND `isInternetReachable` (handles captive portals)
-  - Event-based detection (no polling overhead)
-  - Automatic query/mutation pause when offline
-- ✅ **ErrorBoundary Component** - Catches React component errors (no white screens)
-  - getDerivedStateFromError for error state management
-  - "Try Again" button to reset and re-render
-- ✅ **ErrorFallbackScreen** - User-friendly error UI with reset button
-  - Development mode shows detailed error information
-  - Production mode shows simple user-friendly message
-- ✅ **OfflineBanner** - Visual feedback when user is offline
-  - Appears at top of screen when device is offline
-  - Handles airplane mode, WiFi without internet, cellular failures
-- ✅ **Improved Mutation Resilience**
-  - Increased retry count from 1 to 2 (more resilient than TanStack Query defaults)
-  - Exponential backoff: `Math.min(1000 * 2 ** attemptIndex, 30000)` (matches TanStack Query defaults exactly)
-  - Queries: 2 retries, Mutations: 2 retries
-- ✅ **2025 Standards Applied:**
-  - OnlineManager with NetInfo (official TanStack Query pattern)
-  - Network mode: 'online' (queries/mutations pause when offline)
-  - RefetchOnReconnect: 'always' (fresh data after reconnecting)
-  - Better than basic examples (checks both network states for edge cases)
-- ✅ **ErrorBoundary Tests: 8/8 passing**
-- ✅ **OfflineBanner Unit Tests: 4/4 passing**
-- ✅ **OfflineBanner Integration Tests: 3/3 passing**
-- ✅ **ErrorFallbackScreen Tests: 8/8 passing**
-- ✅ **Full Test Suite: 635/635 tests passing**
+**Features:**
+- Error boundary catches app crashes
+- Offline banner shows network status
+- Automatic retry with exponential backoff
+- User-friendly error messages
 
-**Why This is Production-Ready:**
-- Follows official TanStack Query 2025 standards (verified via docs)
-- Handles edge cases: captive portals, airplane mode, WiFi-but-no-internet
-- Event-based detection (no polling, better battery life)
-- More resilient mutations than framework defaults (2 vs 0 retries)
-- Exponential backoff matches industry standards
-- Comprehensive error handling for both network and app errors
+#### ✅ Story 12.6: API Rate Limiting
+**User Story:** As the API owner, I want to protect the demo API from abuse.
 
-#### ✅ Story 12.6: API Rate Limiting (Partial)
-**User Story:** As the API owner, I want to protect the demo API from abuse so it remains available for portfolio viewers.
+**Features:**
+- Multi-tier IP-based rate limiting
+- Prevents burst and sustained attacks
+- Health endpoint whitelisted
+- Automatic logging of violations
 
-**Features:** (Completed - Rate Limiting Only)
-- ✅ **Multi-Tier IP-Based Rate Limiting** - AspNetCoreRateLimit 5.0.0
-  - 60 requests per minute (prevents burst attacks)
-  - 200 requests per 15 minutes
-  - 600 requests per hour
-  - 2,000 requests per 12 hours (prevents sustained abuse)
-  - Returns 429 Too Many Requests when limits exceeded
-- ✅ **Health Endpoint Whitelisted** - `/health` excluded from rate limiting
-- ✅ **Automatic Logging** - Rate limit violations logged with IP address
-- ✅ **Production-Grade Protection** - Multi-tier strategy better than single-limit approach
-- ⚠️ **CORS Not Restricted** - Still uses `AllowAnyOrigin()` (security risk, needs to be addressed)
+#### ✅ Story 13: Material Design 3 Polish
+**User Story:** As a user, I want a polished, professional-looking interface with smooth animations.
 
-**Why Multi-Tier is Better:**
-- Prevents both burst attacks (60/min) and sustained abuse (2000/12hr)
-- More sophisticated than single-tier limiting
-- Allows normal users to burst occasionally without hitting limits
-- Production-grade protection against various attack patterns
-
-**Security Note:**
-- CORS restriction deferred to avoid breaking demo during development
-- Must be restricted to `https://cadil91.github.io` + `localhost` before production release
-
-#### ✅ Story 13: Material Design 3 Polish & Refinements
-**User Story:** As a user, I want a polished, professional-looking interface with smooth animations and consistent Material Design 3 styling.
-
-**Features:** (Completed October 28, 2025)
-- Co-located component architecture following Kent C. Dodds principles
-  - 5 recipe components refactored (Title, Servings, Image, Category, Instructions)
-  - VIEW and EDIT modes co-located for seamless transitions
-- Bounce animations for EDIT mode using react-native-reanimated
-- Comprehensive accessibility support (WCAG compliance)
-  - accessibilityLabel, accessibilityHint, accessibilityRole, accessibilityState
-- Full dark mode support with custom theme colors
-- Custom hooks for reusable patterns (useEditableBounce, useEditableHaptics)
-- 193 tests fixed with proper async/await patterns
-- Updated deprecated Zod methods (.url(), .uuid() → refine patterns)
-- Removed unused code (react-native-paper.d.ts, unused theme imports)
-- Test coverage improved to 91.87% (+8.43%)
-- 2025 React Native best practices verified (TypeScript strict, modern libraries, performance patterns)
+**Features:**
+- Co-located component architecture
+- Bounce animations for EDIT mode
+- Comprehensive accessibility support (WCAG)
+- Full dark mode support
+- Custom hooks for reusable patterns
 
 ---
-
-## 🚀 Next Sprint: User Management & Authentication
-
-**Sprint 4** will add user authentication and data isolation. See [`docs/sprint-4.md`](./docs/sprint-4.md) for details:
-- User registration and login
-- JWT authentication with refresh tokens
-- User-scoped recipe data
-- Password reset flow
-- Email verification (optional)
 
 ## Architecture
 

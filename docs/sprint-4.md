@@ -1,758 +1,1046 @@
-# Sprint 4: User Management & Authentication
+# Sprint 4: User Authentication & Authorization
+
+**Status:** 📋 PLANNING - Research Phase Complete
+**Start Date:** TBD
+**Target Completion:** TBD
+
+---
 
 ## Sprint Goal
-Transform the recipe demo into a production-ready application with user authentication, secure data isolation, and personalized recipe management.
 
-**Timeline:** 3-4 weeks  
-**Focus:** User authentication, database security, and user-scoped data management
+Implement Microsoft Entra External ID authentication for the FoodBudget mobile app and backend API, enabling users to sign up and sign in using email/password or social providers (Google, Facebook, Apple), and securing the backend API to accept only authenticated requests.
 
 ---
 
-## Story Ordering & Dependencies
+## Context
+
+**Product:** Microsoft Entra External ID in External Tenants (CIAM)
+**Replaces:** Azure AD B2C (deprecated May 1, 2025 for new customers)
+**Frontend:** React Native + Expo mobile app
+**Backend:** ASP.NET Core Web API (.NET 8) on Azure App Service
+
+**Key Decisions:** See [Research Guide - Executive Summary](./entra-external-id-setup-guide.md#1-executive-summary-) for all MVP decisions.
+
+---
+
+## Sprint Overview
+
+### Phase 1: Foundation Setup
+**Goal:** Create authentication infrastructure
+
+**Tasks:**
+
+**1. Create Microsoft Entra External ID external tenant**
+
+**Prerequisites:**
+- Active Azure subscription (existing)
+- Account with "Tenant Creator" role assigned
+
+**Steps:**
+1. Navigate to Microsoft Entra admin center (https://entra.microsoft.com)
+2. Go to **Entra ID** → **Overview** → **Manage tenants**
+3. Click **Create** button
+4. Select **External** as tenant type
+5. Choose **Use Azure Subscription** (not trial)
+6. Configure Basics tab:
+   - **Tenant Name:** `FoodBudgetExternal`
+   - **Domain Name:** `foodbudget` (becomes `foodbudget.ciamlogin.com`)
+   - **Location:** `United States`
+7. Configure Subscription tab:
+   - **Subscription:** Select existing Azure subscription
+   - **Resource Group:** Create new or select existing (developer decision)
+   - **Resource Group Location:** `United States`
+8. Review and click **Create**
+9. Wait for creation (up to 30 minutes)
+10. Verify tenant created successfully in Notifications pane
+11. Switch to new tenant using tenant switcher
+12. Confirm tenant details in **Tenant overview**
+
+**Critical Notes:**
+- Domain name cannot be changed after creation
+- Location cannot be changed after creation
+- Alternative: 30-day free trial (no subscription required) or VS Code extension
+
+**2. Register mobile app and backend API applications**
+
+**Prerequisites:**
+- External tenant created (Task 1 above)
+- Account with "Application Developer" role
+
+**Overview:**
+Register TWO applications:
+- Mobile app (public client) - Users authenticate here
+- Backend API (protected resource) - Mobile app requests access
+
+**Steps for Mobile App Registration:**
+
+1. Navigate to Microsoft Entra admin center → **Entra ID** → **App registrations** → **New registration**
+2. Ensure you're in the external tenant (use tenant switcher if needed)
+3. Configure registration:
+   - **Name:** `FoodBudget Mobile App`
+   - **Supported account types:** "Accounts in this organizational directory only" (external tenant)
+   - **Redirect URI:** Skip for now (add after registration)
+4. Click **Register**
+5. Record from Overview page:
+   - Application (client) ID
+   - Directory (tenant) ID
+   - Object ID
+
+**Steps for Backend API Registration:**
+
+1. Navigate to **App registrations** → **New registration**
+2. Configure registration:
+   - **Name:** `FoodBudget API`
+   - **Supported account types:** "Accounts in this organizational directory only" (external tenant)
+   - **Redirect URI:** Leave blank (not needed for APIs)
+3. Click **Register**
+4. Record Application (client) ID from Overview
+5. Configure API identifier:
+   - Navigate to **Expose an API** section
+   - Click **Add** next to Application ID URI
+   - Accept default: `api://<client-id>`
+   - Click **Save**
+
+**Post-Registration: Grant Permissions**
+
+1. Go to mobile app registration → **API permissions**
+2. Click **Add a permission** → **My APIs** tab
+3. Select **FoodBudget API**
+4. Select delegated permissions (scopes from API)
+5. Click **Add permissions**
+6. Click **Grant admin consent** button (required for external tenants)
+
+**Pending Configuration (Future Tasks):**
+- ⏸️ Mobile app platform configuration (redirect URIs)
+- ⏸️ API scope definition (recommend: `access_as_user` for MVP)
+- ⏸️ Public client flow settings
+
+**Critical Notes:**
+- Apps are hidden from users by default
+- Redirect URI format for React Native/Expo pending research
+- Platform-specific configuration details pending research
+
+**Outcome:** Tenant and app registrations ready for configuration
+
+**Estimated Effort:** 1-3 hours
+
+---
+
+### Phase 2: Authentication Configuration
+**Goal:** Configure how users will authenticate
+
+**Tasks:**
+
+**⚠️ IMPORTANT: Task 4 must be completed BEFORE Task 3**
+(Social providers must be configured before user flow creation)
+
+**4. Add social identity providers** (DO THIS FIRST)
+
+**Prerequisites:**
+- Tenant created with Tenant ID recorded (Phase 1, Task 1)
+- App registrations created (Phase 1, Task 2)
+- Google account (create new account specifically for FoodBudget development)
+- Facebook developer account (free)
+- Apple Developer account ($99/year)
+
+**Overview:**
+Configure federation with Google, Facebook, and Apple so they appear as options during user flow creation.
+
+**Critical Notes:**
+- ⚠️ Social providers must be configured here FIRST (before creating user flow)
+- They only become available in user flow after federation setup
+- Apple Sign In mandatory for iOS App Store if offering any social login
+- Test each provider immediately after configuration
+
+**Cost:**
+- Google: FREE
+- Facebook: FREE
+- Apple: $99/year (Apple Developer Program)
+
+---
+
+**4A. Configure Google Sign-In**
+
+**Part 1: Google Cloud Console Setup**
+
+**Step 1: Create Google Project**
+1. Access [Google Developers Console](https://console.developers.google.com/)
+2. Sign in with Google account (create new account for FoodBudget if needed)
+3. Accept terms of service if prompted
+4. Select project list (upper-left) → **New Project**
+5. Enter project name: **"FoodBudget"**
+6. Click **Create**
+7. Verify you're in the new project
+
+**Step 2: Configure OAuth Consent Screen**
+1. Navigate to **APIs & services** → **OAuth consent screen**
+2. Select **External** user type → **Next**
+3. Complete app information:
+   - **Application name:** "FoodBudget"
+   - **User support email:** Your email address
+4. Under **Authorized domains**, add:
+   - `ciamlogin.com`
+   - `microsoftonline.com`
+5. **Developer contact emails:** Your email (for Google notifications)
+6. Click **Save and Continue**
+
+**Step 3: Create OAuth Client Credentials**
+1. Left menu → **Credentials** → **Create credentials** → **OAuth client ID**
+2. Choose **Web application**
+3. Enter name: **"Microsoft Entra External ID"**
+4. **Add these 7 Redirect URIs** (replace `<tenant-ID>` with your actual Tenant ID from Phase 1):
 
 ```
-Story 1: Database Schema (Foundation)
-    ↓
-Story 2: Backend User API (Register, Login, Profile)
-    ↓
-Story 3: JWT Authentication & Security (Tokens, Middleware)
-    ↓
-Story 4: Frontend Authentication (Screens, Context, Navigation)
-    ↓
-Story 5: User-Scoped Recipe Data (Data Isolation)
-    ↓
-Story 6: Password Reset Flow (Requires Stories 1-3)
-    ↓
-Story 7: Email Verification (Optional - Requires Story 6)
-    ↓
-Story 8: Offline Support & Sync (Deferred from Sprint 3)
+https://login.microsoftonline.com
+https://login.microsoftonline.com/te/<tenant-ID>/oauth2/authresp
+https://login.microsoftonline.com/te/foodbudget.onmicrosoft.com/oauth2/authresp
+https://<tenant-ID>.ciamlogin.com/<tenant-ID>/federation/oidc/accounts.google.com
+https://<tenant-ID>.ciamlogin.com/foodbudget.onmicrosoft.com/federation/oidc/accounts.google.com
+https://foodbudget.ciamlogin.com/<tenant-ID>/federation/oauth2
+https://foodbudget.ciamlogin.com/foodbudget.onmicrosoft.com/federation/oauth2
 ```
 
-## Deferred Features from Sprint 3
+5. Click **Create**
+6. **COPY AND SAVE SECURELY:**
+   - **Client ID**
+   - **Client Secret**
+7. Click **OK**
 
-### Story 8: Offline Support & Mutation Queue
+**Part 2: Microsoft Entra Configuration**
 
-**Status:** 🔴 NOT STARTED
-**Priority:** MEDIUM
-**Type:** Reliability & UX Enhancement
-**Dependencies:** Sprint 3 Stories 12a, 12b, 12c (Optimistic Updates)
-**Estimated Effort:** Medium (8-10 hours)
+**Step 1: Add Google as Identity Provider**
+1. Sign in to [Microsoft Entra admin center](https://entra.microsoft.com)
+2. Switch to external tenant
+3. Navigate to **Entra ID** → **External Identities** → **All identity providers**
+4. On **Built-in** tab, select **Configure** next to Google
+5. Enter:
+   - **Name:** "Google"
+   - **Client ID:** Paste from Google Console
+   - **Client secret:** Paste from Google Console
+6. Click **Save**
 
-**Context:**
-During Sprint 3's optimistic updates implementation, offline support was identified as important but deferred to avoid scope creep. Now that user authentication is in place, offline support becomes more critical for a production app.
+**Step 2: Verify**
+1. Navigate to **Entra ID** → **External Identities** → **All identity providers**
+2. Verify "Google" appears in list
 
-**User Story:**
-As a user, I want to create, update, and delete recipes while offline so that I can use the app without an internet connection, with changes syncing automatically when I reconnect.
+**Test Google Sign-In (After User Flow Created):**
+1. Use "Run user flow" feature (after Task 3 completed)
+2. Verify Google appears as sign-in option
+3. Test sign-up with Google (new user)
+4. Test sign-in with Google (existing user)
+5. Verify user created in Entra ID with Google identity
 
-**Technical Approach:**
-- Use `@react-native-community/netinfo` for network detection
-- Queue mutations while offline using TanStack Query's retry mechanism
-- Show offline indicator in UI
-- Automatically sync queued mutations when connection restored
-- Handle authentication token refresh during offline periods
+---
 
-**Implementation Tasks:**
-- [ ] Install and configure `@react-native-community/netinfo`
-- [ ] Add global network status detector
-- [ ] Update `hooks/useRecipeMutations.ts` to detect offline state
-- [ ] Queue mutations when offline (TanStack Query retries automatically)
-- [ ] Add offline indicator component to navigation
-- [ ] Handle auth token expiration during offline mode
-- [ ] Add tests for offline scenarios
+**4B. Configure Facebook Login**
 
-**Files to Create:**
-- `hooks/useNetworkStatus.ts` - Network detection hook
-- `components/shared/ui/OfflineIndicator.tsx` - Offline banner component
+**⚠️ BLOCKER:** Requires Privacy Policy, Terms of Service, and User Data Deletion URLs
 
-**Files to Modify:**
-- `hooks/useRecipeMutations.ts` - Add offline detection
-- `navigation/AppNavigator.tsx` - Add offline indicator
+**Part 1: Facebook Developers Setup**
 
-**Technical Implementation:**
-```typescript
-// hooks/useNetworkStatus.ts
-import { useEffect, useState } from 'react';
-import NetInfo from '@react-native-community/netinfo';
+**Step 1: Register as Facebook Developer**
+1. Visit [Facebook for Developers](https://developers.facebook.com/apps)
+2. Select **"Get Started"** → Accept policies → Complete registration
 
-export const useNetworkStatus = () => {
-  const [isOnline, setIsOnline] = useState(true);
+**Step 2: Create Facebook App**
+1. Select **Create App**
+2. Choose **"Authenticate and request data from users with Facebook Login"** → **Next**
+3. Select **"No, I'm not building a game"** → **Next**
+4. Provide:
+   - **App name:** "FoodBudget"
+   - **Contact email:** Your email
+5. Select **Create app**
 
-  useEffect(() => {
-    const unsubscribe = NetInfo.addEventListener(state => {
-      setIsOnline(state.isConnected ?? false);
+**Step 3: Configure Basic Settings**
+1. Navigate to **App settings** → **Basic**
+2. **COPY AND SAVE:**
+   - **App ID**
+   - **App Secret** (click "Show")
+3. ⚠️ **REQUIRED URLs** (create placeholder pages first):
+   - **Privacy Policy URL:** `https://foodbudget.com/privacy`
+   - **Terms of Service URL:** `https://foodbudget.com/terms`
+   - **User Data Deletion URL:** `https://foodbudget.com/delete-data`
+4. **Category:** "Business and pages"
+5. **Save changes**
+
+**⚠️ ACTION REQUIRED BEFORE SPRINT 4:**
+- Create simple placeholder HTML pages for privacy policy, terms, and data deletion
+- Can be updated later with final legal documents
+- **Blocker:** Facebook won't save configuration without these URLs
+
+**Step 4: Add Website Platform**
+1. **Add platform** → **Website** → **Next**
+2. **Site URL:** `https://foodbudget.ciamlogin.com`
+3. **Save changes**
+
+**Note:** Using "Website" platform because OAuth happens in browser (even though FoodBudget is mobile)
+
+**Step 5: Configure OAuth Redirect URIs**
+1. Navigate to **Use cases** → **Customize** → **Go to settings** (Facebook Login)
+2. **Add these 6 Redirect URIs** (replace `<tenant-ID>`):
+
+```
+https://login.microsoftonline.com/te/<tenant-ID>/oauth2/authresp
+https://login.microsoftonline.com/te/foodbudget.onmicrosoft.com/oauth2/authresp
+https://foodbudget.ciamlogin.com/<tenant-ID>/federation/oidc/www.facebook.com
+https://foodbudget.ciamlogin.com/foodbudget.onmicrosoft.com/federation/oidc/www.facebook.com
+https://foodbudget.ciamlogin.com/<tenant-ID>/federation/oauth2
+https://foodbudget.ciamlogin.com/foodbudget.onmicrosoft.com/federation/oauth2
+```
+
+3. **Save changes**
+
+**Step 6: Add Email Permissions**
+1. **Use cases** → **Customize** → **Add** (under Permissions) → **Go back**
+
+**Step 7: Go Live**
+1. Select **Go live** from menu
+2. Complete data handling questions
+3. ⏸️ **Business verification may be required** (see Story 6.6)
+4. Switch to **Live** mode
+
+**Part 2: Microsoft Entra Configuration**
+
+**Step 1: Add Facebook as Identity Provider**
+1. Sign in to [Microsoft Entra admin center](https://entra.microsoft.com)
+2. Navigate to **Entra ID** → **External Identities** → **All identity providers**
+3. **Built-in** tab → **Configure** (next to Facebook)
+4. Enter:
+   - **Name:** "Facebook"
+   - **Client ID:** Paste App ID
+   - **Client secret:** Paste App Secret
+5. **Save**
+
+**Step 2: Verify**
+1. **All identity providers** → Verify "Facebook" appears
+
+**Test Facebook Sign-In (After User Flow Created):**
+1. Use "Run user flow" feature
+2. Verify Facebook appears as sign-in option
+3. Test sign-up with Facebook (new user)
+4. Test sign-in with Facebook (existing user)
+5. Verify user created in Entra ID
+
+**Estimated Effort:** 1-2 hours
+
+---
+
+**4C. Configure Apple Sign In**
+
+**⚠️ CRITICAL:** Apple App Store **requires** Apple Sign In if offering other social logins (mandatory, not optional)
+
+**Prerequisites:**
+- Purchase Apple Developer Program membership ($99/year)
+
+**Part 1: Apple Developer Portal Setup**
+
+**Step 1: Create App ID**
+1. Sign into [Apple Developer Portal](https://developer.apple.com/)
+2. **Certificates, IDs, & Profiles** → **(+)**
+3. Choose **App IDs** → **Continue** → **App** → **Continue**
+4. Register:
+   - **Description:** "FoodBudget Mobile App"
+   - **Bundle ID:** `com.foodbudget.mobile`
+   - ✅ Select **Sign in with Apple**
+   - **⚠️ NOTE YOUR TEAM ID** (App ID Prefix) - needed later
+   - **Continue** → **Register**
+
+**Step 2: Create Service ID**
+1. **Certificates, IDs, & Profiles** → **(+)**
+2. Choose **Services IDs** → **Continue**
+3. Register:
+   - **Description:** "FoodBudget Sign In"
+   - **Identifier:** `com.foodbudget.signin` (this becomes Client ID)
+   - **Continue** → **Register**
+
+**Step 3: Configure Sign in with Apple**
+1. Select Service ID → **Sign In with Apple** → **Configure**
+2. Select Primary App ID (`com.foodbudget.mobile`)
+3. **Domains and Subdomains** (replace `<tenant-id>`):
+   - `foodbudget.ciamlogin.com`
+   - `<tenant-id>.ciamlogin.com`
+4. **Return URLs** (replace `<tenant-id>`):
+
+```
+https://<tenant-id>.ciamlogin.com/<tenant-id>/federation/oauth2
+https://<tenant-id>.ciamlogin.com/foodbudget/federation/oauth2
+https://foodbudget.ciamlogin.com/<tenant-id>/federation/oauth2
+```
+
+**⚠️ VERIFICATION:** Confirm ALL characters are lowercase (Apple requirement)
+
+5. **Next** → **Done** → **Continue** → **Save**
+
+**Step 4: Create Private Key**
+1. **Keys** → **(+)**
+2. Register:
+   - **Key Name:** "FoodBudget Sign In Key"
+   - ✅ **Sign in with Apple** → **Configure**
+   - Choose `com.foodbudget.mobile` → **Save**
+   - **Continue** → **Register**
+3. **⚠️ NOTE KEY ID** (save securely)
+4. **⚠️ DOWNLOAD .p8 FILE** (CAN ONLY DOWNLOAD ONCE!)
+   - **Save to secure password manager immediately**
+   - Name: "Apple Sign In Private Key - FoodBudget.p8"
+   - Note: Key ID, creation date, renewal date (+6 months)
+5. **Done**
+
+**⚠️ MAINTENANCE:** Add calendar reminder NOW for 6-month key renewal
+
+**Part 2: Microsoft Entra Configuration**
+
+**Step 1: Add Apple as Identity Provider**
+1. Sign in to [Microsoft Entra admin center](https://entra.microsoft.com)
+2. **Entra ID** → **External Identities** → **All identity providers**
+3. **Built-in** tab → **Apple**
+4. Enter:
+   - **Client ID:** `com.foodbudget.signin`
+   - **Apple developer team ID:** Team ID (from Step 1)
+   - **Key ID:** From Step 4
+   - **Client secret (.p8) key:** Paste ENTIRE contents of .p8 file
+5. **Save**
+
+**Step 2: Verify**
+1. **All identity providers** → Verify "Apple" appears
+
+**Test Apple Sign-In (After User Flow Created):**
+1. Use "Run user flow" feature
+2. Verify Apple appears as sign-in option
+3. Test sign-up with Apple (new user)
+4. Test sign-in with Apple (existing user)
+5. Verify user created in Entra ID
+
+**Cost:** $99/year Apple Developer Program
+**Estimated Effort:** 2-3 hours
+
+---
+
+**Outcome:** Google, Facebook, and Apple configured and ready for user flow selection
+
+**Estimated Effort:** 4-7 hours total (Google: 1-2 hours, Facebook: 1-2 hours, Apple: 2-3 hours)
+
+**3. Configure user flow (sign-up/sign-in)** (DO THIS SECOND)
+
+**Prerequisites:**
+- Tenant created (Phase 1, Task 1)
+- App registrations created (Phase 1, Task 2)
+- Social providers configured (Task 4 above)
+
+**Steps:**
+
+1. Navigate to Microsoft Entra admin center → **Entra ID** → **External Identities** → **User flows** → **New user flow**
+
+2. Enter user flow name:
+   - **Name:** `SignUpSignIn`
+
+3. Configure identity providers:
+   - Under **Identity providers** section:
+     - ✅ Check **Email Accounts**
+     - Select **Email with password** (not Email OTP)
+     - ✅ Check **Google** (configured in Task 4)
+     - ✅ Check **Facebook** (configured in Task 4)
+     - ✅ Check **Apple** (configured in Task 4)
+
+4. Configure user attributes:
+   - Under **User attributes** section:
+     - ✅ Check **Email Address**
+     - ✅ Check **Display Name**
+     - ❌ DO NOT check Given Name, Surname, Job Title, Postal Code
+   - Click **OK** to confirm
+
+5. Review and create:
+   - Click **Create** button
+   - Wait for confirmation
+
+6. Associate application (do immediately for testing purposes):
+   - Navigate to **Entra ID** → **External Identities** → **User flows**
+   - Select `SignUpSignIn` user flow
+   - In left sidebar (under "Use" section), click **Applications**
+   - Click **Add application** button
+   - Select **FoodBudget Mobile App** from list (or use search)
+   - Click **Select** to confirm
+   - Verify app appears in Applications list
+   - **Result:** Sign-up and sign-in experience is immediately activated
+
+**Critical:** Only add mobile app to user flow
+- ✅ Add: **FoodBudget Mobile App** (users sign in through this)
+- ❌ Do NOT add: **FoodBudget API** (APIs validate tokens, don't authenticate users)
+
+**Important Constraints:**
+- ⚠️ One application can have only ONE user flow (but one flow can serve multiple apps)
+- ✅ This is why we use a single "SignUpSignIn" flow for all authentication needs
+- ⚠️ Do NOT delete auto-created `b2c-extensions-app` (stores custom user attributes)
+
+**Configuration Decisions:**
+- ✅ User flow name: `SignUpSignIn`
+- ✅ Authentication: Email + Password (FREE)
+- ✅ User attributes: Email + Display Name only
+- ✅ Social providers: Google, Facebook, Apple
+- ✅ Terms/privacy checkbox: NO for MVP (deferred - no legal docs yet)
+- ✅ Given name/surname: NO (using Display Name only for simplicity)
+
+**Deferred:**
+- Terms/privacy policy acceptance checkbox (no legal documents created yet)
+- Can be added later when legal documents ready
+
+**Testing User Flow (After Social Providers Configured):**
+
+**Prerequisites:**
+- User flow created and app associated ✅
+- Social providers configured (Task 4) ⏸️
+- Redirect URI configured (pending React Native/Expo research) ⏸️
+- Wait for short delay after app association before testing
+
+**Test Using "Run User Flow" Feature:**
+
+1. Navigate to **Entra ID** → **External Identities** → **User flows** → Select `SignUpSignIn`
+2. Click **"Run user flow"** button
+3. Configure test parameters:
+   - **Application:** Select **FoodBudget Mobile App**
+   - **Reply URL:** Verify redirect URI
+   - **Response Type:** Select appropriate token type
+   - **PKCE:** Enable "Specify code challenge" (for React Native apps)
+4. Click **"Run user flow"** to execute test
+5. Sign-in page opens for testing
+
+**Test ALL Authentication Methods:**
+1. ✅ **Email + Password Sign-Up:** Register new user with email/password
+2. ✅ **Email + Password Sign-In:** Authenticate existing user
+3. ✅ **Google Sign-Up:** Register new user via Google
+4. ✅ **Google Sign-In:** Authenticate existing user via Google
+5. ✅ **Facebook Sign-Up:** Register new user via Facebook
+6. ✅ **Facebook Sign-In:** Authenticate existing user via Facebook
+7. ✅ **Apple Sign-Up:** Register new user via Apple
+8. ✅ **Apple Sign-In:** Authenticate existing user via Apple
+
+**Verify:**
+- ✅ All authentication methods work correctly
+- ✅ User attributes collected (email, display name)
+- ✅ Redirect after authentication completes
+- ✅ UI displays properly
+
+**Outcome:** Users can sign up/sign in using email or social providers
+
+**Estimated Effort:** 6-10 hours
+
+---
+
+**5. Enable self-service password reset (SSPR)**
+
+**Prerequisites:**
+- User flow created with "Email with password" enabled ✅ (Task 3)
+
+**Overview:**
+Enable users to independently reset forgotten passwords without administrator assistance.
+
+**Steps:**
+
+**Step 1: Enable Email OTP Authentication Method**
+1. Navigate to Microsoft Entra admin center → **Entra ID** → **Authentication methods**
+2. Select **Email OTP** under Policies → Method
+3. Enable the feature
+4. Select **"All users"** for inclusion
+5. Click **Save**
+
+**Important Notes:**
+- ✅ **Email OTP is FREE** (email-based, not SMS-based)
+- Email OTP is ONLY used for password reset flow
+- Does NOT change primary authentication method (still Email + Password)
+- Different from SMS OTP (which costs money)
+
+**Step 2: Test Password Reset (After Redirect URI Configured)**
+
+**Prerequisites:**
+- Email OTP enabled ✅ (Step 1 above)
+- Redirect URI configured (pending React Native/Expo research) ⏸️
+
+**Test Procedure:**
+1. Launch application and navigate to sign-in
+2. Click **"Forgot password?"** link (if visible)
+3. Enter test user email address
+4. Check email for one-time passcode
+5. Enter OTP code
+6. Enter and confirm new password
+7. Verify successful password reset
+8. Sign in with new password
+
+**Test Scenarios:**
+- ✅ Forgotten password recovery
+- ✅ Email OTP delivery and validation
+- ✅ New password requirements enforcement
+- ✅ Successful sign-in after reset
+
+**Configuration Decisions:**
+- ✅ Enable SSPR for MVP (reduces support burden, improves UX)
+- ✅ Enable Email OTP authentication method (FREE)
+- ✅ Show "Forgot password?" link in branding (Phase 5, Task 8)
+
+**Outcome:** Users can independently reset forgotten passwords
+
+**Estimated Effort:** 30-40 minutes
+
+---
+
+### Phase 3: Backend Integration
+**Goal:** Secure the backend API
+
+**Tasks:**
+6. Protect backend API using Azure App Service Authentication
+   - Configure App Service Authentication with External ID
+   - Set authority URL: `https://foodbudget.ciamlogin.com/`
+   - Configure token validation
+   - **Pending:** App Service auth + ASP.NET Core integration details
+   - **Pending:** `[Authorize]` attribute usage pattern
+   - **Pending:** User claims access in controllers
+   - **Pending:** Public vs protected endpoint configuration
+
+**Outcome:** Backend API rejects unauthenticated requests, validates tokens
+
+**Estimated Effort:** TBD (pending research completion)
+
+---
+
+**6B. Implement backend rate limiting for sign-up endpoints**
+
+**Goal:** Protect against bot-driven mass account creation and control costs
+
+**Why This Matters:**
+- Prevents bot-driven fake account registrations
+- Controls Entra External ID costs (MAU-based pricing)
+- Protects database from bloat
+- Complements email verification for defense-in-depth
+
+**Scope:**
+- Rate limit sign-up/registration endpoints
+- Rate limit by IP address (prevent single-source attacks)
+- Configure sensible limits for MVP (e.g., 10 sign-ups per IP per hour)
+- Return 429 Too Many Requests for rate-limited requests
+
+**Implementation:**
+
+**Option A: ASP.NET Core Built-In Rate Limiting (.NET 7+)**
+
+```csharp
+// Program.cs
+using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Add rate limiting
+builder.Services.AddRateLimiter(options =>
+{
+    // Fixed window rate limiter for sign-up
+    options.AddFixedWindowLimiter("signup", rateLimitOptions =>
+    {
+        rateLimitOptions.PermitLimit = 10; // 10 requests
+        rateLimitOptions.Window = TimeSpan.FromHours(1); // per hour
+        rateLimitOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        rateLimitOptions.QueueLimit = 0; // No queuing
     });
 
-    return () => unsubscribe();
-  }, []);
-
-  return { isOnline };
-};
-
-// hooks/useRecipeMutations.ts (enhanced)
-export const useCreateRecipe = () => {
-  const queryClient = useQueryClient();
-  const { isOnline } = useNetworkStatus();
-
-  return useMutation({
-    mutationFn: RecipeService.createRecipe,
-    onMutate: async (newRecipe) => {
-      if (!isOnline) {
-        // Show queued indicator instead of error
-        console.log('Queued for sync when online');
-      }
-
-      // Proceed with optimistic update
-      // TanStack Query will automatically retry when online
-    },
-    retry: 3, // Retry failed mutations
-    retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
-  });
-};
-```
-
-**Acceptance Criteria:**
-- [ ] App detects offline status accurately
-- [ ] Offline indicator shown when no connection
-- [ ] Mutations queued while offline
-- [ ] Queued mutations sync automatically when online
-- [ ] User sees clear feedback about queued operations
-- [ ] Auth tokens handled correctly during offline periods
-- [ ] Tests verify offline behavior
-
-**Notes:**
-- This story builds on the optimistic updates from Sprint 3 Stories 12a-c
-- Network detection is lightweight and doesn't impact performance
-- TanStack Query handles retry logic automatically
-- Consider adding exponential backoff for failed syncs
-
----
-
-# Story 1: Database Schema - User Management Foundation
-
-**Priority:** HIGH  
-**Type:** Database & Backend Infrastructure  
-**Dependencies:** None  
-**Estimated Effort:** Medium
-
-## User Story
-> As a developer, I need a user management database schema so that recipes can be associated with specific users and properly isolated.
-
-## Acceptance Criteria
-- ✅ User table created with proper schema (id, email, password_hash, name, created_at)
-- ✅ Recipe table updated with user_id foreign key
-- ✅ Database indexes created for performance (user.email, recipe.user_id)
-- ✅ Migration script handles existing data (assigns to system user)
-- ✅ All existing recipes associated with default system user
-- ✅ Database constraints ensure referential integrity
-
-## Technical Notes
-**User Table Fields:**
-- id (GUID primary key)
-- email (unique, indexed)
-- password_hash (BCrypt hashed)
-- name (optional)
-- created_at (timestamp)
-
-**Recipe Table Changes:**
-- Add user_id foreign key to users table
-- Index on (user_id, created_at) for efficient queries
-
-**Data Migration Strategy:**
-- Create system user for existing recipes
-- Assign all orphaned recipes to system user
-- Prevent data loss during migration
-
-## Files to Create
-- Backend: `Entities/User.cs`
-- Backend: `Migrations/xxxx_CreateUserTable.cs`
-- Backend: `Migrations/xxxx_AddUserIdToRecipes.cs`
-
-## Files to Modify
-- Backend: `Entities/Recipe.cs` (add User navigation property)
-- Backend: `Data/ApplicationDbContext.cs` (add User DbSet)
-
----
-
-# Story 2: Backend API - User Management Endpoints
-
-**Priority:** HIGH  
-**Type:** Backend API Development  
-**Dependencies:** Story 1  
-**Estimated Effort:** Medium
-
-## User Story
-> As a user, I want to register for an account and log in so that I can access my personal recipe collection.
-
-## Acceptance Criteria
-- ✅ POST /api/auth/register endpoint (email, password, name)
-- ✅ POST /api/auth/login endpoint (email, password)
-- ✅ GET /api/users/profile endpoint (authenticated)
-- ✅ PUT /api/users/profile endpoint (update name)
-- ✅ Input validation for all endpoints (email format, password strength)
-- ✅ Password hashing with BCrypt
-- ✅ Proper error handling and HTTP status codes
-- ✅ API documentation updated (Swagger)
-- ✅ Unit tests for all endpoints
-
-## Technical Notes
-**Password Requirements:**
-- Minimum 8 characters
-- At least one uppercase letter
-- At least one lowercase letter
-- At least one number
-- At least one special character
-
-**Error Responses:**
-- 400: Validation errors (weak password, invalid email)
-- 401: Invalid credentials
-- 409: Email already exists
-- 500: Server errors
-
-**DTOs:**
-- RegisterRequestDto, LoginRequestDto
-- AuthResponseDto (includes user info)
-- UserDto (profile information)
-
-## Files to Create
-- Backend: `Controllers/AuthController.cs`
-- Backend: `Controllers/UsersController.cs`
-- Backend: `Services/IUserService.cs`
-- Backend: `Services/UserService.cs`
-- Backend: `Models/DTOs/Requests/RegisterRequestDto.cs`
-- Backend: `Models/DTOs/Requests/LoginRequestDto.cs`
-- Backend: `Models/DTOs/Responses/AuthResponseDto.cs`
-- Backend: `Models/DTOs/Responses/UserDto.cs`
-
----
-
-# Story 3: JWT Authentication & Security
-
-**Priority:** HIGH  
-**Type:** Security & Authentication  
-**Dependencies:** Story 2  
-**Estimated Effort:** Large
-
-## User Story
-> As a system administrator, I need secure JWT token authentication so that user sessions are protected and API access is properly controlled.
-
-## Acceptance Criteria
-
-### JWT & Token Management
-- ✅ JWT middleware implemented for authentication
-- ✅ Access tokens (15 minute expiry)
-- ✅ Refresh tokens (7 day expiry)
-- ✅ Token refresh endpoint (POST /api/auth/refresh)
-- ✅ **RefreshToken database table** with IsActive tracking
-- ✅ **Token revocation on logout** (mark refresh token as revoked)
-- ✅ **All refresh tokens revoked on password change** (security best practice)
-- ✅ All recipe endpoints protected with [Authorize] attribute
-
-### Security & Protection
-- ✅ **Security headers middleware** (X-Content-Type-Options, X-Frame-Options, X-XSS-Protection, Referrer-Policy, HSTS)
-- ✅ Rate limiting on auth endpoints (max 5 login attempts per IP per minute)
-- ✅ Account lockout after 5 failed login attempts (15 minute lockout)
-- ✅ Security audit logging (login attempts, password changes, token revocations)
-- ✅ Integration tests for JWT authentication flow
-
-## Technical Notes
-**JWT Configuration:**
-- Secret key from Azure Key Vault (production)
-- Proper issuer and audience claims
-- User ID and email in token claims
-
-**Security Enhancements:**
-- Rate limiting per IP address
-- Account lockout mechanism (5 failed attempts = 15min lockout)
-- Audit logging for security events
-- HTTPS enforcement in production
-
-**Token Service:**
-- Generate access and refresh tokens
-- Validate token signatures
-- Handle token expiration
-- **Save refresh tokens to database with expiry**
-- **Revoke tokens on logout (mark as revoked, not deleted)**
-- **Revoke all user tokens on password change**
-
-**RefreshToken Entity (NEW):**
-```csharp
-public class RefreshToken
-{
-    public Guid Id { get; set; }
-    public Guid UserId { get; set; }
-    public string Token { get; set; } = null!;  // Store hashed token
-    public DateTime ExpiresAt { get; set; }
-    public DateTime CreatedAt { get; set; }
-    public DateTime? RevokedAt { get; set; }
-    public string? RevokedByIp { get; set; }
-    public bool IsRevoked => RevokedAt != null;
-    public bool IsExpired => DateTime.UtcNow >= ExpiresAt;
-    public bool IsActive => !IsRevoked && !IsExpired;
-
-    // Navigation
-    public User User { get; set; } = null!;
-}
-```
-
-**Security Headers Middleware (NEW):**
-```csharp
-// Middleware/SecurityHeadersMiddleware.cs
-public class SecurityHeadersMiddleware
-{
-    public async Task InvokeAsync(HttpContext context)
+    // Configure rejection response
+    options.OnRejected = async (context, cancellationToken) =>
     {
-        context.Response.Headers.Add("X-Content-Type-Options", "nosniff");
-        context.Response.Headers.Add("X-Frame-Options", "DENY");
-        context.Response.Headers.Add("X-XSS-Protection", "1; mode=block");
-        context.Response.Headers.Add("Referrer-Policy", "strict-origin-when-cross-origin");
-        context.Response.Headers.Add("Permissions-Policy", "geolocation=(), microphone=(), camera=()");
-
-        if (!env.IsDevelopment())
+        context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+        await context.HttpContext.Response.WriteAsJsonAsync(new
         {
-            context.Response.Headers.Add("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
-        }
-
-        await next(context);
-    }
-}
-```
-
-**Why These Enhancements are Critical for 2025:**
-- **Token Revocation Table:** Cannot implement logout properly without tracking issued tokens. Required for OAuth 2.0 best practices and security audits.
-- **Security Headers:** OWASP Top 10 defense against XSS, clickjacking, MIME sniffing. Security scanners flag missing headers as vulnerabilities.
-
-## Files to Create
-- Backend: `Services/ITokenService.cs`
-- Backend: `Services/TokenService.cs`
-- Backend: `Middleware/JwtMiddleware.cs`
-- Backend: `Models/JwtSettings.cs`
-- **Backend: `Entities/RefreshToken.cs` - NEW for token tracking**
-- **Backend: `Repositories/IRefreshTokenRepository.cs` - NEW**
-- **Backend: `Repositories/RefreshTokenRepository.cs` - NEW**
-- **Backend: `Middleware/SecurityHeadersMiddleware.cs` - NEW**
-- **Backend: `Migrations/xxxx_CreateRefreshTokensTable.cs` - NEW**
-
-## Files to Modify
-- Backend: `Controllers/RecipesController.cs` (add [Authorize])
-- Backend: `Services/RecipeService.cs` (filter by authenticated user)
-- Backend: `Program.cs` (register auth services)
-- Backend: `appsettings.json` (JWT configuration)
-- **Backend: `Data/FoodBudgetDbContext.cs` (add DbSet<RefreshToken>)**
-- **Backend: `Middleware/MiddlewareExtensions.cs` (add security headers extension)**
-- **Backend: `Utility/Setup/ApplicationConfiguration.cs` (add security headers to pipeline before exception handler)**
-
----
-
-# Story 4: Frontend Authentication Integration
-
-**Priority:** HIGH  
-**Type:** Frontend Authentication  
-**Dependencies:** Story 3  
-**Estimated Effort:** Large
-
-## User Story
-> As a user, I want to log in with my credentials so that I can access my personal recipe collection.
-
-## Acceptance Criteria
-
-### Authentication Screens & UI
-- ✅ LoginScreen with email/password form
-- ✅ RegisterScreen with validation
-- ✅ AuthContext for app-wide authentication state
-- ✅ AuthService for API integration (login, register, logout)
-- ✅ Loading states during authentication
-- ✅ Error handling with user-friendly messages
-
-### Token Management (ENHANCED)
-- ✅ Secure token storage (AsyncStorage for mobile, web storage for web)
-- ✅ **TokenService with automatic refresh before expiry** (refresh 5 minutes before expiration)
-- ✅ **Race condition protection for concurrent token refresh** (singleton promise pattern)
-- ✅ **Auth interceptor added to FetchClient** (automatic token injection)
-- ✅ **Token expiry handled globally** (401 → logout and redirect to login)
-- ✅ Navigation guards for authenticated routes
-- ✅ Logout functionality clears tokens and state
-
-### Testing
-- ✅ MSW handlers for auth endpoints
-- ✅ Integration tests for auth flows
-- ✅ **Token refresh integration tests** (expiry scenarios)
-
-## Technical Notes
-**Authentication Flow:**
-- Unauthenticated: Show AuthNavigator (Login/Register screens)
-- Authenticated: Show MainNavigator (Recipe app)
-- Loading: Show SplashScreen while checking token
-
-**Token Management (ENHANCED):**
-- Store access and refresh tokens securely
-- **Auto-refresh tokens 5 minutes before expiry** (prevents user interruptions)
-- **Singleton promise pattern prevents concurrent refresh** (race condition protection)
-- Clear tokens on logout
-- Handle 401 responses globally (auto-logout)
-
-**TokenService Implementation (NEW):**
-```typescript
-// lib/shared/services/TokenService.ts
-export class TokenService {
-  private static refreshPromise: Promise<string> | null = null;
-
-  static async getAccessToken(): Promise<string | null> {
-    const token = await AsyncStorage.getItem('access_token');
-    const expiresAt = await AsyncStorage.getItem('token_expires_at');
-
-    if (!token || !expiresAt) return null;
-
-    // Refresh if expiring in next 5 minutes
-    if (Date.now() >= (parseInt(expiresAt) - 5 * 60 * 1000)) {
-      return await this.refreshAccessToken();
-    }
-
-    return token;
-  }
-
-  private static async refreshAccessToken(): Promise<string> {
-    // Prevent concurrent refresh calls (race condition protection)
-    if (this.refreshPromise) {
-      return this.refreshPromise;
-    }
-
-    this.refreshPromise = this._doRefresh();
-    const token = await this.refreshPromise;
-    this.refreshPromise = null;
-    return token;
-  }
-
-  private static async _doRefresh(): Promise<string> {
-    const refreshToken = await AsyncStorage.getItem('refresh_token');
-    // Call POST /api/auth/refresh endpoint
-    // Save new tokens and return access token
-  }
-}
-```
-
-**Auth Interceptor for FetchClient (NEW):**
-```typescript
-// lib/shared/api/auth-interceptor.ts
-export async function addAuthHeader(headers: HeadersInit): Promise<HeadersInit> {
-  const token = await TokenService.getAccessToken();
-  if (token) {
-    return {
-      ...headers,
-      'Authorization': `Bearer ${token}`
+            error = "Too many sign-up attempts. Please try again later.",
+            retryAfter = context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter)
+                ? retryAfter.ToString()
+                : "1 hour"
+        }, cancellationToken);
     };
-  }
-  return headers;
-}
+});
+
+var app = builder.Build();
+
+// Enable rate limiting middleware
+app.UseRateLimiter();
+
+app.Run();
 ```
 
-**Why These Enhancements are Critical for 2025:**
-- **Auto-Refresh:** Modern SPAs refresh tokens transparently - users expect uninterrupted sessions
-- **Race Condition Protection:** Multiple API calls happening simultaneously could trigger duplicate refresh requests without singleton pattern
-- **Auth Interceptor:** DRY principle - automatic token injection prevents repetitive code and bugs
+**Option B: AspNetCoreRateLimit Package (More Features)**
 
-**Form Validation:**
-- Zod schemas for email and password
-- Real-time validation feedback
-- Progressive disclosure of errors
+```csharp
+// Install: dotnet add package AspNetCoreRateLimit
 
-## Files to Create
-- Frontend: `screens/auth/LoginScreen.tsx`
-- Frontend: `screens/auth/RegisterScreen.tsx`
-- Frontend: `screens/auth/SplashScreen.tsx`
-- Frontend: `lib/shared/services/AuthService.ts`
-- Frontend: `contexts/AuthContext.tsx`
-- Frontend: `hooks/useAuth.ts`
-- Frontend: `navigation/AuthNavigator.tsx`
-- Frontend: `lib/shared/schemas/auth.schema.ts`
-- **Frontend: `lib/shared/services/TokenService.ts` - NEW for automatic token refresh**
-- **Frontend: `lib/shared/api/auth-interceptor.ts` - NEW for automatic auth headers**
+// Program.cs
+using AspNetCoreRateLimit;
 
-## Files to Modify
-- Frontend: `navigation/AppNavigator.tsx` (conditional routing)
-- Frontend: `lib/shared/services/RecipeService.ts` (add auth headers)
-- **Frontend: `lib/shared/api/fetch-client.ts` (integrate auth interceptor, handle 401 globally)**
-- Frontend: `mocks/handlers/auth.ts` (MSW handlers)
+builder.Services.AddMemoryCache();
+builder.Services.Configure<IpRateLimitOptions>(options =>
+{
+    options.EnableEndpointRateLimiting = true;
+    options.StackBlockedRequests = false;
+    options.HttpStatusCode = 429;
+    options.RealIpHeader = "X-Real-IP";
+    options.GeneralRules = new List<RateLimitRule>
+    {
+        new RateLimitRule
+        {
+            Endpoint = "*:/api/auth/signup*",
+            Period = "1h",
+            Limit = 10
+        }
+    };
+});
 
----
+builder.Services.AddSingleton<IIpPolicyStore, MemoryCacheIpPolicyStore>();
+builder.Services.AddSingleton<IRateLimitCounterStore, MemoryCacheRateLimitCounterStore>();
+builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
+builder.Services.AddSingleton<IProcessingStrategy, AsyncKeyLockProcessingStrategy>();
 
-# Story 5: User-Scoped Recipe Data
+var app = builder.Build();
+app.UseIpRateLimiting();
+```
 
-**Priority:** MEDIUM  
-**Type:** Data Filtering & Security  
-**Dependencies:** Story 4  
-**Estimated Effort:** Small
-
-## User Story
-> As a logged-in user, I want to see only my own recipes so that I have a private, personalized recipe collection.
-
-## Acceptance Criteria
-- ✅ Recipe list shows only current user's recipes
-- ✅ New recipes automatically assigned to authenticated user
-- ✅ Recipe updates only allowed for recipe owner
-- ✅ Recipe deletion only allowed for recipe owner
-- ✅ Search and filtering work within user's recipe scope
-- ✅ Cross-user data access is prevented (backend validation)
-- ✅ All existing recipe functionality works without breaking changes
-- ✅ No frontend recipe screen changes required
-- ✅ Integration tests verify data isolation between users
-
-## Technical Notes
-**Backend Changes:**
-- RecipeService filters all queries by authenticated user ID
-- Recipe creation assigns user_id from JWT claims
-- Recipe update/delete validates ownership
-- Return 403 Forbidden for cross-user access attempts
-
-**Frontend Changes:**
-- No changes to recipe screens needed
-- All API calls automatically scoped to authenticated user
-- MSW handlers support user-scoped mock data
+**Rate Limit Configuration:**
+- **Sign-up endpoints:** 10 per IP per hour (strict)
+- **Sign-in endpoints:** 50 per IP per hour (more lenient)
+- **Password reset:** 5 per IP per hour (prevent abuse)
+- **General API:** 1000 per IP per hour (generous)
 
 **Testing:**
-- Create two test users
-- Verify User A cannot see User B's recipes
-- Verify User A cannot edit/delete User B's recipes
+```bash
+# Test rate limiting
+for i in {1..15}; do
+  curl -X POST http://localhost:5000/api/auth/signup \
+    -H "Content-Type: application/json" \
+    -d '{"email":"test'$i'@example.com","password":"Test123!"}'
+  echo "Request $i completed"
+done
 
-## Files to Modify
-- Backend: `Services/RecipeService.cs` (add user filtering and validation)
-- Frontend: `mocks/handlers/recipes.ts` (user-scoped mock data)
+# Expected: First 10 succeed, requests 11-15 return 429
+```
 
----
+**Important Notes:**
+- Rate limiting by IP address (not user ID, since they're not authenticated yet)
+- Won't affect legitimate users (10/hour is generous for sign-ups)
+- Social login bypasses this (handled by Google/Facebook)
+- Email verification provides additional protection
+- Consider X-Forwarded-For header if behind proxy/load balancer
 
-# Story 6: Password Reset Flow
+**Acceptance Criteria:**
+- [ ] Rate limiting configured for sign-up endpoints
+- [ ] Returns 429 status code when limit exceeded
+- [ ] Clear error message indicates retry time
+- [ ] Rate limits don't affect legitimate usage patterns
+- [ ] Configuration is environment-specific (stricter in production)
+- [ ] Tests verify rate limiting behavior
 
-**Priority:** CRITICAL  
-**Type:** Authentication Enhancement  
-**Dependencies:** Stories 1, 2, 3  
-**Estimated Effort:** Large
+**Files to Create:**
+- Backend: `Middleware/RateLimitingConfiguration.cs` (if using AspNetCoreRateLimit)
 
-## User Story
-> As a user, I want to reset my password if I forget it so that I can regain access to my account without contacting support.
+**Files to Modify:**
+- Backend: `Program.cs` - Add rate limiting configuration
+- Backend: `appsettings.json` - Configure rate limit values
 
-## Acceptance Criteria
-- ✅ "Forgot Password?" link on login screen
-- ✅ POST /api/auth/forgot-password endpoint (sends reset email)
-- ✅ POST /api/auth/reset-password endpoint (resets with token)
-- ✅ GET /api/auth/verify-reset-token endpoint (validates token)
-- ✅ ForgotPasswordScreen with email input
-- ✅ ResetPasswordScreen with new password form
-- ✅ Email service integration (SendGrid or AWS SES)
-- ✅ Password reset email template
-- ✅ Password changed confirmation email
-- ✅ Tokens expire after 1 hour
-- ✅ Tokens are single-use (marked as used after reset)
-- ✅ Rate limiting (3 requests per email per hour)
-- ✅ No user enumeration (generic success messages)
-- ✅ Password strength validation enforced
-- ✅ MSW handlers for password reset flow
-- ✅ Integration tests for full reset flow
+**Protection Strategy (Defense in Depth):**
+1. ✅ **Email verification** (SSPR, Phase 2, Task 5) - Slows bots
+2. ✅ **Backend rate limiting** (This task) - Prevents mass creation
+3. ✅ **Social login** (60%+ of users) - Google/Facebook handle bots
+4. ✅ **Entra baseline security** (automatic) - DDoS, brute force protection
+5. ✅ **Monitoring** (Sprint 5) - Detect unusual patterns
 
-## Technical Notes
-**Security Requirements:**
-- Tokens stored as SHA256 hashes (not plaintext)
-- 1 hour expiry from creation
-- Single-use enforcement (mark as used)
-- Rate limiting prevents abuse
-- IP address tracking for audit
-- Generic messages prevent user enumeration
+**Cost Protection:**
+- Prevents bot-driven MAU costs (Entra charges per active user >50K)
+- Protects database from bloat (storage costs)
+- Prevents API abuse (compute costs)
 
-**Email Provider Options:**
-- SendGrid (recommended - free tier available)
-- AWS SES (Azure-friendly, cheap)
-- Mailgun (alternative)
+**Estimated Effort:** 2-4 hours
+- Configuration: 1 hour
+- Testing: 1 hour
+- Environment setup: 1-2 hours
 
-**Reset Flow:**
-1. User enters email → Token generated → Email sent
-2. User clicks link → Token validated → Reset form shown
-3. User submits new password → Token marked used → Password updated
-4. Optional: Revoke all refresh tokens (force re-login)
-
-## Files to Create
-- Backend: `Entities/PasswordResetToken.cs`
-- Backend: `Services/IPasswordResetService.cs`
-- Backend: `Services/PasswordResetService.cs`
-- Backend: `Services/IEmailService.cs`
-- Backend: `Services/SendGridEmailService.cs`
-- Backend: `Repositories/IPasswordResetTokenRepository.cs`
-- Backend: `Repositories/PasswordResetTokenRepository.cs`
-- Backend: `Migrations/xxxx_CreatePasswordResetTokensTable.cs`
-- Frontend: `screens/auth/ForgotPasswordScreen.tsx`
-- Frontend: `screens/auth/ResetPasswordScreen.tsx`
-- Frontend: `lib/shared/services/PasswordResetService.ts`
-- Frontend: `lib/shared/schemas/passwordReset.schema.ts`
-- Frontend: `components/auth/PasswordStrengthIndicator.tsx`
-
-## Files to Modify
-- Backend: `Controllers/AuthController.cs` (add reset endpoints)
-- Backend: `appsettings.json` (email service config)
-- Frontend: `screens/auth/LoginScreen.tsx` (add forgot password link)
-- Frontend: `types/navigation.ts` (add reset password routes)
-- Frontend: `navigation/AuthNavigator.tsx` (add new screens)
+**Outcome:** Sign-up endpoints protected from bot-driven mass registrations
 
 ---
 
-# Story 7: Email Verification Flow (Optional)
+### Phase 4: Mobile Authentication
+**Goal:** Enable mobile app to authenticate users and call protected API
 
-**Priority:** MEDIUM  
-**Type:** User Management Enhancement  
-**Dependencies:** Story 6  
-**Estimated Effort:** Medium
+**Tasks:**
+7. Integrate authentication in mobile app
+   - Add MSAL React Native package
+   - Configure authentication (authority, client ID, scopes)
+   - Implement sign-in UI
+   - Implement sign-up flow
+   - Implement sign-out
+   - Acquire access tokens
+   - **Pending:** MSAL React Native package name and configuration
+   - **Pending:** Redirect URI format for React Native/Expo
+   - **Pending:** Token acquisition code examples
 
-## User Story
-> As a user, I want to verify my email address so that my account is secure and I can receive important notifications.
+8. Connect mobile app to protected API
+   - Configure API scopes in mobile app
+   - Implement authenticated API client
+   - Add authentication tokens to API requests
+   - Handle token refresh
+   - Handle authentication errors (401, expired tokens)
+   - **Pending:** Token injection pattern with MSAL
+   - **Pending:** API client configuration
 
-## Acceptance Criteria
-- ✅ Verification email sent on registration
-- ✅ GET /api/auth/verify-email/:token endpoint
-- ✅ POST /api/auth/resend-verification endpoint
-- ✅ EmailVerificationPromptScreen after registration
-- ✅ EmailVerificationBanner for unverified users
-- ✅ Verification status shown in profile
-- ✅ Tokens expire after 7 days
-- ✅ Resend rate limiting (3 per hour)
-- ✅ Email verification template
-- ✅ Integration tests for verification flow
+**Outcome:** Mobile app can authenticate users and successfully call protected backend API
 
-## Technical Notes
-**Verification Strategy (Choose One):**
-- **Soft:** User can access app, banner prompts verification
-- **Hard:** Must verify before creating recipes
-- **Strict:** Must verify before any login
-
-**Recommendation:** Start with Soft approach, upgrade if abuse occurs
-
-**Database Options:**
-- Inline on User table (simple)
-- Separate verification_tokens table (scalable, recommended)
-
-**Integration with Password Reset:**
-- Option: Only send reset emails to verified addresses
-- Or: Allow reset for unverified users (less secure)
-
-## Implementation Decision
-**Status:** DEFERRED to Sprint 4 or Sprint 5 depending on:
-- Story 6 (Password Reset) completion timeline
-- Email service reliability after Story 6
-- Sprint 4 bandwidth after completing Stories 1-6
-
-**Include in Sprint 4 if:**
-- Story 6 completes smoothly
-- Email infrastructure is working well
-- Time permits (~1 week additional)
-
-**Defer to Sprint 5 if:**
-- Sprint 4 is already at capacity
-- Want to stabilize password reset first
-- User verification not critical for initial launch
+**Estimated Effort:** TBD (pending research completion)
 
 ---
 
-# Sprint 4 Success Metrics
+### Phase 5: Polish & Verification
+**Goal:** Brand the authentication experience and verify security
 
-## Authentication Metrics
-- ✅ Users can register and login successfully
-- ✅ JWT tokens are generated and validated properly
-- ✅ User sessions persist across app restarts
-- ✅ Logout clears all authentication state
+**Tasks:**
+9. Apply custom branding
 
-## Data Isolation Metrics
-- ✅ Users see only their own recipes
-- ✅ Cross-user data access is prevented
-- ✅ New recipes are automatically user-scoped
-- ✅ All existing functionality works without breaking changes
+**Prerequisites:**
+- ⚠️ **Temporary branding assets** (no official branding exists yet)
+- Privacy Policy and Terms of Service URLs (placeholder pages from Story 6.7)
 
-## Security Metrics
-- ✅ Passwords are hashed securely (BCrypt)
-- ✅ Account lockout prevents brute force attacks
-- ✅ Rate limiting protects auth endpoints
-- ✅ Security audit logging captures important events
+**Note:** Using temporary branding for Sprint 4 - can be updated with official branding post-MVP
 
-## User Experience Metrics
-- ✅ Login flow is intuitive and fast (<3 seconds)
-- ✅ Error messages are helpful and clear
-- ✅ Loading states provide good user feedback
-- ✅ Password reset flow works end-to-end (<2 minutes)
+**Customization Process:**
 
-## Technical Metrics
-- ✅ All unit tests passing (>90% coverage)
-- ✅ All integration tests passing
-- ✅ No security vulnerabilities in auth flow
-- ✅ Performance remains acceptable with user-scoped queries
+**Step 1: Access Company Branding**
+1. Sign in to [Microsoft Entra admin center](https://entra.microsoft.com)
+2. Switch to external tenant
+3. Search for **Company Branding** or navigate via **Entra ID** → **Company Branding**
+4. Select **Default sign-in** tab → **Edit**
+
+**Step 2: Configure Basics Tab**
+- **Favicon:** Upload browser tab icon (PNG preferred, check size requirements)
+- **Background image:** Upload or select solid color (temporary background)
+- **Fallback color:** Set color if image fails to load
+
+**Step 3: Configure Layout Tab**
+- **Template:** Select full-screen or partial-screen layout
+- **Header/Footer:** Toggle visibility as needed
+- **Preview:** Review layout appearance
+
+**Step 4: Configure Header Tab**
+- **Company logo:** Upload temporary FoodBudget logo (banner logo)
+- **Logo specifications:** Review file size requirements (PNG preferred)
+
+**Step 5: Configure Footer Tab**
+- **Privacy & Cookies:** Add link to Privacy Policy page
+  - URL: From Story 6.7 placeholder page
+  - Link text: "Privacy Policy"
+- **Terms of Use:** Add link to Terms of Service page
+  - URL: From Story 6.7 placeholder page
+  - Link text: "Terms of Service"
+
+**Step 6: Configure Sign-in Form Tab**
+- **Square logo (light theme):** Optional - upload if available
+- **Square logo (dark theme):** Optional - upload if available
+- **Banner logo:** Already configured in Header
+- **Username hint text:** Leave default or customize (e.g., "Email address")
+- **Sign-in page text:** Add custom message if desired (max 1,024 characters, supports Markdown)
+- ✅ **Show self-service password reset:** Check this box (enables SSPR link from Phase 2, Task 5)
+
+**Step 7: Configure Text Tab**
+- Customize user attribute labels if needed
+- Add any additional messaging
+- Supports Markdown (hyperlinks, bold, italics, underline)
+
+**Step 8: Review and Save**
+- Review all tabs
+- Verify all assets uploaded correctly
+- **Save** configuration
+
+**Testing Branded Experience:**
+
+1. Use "Run user flow" feature to preview
+2. Test sign-in page appearance
+3. Verify logo displays correctly
+4. Check background/colors render properly
+5. Test footer links (Privacy Policy, Terms of Service)
+6. Verify "Forgot password?" link appears (SSPR)
+7. Test across devices:
+   - Desktop browser
+   - Mobile browser (iOS Safari, Android Chrome)
+   - Different screen sizes
+8. Test fallback behavior (if custom branding fails, should show neutral branding)
+
+**Brand Assets Needed (Temporary):**
+- Favicon (.png, check size requirements)
+- Banner logo (.png preferred, check size requirements)
+- Background image or solid color
+- Square logos (optional, light and dark themes)
+- Brand colors (hex codes)
+
+**Important Notes:**
+- PNG preferred for all images, JPG acceptable
+- Review file size requirements for each image
+- Custom branding has automatic fallback to neutral branding
+- Company Branding and User Flows modify same JSON file - most recent change wins
+- No custom CSS for MVP (use default layouts)
+- English-only for MVP (multi-language deferred to backlog - Story 6.9)
+
+**Outcome:** Temporarily branded sign-in/sign-up experience with SSPR link and legal page links
+
+10. Verify security configuration
+   - Confirm baseline security protections active (automatic)
+   - Document MFA decision (NO for MVP - deferred to Story 6.10)
+   - Test brute force protection
+   - Document authentication methods configured
+   - Verify all authentication flows work
+
+**Outcome:** Branded authentication experience, security verified and documented
+
+**Estimated Effort:** 5-10 hours
 
 ---
 
-# Definition of Done (Sprint 4)
+## Success Criteria
 
-## For Each Story
-- ✅ Code implemented and working
-- ✅ API integration tested (where applicable)
-- ✅ Error handling implemented
-- ✅ Loading states shown to user
-- ✅ Works on web platform (mobile optional)
-- ✅ Unit tests passing
-- ✅ Integration tests passing (for API-connected features)
-- ✅ No console errors or warnings
-- ✅ Code reviewed and merged to main branch
-- ✅ Deployed to staging and tested
+### Functional Requirements
+- ✅ Users can sign up using email + password
+- ✅ Users can sign up using Google, Facebook, or Apple
+- ✅ Users can sign in using any enabled authentication method
+- ✅ Users can sign out
+- ✅ Mobile app acquires and uses access tokens
+- ✅ Backend API rejects unauthenticated requests
+- ✅ Backend API accepts valid authenticated requests
+- ✅ Token refresh works automatically
+- ✅ Authentication errors are handled gracefully
 
-## For Sprint 4 Overall
-- ✅ All Stories 1-6 complete (Story 7 optional)
-- ✅ Users can register, login, and manage recipes
-- ✅ Password reset functionality working
-- ✅ Data isolation verified between users
-- ✅ Security audit completed
-- ✅ User acceptance testing completed
-- ✅ Deployed to production
-- ✅ Documentation updated
+### Non-Functional Requirements
+- ✅ Baseline security protections active (automatic)
+- ✅ Branded sign-in/sign-up experience
+- ✅ OAuth 2.0 compliant (browser-based authentication with PKCE)
+- ✅ All tests passing (TDD approach - tests embedded in each task)
 
 ---
 
-# Deployment Checklist
+## Technical Decisions Made
 
-## Before Deployment
+**Detailed rationale in:** [Research Guide - Executive Summary](./entra-external-id-setup-guide.md#1-executive-summary-)
 
-### Database & Infrastructure
-- [ ] Database migrations tested on staging
-- [ ] **Backup strategy configured and tested:**
-  - [ ] Azure SQL automated backups enabled (7-35 day retention)
-  - [ ] Point-in-time restore window configured (default: 7 days)
-  - [ ] Long-term retention (LTR) for weekly/monthly backups (optional)
-  - [ ] Backup restore procedure tested in staging environment
-  - [ ] Backup retention policy documented in deployment guide
-  - [ ] Backup monitoring alerts configured
-- [ ] Environment variables set in Azure
+### Authentication Approach
+- ✅ **Tenant Type:** External tenant (consumer-facing)
+- ✅ **Authentication Methods:** Email+Password + Google + Facebook + Apple
+- ✅ **Auth Flow:** Standard MSAL (browser-based with in-app tabs)
+- ❌ **NOT using:** Native authentication (React Native not supported)
 
-### Security Configuration
-- [ ] HTTPS enforced in production
-- [ ] Security headers configured (X-Content-Type-Options, X-Frame-Options, HSTS)
-- [ ] Rate limiting configured (auth endpoints + global)
-- [ ] JWT secrets securely stored (Azure Key Vault)
-- [ ] CORS restricted to production origins only
+### User Data
+- ✅ **Attributes:** Email (required) + Display Name (required) only
+- ❌ **NOT using:** Custom attributes in Entra (store app data in FoodBudget database)
 
-### Email & Authentication
-- [ ] Email service configured and tested (SendGrid/AWS SES)
-- [ ] Email templates verified (password reset, verification)
-- [ ] Email delivery monitoring enabled
+### Security
+- ✅ **Baseline Security:** Automatic (zero configuration required)
+- ❌ **MFA:** NO for MVP (reduces friction, baseline security sufficient)
 
-## After Deployment
-- [ ] Test user registration end-to-end
-- [ ] Test login and logout flows
-- [ ] Test password reset flow
-- [ ] Verify data isolation between users
-- [ ] Monitor error logs for 48 hours
-- [ ] Verify email delivery metrics
-- [ ] Check security audit logs
+### Branding
+- ✅ **Customization:** Portal-based (logo, colors, footer links)
+- ❌ **Custom Domain:** NO for MVP (save $50-100/month)
+- ❌ **Custom CSS:** NO for MVP (default options sufficient)
+
+### Backend Integration
+- ✅ **Primary Approach:** Azure App Service Authentication (EasyAuth)
+- ✅ **Authority URL:** `https://foodbudget.ciamlogin.com/`
+- ✅ **Package (if needed):** Microsoft.Identity.Web
+
+### Cost
+- ✅ **FREE for MVP:** First 50,000 Monthly Active Users
+- ✅ **Cost Savings:** No custom domain, no SMS MFA
 
 ---
 
-# Future Work
+## Deferred Features (Post-MVP)
 
-All post-Sprint 4 features, enhancements, and technical debt have been consolidated into **[Product Backlog](./backlog.md)**.
+**NOT implementing in Sprint 4:**
 
-The backlog includes prioritized roadmap for Sprint 5+ covering:
-- **Sprint 5:** Observability & Performance (APM, pagination, PWA, email verification if deferred)
-- **Sprint 6:** Infrastructure & Security (IaC, 2FA, load testing, session management)
-- **Sprint 7+:** User-facing features (multi-category, profile enhancements, social auth, GDPR compliance)
-- **Technical Debt:** Ongoing code quality, testing, and DevOps improvements
+| Feature | Why Deferred | Estimated Effort |
+|---------|--------------|------------------|
+| Custom URL Domain | Not essential, costs $50-100/month | 7-11 hours |
+| Custom Authentication Extensions | Adds complexity, no current use case | 16-32 hours |
+| Email OTP MFA (Story 6.10) | Reduces conversions, baseline security sufficient, optional post-MVP | 5-8 hours |
+| Custom Attributes in Entra | Easier to manage in FoodBudget database | N/A |
 
-See **[backlog.md](./backlog.md)** for complete implementation details and prioritization framework.
+---
+
+## Dependencies & Blockers
+
+### Pending Research (In Progress)
+- ⏸️ **MSAL React Native package details** - Package name, configuration, code examples
+- ⏸️ **App Service auth + ASP.NET Core integration** - Implementation patterns, user claims access
+
+### Pending User Decisions
+- ⏸️ **Brand assets** - Logo, brand colors, favicon, privacy/terms URLs (needed for Phase 5)
+- ⏸️ **User attributes** - Include given name/surname? (recommend: NO)
+- ⏸️ **Terms checkbox** - Include during sign-up? (recommend: YES)
+
+### No Technical Blockers
+- ✅ React Native IS supported (confirmed via standard MSAL)
+- ✅ All architectural decisions made
+- ✅ Platform capabilities confirmed
+
+---
+
+## Estimated Timeline
+
+### Known Effort
+- Phase 1 (Foundation): 1-3 hours
+- Phase 2 (Configuration): 6-10 hours
+- Phase 5 (Polish): 5-10 hours
+- **Subtotal:** 12-23 hours
+
+### Pending Effort (Research In Progress)
+- Phase 3 (Backend): TBD
+- Phase 4 (Mobile): TBD
+
+### Total Estimate
+**TBD** - Will be refined after completing how-to guide research for backend and mobile integration patterns.
+
+---
+
+## Testing Approach
+
+**TDD (Test-Driven Development):** Tests embedded in each task
+
+### Test Coverage Required
+- Unit tests for authentication configuration
+- Integration tests for token validation
+- Integration tests for API protection
+- End-to-end tests for complete authentication flows
+- Manual testing for branded user experience
+
+### Test Scenarios
+- Sign up with email + password
+- Sign up with Google, Facebook, Apple
+- Sign in with all methods
+- Sign out
+- Access protected API with valid token
+- Access protected API without token (401 expected)
+- Token refresh
+- Invalid/expired token handling
+
+---
+
+## References
+
+- **Research Guide:** [entra-external-id-setup-guide.md](./entra-external-id-setup-guide.md)
+- **Executive Summary:** [Section 1 - All MVP Decisions](./entra-external-id-setup-guide.md#1-executive-summary-)
+- **Feature Reference:** [Section 3 - Feature-by-Feature Details](./entra-external-id-setup-guide.md#3-feature-reference-)
+- **Implementation Planning:** [Section 4 - Questions & Blockers](./entra-external-id-setup-guide.md#4-implementation-planning)
+- **Microsoft Docs:** https://learn.microsoft.com/en-us/entra/external-id/customers/
+
+---
+
+## Notes
+
+- Sprint 4 can begin once:
+  1. How-to guide research completes (Phases 3-4 details)
+  2. Brand assets are gathered
+  3. Minor user decisions are finalized (given name/surname, terms checkbox)
+
+- Phases 1-2 and Phase 5 can begin immediately (100% ready)
+- Phases 3-4 details will be added as research completes
+
+---
+
+**Last Updated:** 2025-01-29
+**Research Status:** 75% complete (24 of ~28 docs analyzed)
+**Ready to Start:** Phases 1, 2, and 5 (after brand assets)
+**Pending:** Phases 3-4 implementation details

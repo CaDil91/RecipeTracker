@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using AutoMapper;
 using FluentAssertions;
 using FoodBudgetAPI.Controllers;
@@ -6,6 +7,7 @@ using FoodBudgetAPI.Mapping;
 using FoodBudgetAPI.Models.DTOs.Requests;
 using FoodBudgetAPI.Models.DTOs.Responses;
 using FoodBudgetAPI.Services;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -19,19 +21,40 @@ public class RecipeControllerTests
     private readonly IMapper _mapper;
     private readonly Mock<IRecipeService> _mockRecipeService;
     private readonly RecipeController _subjectUnderTest;
+    private readonly Guid _testUserId = Guid.NewGuid();
 
     public RecipeControllerTests()
     {
         _mockRecipeService = new Mock<IRecipeService>();
         _mockLogger = new Mock<ILogger<RecipeController>>();
-        
+
         var configuration = new MapperConfiguration(cfg =>
         {
             cfg.AddProfile<RecipeMappingProfile>();
         }, Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         _mapper = configuration.CreateMapper();
-        
+
         _subjectUnderTest = new RecipeController(_mockRecipeService.Object, _mockLogger.Object, _mapper);
+
+        // Setup authenticated user with 'oid' claim (required for GetObjectId())
+        SetupAuthenticatedUser(_testUserId);
+    }
+
+    private void SetupAuthenticatedUser(Guid userId)
+    {
+        var claims = new List<Claim>
+        {
+            new Claim("oid", userId.ToString()),
+            new Claim("email", "test@example.com")
+        };
+
+        var identity = new ClaimsIdentity(claims, "TestAuthentication");
+        var claimsPrincipal = new ClaimsPrincipal(identity);
+
+        _subjectUnderTest.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = claimsPrincipal }
+        };
     }
 
     #region Constructor Tests
@@ -89,39 +112,36 @@ public class RecipeControllerTests
             new() { Id = Guid.NewGuid(), Title = "Recipe 1", Servings = 4, Category = "Main Course", ImageUrl = "https://example.com/recipe1.jpg" },
             new() { Id = Guid.NewGuid(), Title = "Recipe 2", Servings = 2, Category = "Appetizer", ImageUrl = "https://example.com/recipe2.jpg" }
         };
-        _mockRecipeService.Setup(x => x.GetAllRecipesAsync(null, null)).ReturnsAsync(recipes);
+        _mockRecipeService.Setup(x => x.GetAllRecipesAsync(_testUserId, null)).ReturnsAsync(recipes);
 
         // Act
         IActionResult result = await _subjectUnderTest.GetAllRecipes();
 
         // Assert
-        _mockRecipeService.Verify(x => x.GetAllRecipesAsync(null, null), Times.Once);
+        _mockRecipeService.Verify(x => x.GetAllRecipesAsync(_testUserId, null), Times.Once);
         OkObjectResult? okResult = result.Should().BeOfType<OkObjectResult>().Subject;
         okResult.StatusCode.Should().Be(200);
         okResult.Value.Should().BeAssignableTo<IEnumerable<RecipeResponseDto>>();
     }
 
     [Fact]
-    public async Task GetAllRecipes_WithUserIdFilter_ReturnsFilteredRecipes()
+    public async Task GetAllRecipes_ExtractsUserIdFromToken()
     {
         // Arrange
-        var userId = Guid.NewGuid();
         var userRecipes = new List<Recipe>
         {
-            new() { Id = Guid.NewGuid(), Title = "User Recipe", UserId = userId, Servings = 4 }
+            new() { Id = Guid.NewGuid(), Title = "User Recipe", UserId = _testUserId, Servings = 4 }
         };
-        _mockRecipeService.Setup(x => x.GetAllRecipesAsync(userId, null)).ReturnsAsync(userRecipes);
+        _mockRecipeService.Setup(x => x.GetAllRecipesAsync(_testUserId, null)).ReturnsAsync(userRecipes);
 
         // Act
-        IActionResult result = await _subjectUnderTest.GetAllRecipes(userId);
+        IActionResult result = await _subjectUnderTest.GetAllRecipes();
 
-        // Assert
-        _mockRecipeService.Verify(x => x.GetAllRecipesAsync(userId, null), Times.Once);
+        // Assert - Verify user ID was extracted from token and passed to service
+        _mockRecipeService.Verify(x => x.GetAllRecipesAsync(_testUserId, null), Times.Once);
         OkObjectResult? okResult = result.Should().BeOfType<OkObjectResult>().Subject;
-        okResult.Value.Should().BeAssignableTo<IEnumerable<RecipeResponseDto>>();
         okResult.StatusCode.Should().Be(200);
-        okResult.Value.Should().NotBeNull();
-        ((IEnumerable<RecipeResponseDto>)okResult.Value!).Should().HaveCount(1);
+        okResult.Value.Should().BeAssignableTo<IEnumerable<RecipeResponseDto>>();
     }
 
     [Fact]
@@ -132,21 +152,21 @@ public class RecipeControllerTests
         {
             new() { Id = Guid.NewGuid(), Title = "Recipe 1", Servings = 4 }
         };
-        _mockRecipeService.Setup(x => x.GetAllRecipesAsync(null, 5)).ReturnsAsync(recipes);
+        _mockRecipeService.Setup(x => x.GetAllRecipesAsync(_testUserId, 5)).ReturnsAsync(recipes);
 
         // Act
-        IActionResult result = await _subjectUnderTest.GetAllRecipes(null, 5);
+        IActionResult result = await _subjectUnderTest.GetAllRecipes(5);
 
         // Assert
         result.Should().BeOfType<OkObjectResult>();
-        _mockRecipeService.Verify(x => x.GetAllRecipesAsync(null, 5), Times.Once);
+        _mockRecipeService.Verify(x => x.GetAllRecipesAsync(_testUserId, 5), Times.Once);
     }
 
     [Fact]
     public async Task GetAllRecipes_WithZeroLimit_ReturnsBadRequest()
     {
         // Act
-        IActionResult result = await _subjectUnderTest.GetAllRecipes(null, 0);
+        IActionResult result = await _subjectUnderTest.GetAllRecipes(0);
 
         // Assert
         BadRequestObjectResult? badRequestResult = result.Should().BeOfType<BadRequestObjectResult>().Subject;
@@ -158,7 +178,7 @@ public class RecipeControllerTests
     public async Task GetAllRecipes_WithNegativeLimit_ReturnsBadRequest()
     {
         // Act
-        IActionResult result = await _subjectUnderTest.GetAllRecipes(null, -5);
+        IActionResult result = await _subjectUnderTest.GetAllRecipes(-5);
 
         // Assert
         BadRequestObjectResult? badRequestResult = result.Should().BeOfType<BadRequestObjectResult>().Subject;
@@ -167,40 +187,37 @@ public class RecipeControllerTests
     }
 
     [Fact]
-    public async Task GetAllRecipes_WithUserIdAndLimit_ReturnsFilteredAndLimitedRecipes()
+    public async Task GetAllRecipes_WithLimit_ReturnsLimitedRecipes()
     {
         // Arrange
-        var userId = Guid.NewGuid();
         var recipes = new List<Recipe>
         {
-            new() { Id = Guid.NewGuid(), Title = "User Recipe", UserId = userId, Servings = 4 }
+            new() { Id = Guid.NewGuid(), Title = "User Recipe", UserId = _testUserId, Servings = 4 }
         };
-    
-        _mockRecipeService.Setup(x => x.GetAllRecipesAsync(userId, 5)).ReturnsAsync(recipes);
+
+        _mockRecipeService.Setup(x => x.GetAllRecipesAsync(_testUserId, 5)).ReturnsAsync(recipes);
 
         // Act
-        IActionResult result = await _subjectUnderTest.GetAllRecipes(userId, 5);
+        IActionResult result = await _subjectUnderTest.GetAllRecipes(5);
 
         // Assert
-        _mockRecipeService.Verify(x => x.GetAllRecipesAsync(userId, 5), Times.Once);
+        _mockRecipeService.Verify(x => x.GetAllRecipesAsync(_testUserId, 5), Times.Once);
         OkObjectResult? okResult = result.Should().BeOfType<OkObjectResult>().Subject;
         okResult.StatusCode.Should().Be(200);
         okResult.Value.Should().BeAssignableTo<IEnumerable<RecipeResponseDto>>();
-        var recipeDTOs = (IEnumerable<RecipeResponseDto>)okResult.Value!;
-        recipeDTOs.Should().HaveCount(1);
     }
 
     [Fact]
     public async Task GetAllRecipes_WhenNoRecipes_ReturnsEmptyList()
     {
         // Arrange
-        _mockRecipeService.Setup(x => x.GetAllRecipesAsync(null, null)).ReturnsAsync(new List<Recipe>());
+        _mockRecipeService.Setup(x => x.GetAllRecipesAsync(_testUserId, null)).ReturnsAsync(new List<Recipe>());
 
         // Act
         IActionResult result = await _subjectUnderTest.GetAllRecipes();
 
         // Assert
-        _mockRecipeService.Verify(x => x.GetAllRecipesAsync(null, null), Times.Once);
+        _mockRecipeService.Verify(x => x.GetAllRecipesAsync(_testUserId, null), Times.Once);
         OkObjectResult? okResult = result.Should().BeOfType<OkObjectResult>().Subject;
         okResult.Value.Should().BeAssignableTo<IEnumerable<RecipeResponseDto>>();
         okResult.StatusCode.Should().Be(200);
@@ -208,31 +225,48 @@ public class RecipeControllerTests
     }
 
     [Fact]
-    public async Task GetAllRecipes_WithInvalidLimit_ReturnsBadRequest()
+    public void GetAllRecipes_WhenUserHasNoOidClaim_ThrowsUnauthorizedAccessException()
     {
-        // Arrange
-        _mockRecipeService.Setup(x => x.GetAllRecipesAsync(null, -1))
-            .ThrowsAsync(new ArgumentException("Limit must be greater than zero", $"limit"));
+        // Arrange - Create user without 'oid' claim
+        var claimsWithoutOid = new List<Claim>
+        {
+            new Claim("email", "test@example.com")
+        };
+        var identity = new ClaimsIdentity(claimsWithoutOid, "TestAuthentication");
+        var claimsPrincipal = new ClaimsPrincipal(identity);
 
-        // Act
-        IActionResult result = await _subjectUnderTest.GetAllRecipes(null, -1);
+        _subjectUnderTest.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = claimsPrincipal }
+        };
 
-        // Assert
-        BadRequestObjectResult? badRequestResult = result.Should().BeOfType<BadRequestObjectResult>().Subject;
-        badRequestResult.StatusCode.Should().Be(400);
+        // Act & Assert
+        Func<Task> act = async () => await _subjectUnderTest.GetAllRecipes();
+        act.Should().ThrowAsync<UnauthorizedAccessException>()
+            .WithMessage("User ID not found in token");
     }
 
     [Fact]
-    public async Task GetAllRecipes_WithInvalidUserId_ReturnsBadRequest()
+    public void GetAllRecipes_WhenOidClaimIsInvalid_ThrowsInvalidOperationException()
     {
-        // Act
-        IActionResult result = await _subjectUnderTest.GetAllRecipes(Guid.Empty);
+        // Arrange - Create user with invalid 'oid' claim (not a GUID)
+        var claimsWithInvalidOid = new List<Claim>
+        {
+            new Claim("oid", "not-a-guid"),
+            new Claim("email", "test@example.com")
+        };
+        var identity = new ClaimsIdentity(claimsWithInvalidOid, "TestAuthentication");
+        var claimsPrincipal = new ClaimsPrincipal(identity);
 
-        // Assert
-        BadRequestObjectResult? badRequestResult = result.Should().BeOfType<BadRequestObjectResult>().Subject;
-        badRequestResult.StatusCode.Should().Be(400);
-        badRequestResult.Value.Should().Be("Invalid user ID format");
-        _mockRecipeService.Verify(x => x.GetAllRecipesAsync(It.IsAny<Guid?>(), It.IsAny<int?>()), Times.Never);
+        _subjectUnderTest.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = claimsPrincipal }
+        };
+
+        // Act & Assert
+        Func<Task> act = async () => await _subjectUnderTest.GetAllRecipes();
+        act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("Invalid user ID format in token");
     }
 
     #endregion

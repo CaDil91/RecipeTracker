@@ -227,7 +227,7 @@ public class ExceptionHandlingMiddlewareTests
         response.GetProperty("type").GetString().Should().Be("https://foodbudgetapi.example.com/problems/unauthorized");
         response.GetProperty("status").GetInt32().Should().Be(401);
         response.GetProperty("title").GetString().Should().Be("Unauthorized");
-        response.GetProperty("detail").GetString().Should().Be("Unauthorized access.");
+        response.GetProperty("detail").GetString().Should().Be("User not authorized");
         response.GetProperty("timestamp").Should().NotBeNull();
         response.GetProperty("traceId").GetString().Should().NotBeNull();
         return;

@@ -53,18 +53,26 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
             },
             KeyNotFoundException keyNotFoundEx => new ProblemDetails
             {
-                Type = ProblemTypes.NOT_FOUND, 
+                Type = ProblemTypes.NOT_FOUND,
                 Title = "Not Found",
                 Status = (int)HttpStatusCode.NotFound,
                 Detail = keyNotFoundEx.Message,
                 Instance = context.Request.Path
             },
-            UnauthorizedAccessException => new ProblemDetails
+            UnauthorizedAccessException unauthorizedEx => new ProblemDetails
             {
                 Type = ProblemTypes.UNAUTHORIZED,
-                Title = "Unauthorized", 
+                Title = "Unauthorized",
                 Status = (int)HttpStatusCode.Unauthorized,
-                Detail = "Unauthorized access.",
+                Detail = unauthorizedEx.Message,
+                Instance = context.Request.Path
+            },
+            InvalidOperationException invalidOpEx => new ProblemDetails
+            {
+                Type = ProblemTypes.BAD_REQUEST,
+                Title = "Bad Request",
+                Status = (int)HttpStatusCode.BadRequest,
+                Detail = invalidOpEx.Message,
                 Instance = context.Request.Path
             },
             NotSupportedException notSupportedEx => new ProblemDetails

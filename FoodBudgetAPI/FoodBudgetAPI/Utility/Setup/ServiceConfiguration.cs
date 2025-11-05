@@ -1,8 +1,10 @@
 using System.Diagnostics.CodeAnalysis;
 using Asp.Versioning;
 using AspNetCoreRateLimit;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
+using Microsoft.Identity.Web;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace FoodBudgetAPI.Utility.Setup;
@@ -26,6 +28,12 @@ public static class ServiceConfiguration
         
         // Logging
         ConfigureLogging(builder);
+
+        // Authentication & Authorization
+        builder.Services
+            .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+            .AddMicrosoftIdentityWebApi(builder.Configuration);
+        builder.Services.AddAuthorization();
 
         // Memory cache (required for rate limiting)
         builder.Services.AddMemoryCache();

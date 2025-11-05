@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FoodBudgetAPI.Controllers;
@@ -12,6 +12,12 @@ public class TestExceptionController : ControllerBase
     [HttpGet("throw-test-exception")]
     public IActionResult ThrowException()
     {
-        throw new InvalidOperationException("This is a test exception");
+        throw new Exception("This is a test exception");
+    }
+
+    [HttpGet("public-endpoint")]
+    public IActionResult PublicEndpoint()
+    {
+        return Ok(new { message = "Public test endpoint", timestamp = DateTime.UtcNow });
     }
 }

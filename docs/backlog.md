@@ -12,6 +12,367 @@ This document contains features and enhancements planned for future sprints afte
 
 ---
 
+## Critical: Recipe Image Upload (BLOCKER)
+
+**Status:** 🟡 PAUSED - Waiting for Sprint 4 (Authentication) to complete
+**Priority:** CRITICAL
+**Timeline:** 1-2 weeks after Sprint 4
+**Dependencies:**
+- ✅ Azure subscription (already have)
+- ✅ Azure Blob Storage configured
+- ✅ ImageUploadService complete (21 unit tests passing)
+- 🔄 **Sprint 4 Authentication (IN PROGRESS)** - Required for JWT-protected endpoint
+- 🔄 Temporary demo fix in place (ImageUrl accepts placeholder strings)
+
+### Why Critical?
+
+The recipe form has an image picker UI, but users cannot save recipes with images because:
+- Mobile app stores local file URIs (`file:///path/to/image.jpg`)
+- API expects valid HTTP/HTTPS URLs
+- No image upload infrastructure exists
+
+**Current State:** Image picker works, but saving recipes with images returns 400 validation error.
+
+**User Impact:** Users cannot add photos to their recipes, significantly degrading the recipe app experience.
+
+---
+
+### Story: Recipe Image Upload with Azure Blob Storage
+
+#### 1. Title
+**Recipe Image Upload with Azure Blob Storage**
+
+#### 2. User Story Statement
+**As a** user creating or editing a recipe,
+**I want to** add photos from my device to my recipes,
+**So that** I can visually remember my dishes and make my recipe collection more appealing.
+
+#### 3. Acceptance Criteria
+
+**User-Facing Requirements:**
+
+**Image Selection & Preview:**
+- [ ] User can tap "Add Image" button to select photo from device
+- [ ] Selected image appears instantly (< 100ms) with no loading state
+- [ ] Image displays in 4:3 aspect ratio with rounded corners
+- [ ] User can change or delete selected image before saving
+
+**Upload Progress:**
+- [ ] Progress bar shows percentage (0-100%) during upload
+- [ ] Progress updates smoothly during upload
+- [ ] User can continue filling out form while upload happens in background
+- [ ] Upload typically completes before user finishes filling out form
+
+**Error Handling:**
+- [ ] Failed uploads show clear error message: "Upload failed"
+- [ ] Retry button appears on failed uploads
+- [ ] Retry uses same image (no need to re-select)
+- [ ] User can save recipe without image if upload fails
+
+**Recipe Saving:**
+- [ ] Recipes with uploaded images save successfully
+- [ ] If upload in progress when Save clicked, app waits for completion
+- [ ] Saved recipes display uploaded image when viewed later
+- [ ] Images persist across app restarts and devices
+
+**Performance:**
+- [ ] Images upload in 2-5 seconds on typical connections
+- [ ] Slow connections show progress feedback
+- [ ] App remains responsive during upload
+
+**Edge Cases:**
+- [ ] Offline uploads show immediate error with retry option
+- [ ] Only JPEG and PNG accepted (error for other types)
+- [ ] Files > 10MB rejected with clear error
+- [ ] Network interruptions show error and allow retry
+
+**Backend:**
+- [x] Azure Blob Storage account created and container configured
+  - Storage account: `foodbudgetstorage`
+  - Container: `recipe-images` (private access)
+  - Redundancy: LRS
+  - Azure.Storage.Blobs NuGet package installed
+- [x] Connection string stored securely (Key Vault or env vars)
+  - Dev: `appsettings.Development.json` (in .gitignore)
+  - Prod: TODO - Azure Key Vault or App Service Configuration
+- [ ] `POST /api/images/upload-token` endpoint requires authentication
+- [ ] SAS tokens expire after 5 minutes
+- [ ] SAS tokens scoped to single blob, write-only permission
+- [ ] File type validation (JPEG, PNG only)
+- [ ] File size validation (< 10MB)
+- [ ] `RecipeRequestDto.ImageUrl` accepts Azure Blob URLs
+- [ ] Unit tests for `ImageUploadService` pass
+- [ ] Integration tests for upload-token endpoint pass
+
+**Frontend:**
+- [ ] Local image preview displays instantly
+- [ ] Upload starts automatically in background
+- [ ] Upload service: Request token → Upload to Azure → Return URL
+- [ ] RecipeImage component has progress bar, error overlay, retry
+- [ ] Save validation: wait if upload in progress
+- [ ] User can delete image and pick new one
+- [ ] Unit tests for `useOptimisticImageUpload` hook pass
+- [ ] Integration tests for complete upload flow pass
+
+**Security:**
+- [ ] SAS tokens require user authentication
+- [ ] Tokens cannot be reused after expiration
+- [ ] Tokens scoped to specific blob (can't access others)
+- [ ] No Azure credentials in mobile app code
+- [ ] GUID filenames prevent collisions and enumeration
+
+#### 4. Definition of Done
+
+**Code Quality:**
+- [ ] Code reviewed by team member
+- [ ] Follows project coding standards
+- [ ] No new linting warnings or errors
+- [ ] TypeScript types properly defined
+
+**Testing:**
+- [ ] Backend unit tests pass
+- [ ] Frontend unit tests pass
+- [ ] Integration tests pass
+- [ ] Manual testing checklist completed (see below)
+- [ ] Tested on iOS and Android
+- [ ] Tested on slow network connections
+- [ ] Tested error scenarios
+
+**Deployment:**
+- [ ] Azure Blob Storage configured (dev, staging, prod)
+- [ ] Connection string in Azure Key Vault
+- [ ] Environment variables configured
+- [ ] Deployed to staging and smoke tested
+- [ ] Product owner accepts feature
+
+**Documentation:**
+- [ ] API endpoint documented
+- [ ] SAS token security model documented
+- [ ] Optimistic UI pattern documented
+
+**Manual Testing Checklist:**
+- [ ] Pick image → Preview appears instantly
+- [ ] Progress bar updates smoothly → Completes
+- [ ] Fill out form → Save succeeds with image
+- [ ] Disconnect network → Error → Retry after reconnect
+- [ ] Delete image → Clears successfully
+- [ ] Change image → New image uploads
+- [ ] Large file (> 10MB) → Error shown
+- [ ] Wrong file type (PDF) → Error shown
+- [ ] View saved recipe → Image loads from Azure
+
+#### 5. Technical Notes/Constraints
+
+**Architecture Overview:**
+
+**Upload Flow:**
+1. User selects image → App displays local preview (optimistic UI)
+2. App requests SAS token from backend → Backend validates JWT auth
+3. Backend generates 5-min SAS token (scoped, write-only)
+4. App uploads directly to Azure Blob Storage using XMLHttpRequest (for progress tracking)
+5. App receives public URL → Replaces local URI in form state
+6. User saves recipe → Backend receives Azure Blob URL
+
+**Key Decision: Direct Upload with SAS Tokens**
+- Mobile uploads directly to Azure (not through backend proxy)
+- Avoids backend bottleneck
+- Production pattern (Instagram, Pinterest, Twitter)
+- **2025 Industry Standard**: Confirmed via research and codebase analysis
+
+**Implementation Strategy: TanStack Query v5 Optimistic Updates**
+- **State Management**: TanStack Query v5 (already installed: `@tanstack/react-query@5.90.2`)
+- **Pattern Consistency**: Follow existing `useCreateRecipe`/`useUpdateRecipe` mutation patterns
+- **Upload Hook**: Create `useUploadRecipeImage` hook in `hooks/useRecipeMutations.ts` or separate file
+- **Optimistic UI**: Display local `file://` URI immediately, replace with Azure URL on success
+- **Error Handling**: Follow existing snackbar + retry pattern (consistent with `RecipeListScreen.tsx:95-126`)
+- **Progress Tracking**: XMLHttpRequest wrapper for upload progress (fetch API doesn't support upload progress in 2025)
+- **Cache Management**: Leverage TanStack Query's `onMutate`, `onError`, `onSuccess` lifecycle hooks
+- **Service Layer**: Create `ImageService` following existing `RecipeService` patterns (`src/lib/shared/api/recipe.service.ts`)
+- **Validation**: Zod schemas for file type/size validation (consistent with existing `RecipeRequestSchema`)
+
+**Why XMLHttpRequest for Progress:**
+- **Fetch API Limitation**: `fetch()` does not support upload progress events in 2025
+- **XMLHttpRequest Advantage**: `xhr.upload.onprogress` event for real-time progress tracking
+- **Implementation**: Wrap XMLHttpRequest in Promise for async/await compatibility
+- **Pattern**: Create reusable `uploadWithProgress()` utility function
+
+**Dependencies:**
+- Azure subscription (✅ already have)
+- Sprint 4 authentication complete (JWT tokens)
+- Recipe entity `ImageUrl` field (✅ exists)
+- `expo-image-picker` (✅ installed)
+- `Azure.Storage.Blobs` NuGet package (needs install)
+
+**API Endpoints:**
+
+**New Endpoint:**
+```
+POST /api/images/upload-token
+Auth: Required (JWT Bearer token)
+Request: { fileName: string, contentType: string }
+Response: { uploadUrl: string, publicUrl: string, expiresAt: string }
+Returns: 200 OK | 401 Unauthorized | 400 Bad Request
+```
+
+**Modified Validation:**
+- Remove `[Url]` attribute from `RecipeRequestDto.ImageUrl`
+- Reason: Azure Blob URLs may contain query strings
+
+**Security Considerations:**
+
+**SAS Token Security Model:**
+- SAS tokens generated **server-side only** (5-min expiration)
+- Tokens scoped to single blob, write-only permission
+- Cannot list/delete other files
+- User must be authenticated (JWT validation)
+- Master Azure credentials **never** exposed to mobile
+
+**What SAS Tokens Do:**
+- ✅ Grant temporary permission to upload ONE specific blob
+- ✅ Expire automatically (5 minutes)
+- ❌ Do NOT verify request came from your app
+- ❌ Do NOT identify the user
+
+**The Security Flow:**
+- JWT token verifies WHO the user is (authentication)
+- SAS token grants WHAT they can do (temporary upload permission)
+
+**Optimistic UI Pattern:**
+
+**Key Concept:**
+- Display local image file immediately (already on device)
+- Upload happens in background
+- No temporary storage needed (reference existing file)
+- Remote URL replaces local URI for persistence
+
+**Two-URI Pattern:**
+```typescript
+localUri: "file:///path/to/photo.jpg"  // For instant display
+remoteUrl: "https://blob.azure.net/..."  // For persistence in DB
+```
+
+**Timeline:**
+```
+User picks → Display local (instant) → Upload (background) → Save with remote URL
+Next session → Load from DB → Display remote URL from Azure
+```
+
+**Alternative Approaches Rejected:**
+- ❌ Base64 in database: Bloats DB, poor performance
+- ❌ Proxy via backend: Slow, expensive compute
+- ❌ Public write container: Security nightmare
+- ❌ Cloudinary/ImageKit: $99/month vs $0.50/month
+
+**Performance Requirements:**
+- Target: 95% of uploads complete in < 5 seconds
+- Progress updates every 100ms minimum
+- Local preview renders in < 100ms
+
+**Cost:**
+- Target: < $1/month for 1,000 users
+- Estimate: $0.50/month for 5,000 users
+- Azure Blob Storage: $0.018/GB + $0.004 per 10K writes
+
+#### 6. Design/UX References
+
+**Visual States:**
+
+**Empty State:**
+```
+┌─────────────────────────────┐
+│       [IMAGE ICON]          │
+│       Add Image             │
+└─────────────────────────────┘
+Dashed border, tap to select
+```
+
+**Uploading State:**
+```
+┌─────────────────────────────┐
+│    [Recipe Image Preview]   │
+│  [Progress: 75%]            │
+│  Uploading...               │
+└─────────────────────────────┘
+```
+
+**Upload Complete:**
+```
+┌─────────────────────────────┐
+│    [Recipe Image Preview]   │
+│  [Edit] [Delete]            │
+└─────────────────────────────┘
+```
+
+**Upload Failed:**
+```
+┌─────────────────────────────┐
+│    [Recipe Image Preview]   │
+│    ⚠️ Upload failed         │
+│    [Retry Button]           │
+└─────────────────────────────┘
+```
+
+**UX Principles:**
+- **Instant Feedback:** Local preview appears immediately
+- **Progressive Enhancement:** Show what you have, enhance later
+- **Forgiving:** Easy to retry, change, or delete
+- **Non-Blocking:** Upload doesn't prevent other work
+- **Informative:** Clear progress and error states
+
+#### 7. Estimated Effort
+
+**Total: 1-2 weeks (8 story points)**
+
+**Backend Infrastructure: 3-5 days**
+- Azure Blob Storage setup: 0.5 day
+- ImageUploadService implementation: 1 day
+- Controller endpoint + validation: 0.5 day
+- Unit tests: 1 day
+- Integration tests: 1 day
+
+**Frontend Implementation: 3-5 days**
+- ImageUploadService (API client): 0.5 day
+- useOptimisticImageUpload hook: 1 day
+- RecipeImage component updates: 1 day
+- RecipeForm save validation: 0.5 day
+- Unit tests: 1 day
+- Integration + manual QA: 1 day
+
+**Confidence:** High (well-understood pattern, detailed spec)
+
+#### 8. Priority/Business Value
+
+**Priority:** 🔴 **CRITICAL (Blocker)**
+
+**Current Problem:**
+- Image picker UI exists but users **cannot save recipes with images** (400 error)
+- Mobile stores local URIs (`file:///`), API expects HTTPS URLs
+- Significantly degrades recipe app value
+
+**User Impact:**
+- Users cannot add photos to recipes
+- Competitive disadvantage (all modern recipe apps have images)
+- First impression issue (feature appears broken)
+- Limits engagement and retention
+
+**Business Value:**
+- **Table stakes:** Recipe apps without photos are non-competitive
+- **User retention:** Visual recipes increase engagement ~40%
+- **Production readiness:** Blocks launch
+- **Foundation:** Enables future features (avatars, sharing)
+
+**Cost Impact:**
+- Very low: $0.50/month for 5,000 users
+- 100x cheaper than Cloudinary ($99/month)
+- Scales linearly
+
+**Technical Debt Prevention:**
+- Must complete before production launch
+- Harder to add later (requires data migration)
+- Industry-standard approach positions well for future
+
+---
+
 ## Sprint 5: Observability & Performance (Priority: HIGH)
 
 **Theme:** Make the production app observable, scalable, and performant
@@ -226,6 +587,152 @@ describe('useRecipeMutations - Offline', () => {
 
 **Estimated Timeline:** 1 week
 **Risk:** LOW (well-understood pattern with TanStack Query)
+
+---
+
+### Story 5.1B: User-Based Rate Limiting (Post-Authentication)
+**Priority:** MEDIUM
+**Effort:** Small-Medium (3-5 hours)
+**Type:** Security & Performance
+
+**User Story:**
+> As a developer, I want to rate limit authenticated users by their user ID (not just IP address) so that each user has fair API quota and cannot abuse the API by switching IPs.
+
+**Why Important:**
+- Current IP-based rate limiting has limitations (shared IPs, VPNs, NAT)
+- Authenticated users should have per-user quotas
+- More precise abuse prevention
+- Fair resource allocation across users
+
+**Current State:**
+- ✅ IP-based rate limiting configured (protects unauthenticated endpoints)
+- ✅ JWT authentication validates user identity
+- ❌ No per-user rate limiting for authenticated requests
+
+**Scope:**
+- Add user-based rate limiting middleware AFTER authentication
+- Extract user ID from JWT claims
+- Apply per-user quotas to authenticated endpoints
+- Keep IP-based rate limiting for unauthenticated endpoints
+- Configure separate limits for different user tiers (if needed)
+
+**Implementation:**
+
+**Backend: User-Based Rate Limiting Middleware**
+```csharp
+// Middleware/UserRateLimitingMiddleware.cs
+using Microsoft.Identity.Web;
+
+public class UserRateLimitingMiddleware
+{
+    private readonly RequestDelegate _next;
+    private readonly IMemoryCache _cache;
+    private readonly int _requestsPerMinute = 100; // Per user
+
+    public UserRateLimitingMiddleware(RequestDelegate next, IMemoryCache cache)
+    {
+        _next = next;
+        _cache = cache;
+    }
+
+    public async Task InvokeAsync(HttpContext context)
+    {
+        // Only rate limit authenticated requests
+        if (context.User.Identity?.IsAuthenticated == true)
+        {
+            var userId = context.User.GetObjectId();
+            var cacheKey = $"user_rate_limit_{userId}";
+
+            var requestCount = _cache.GetOrCreate(cacheKey, entry =>
+            {
+                entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(1);
+                return 0;
+            });
+
+            if (requestCount >= _requestsPerMinute)
+            {
+                context.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+                await context.Response.WriteAsJsonAsync(new
+                {
+                    error = "Rate limit exceeded for this user",
+                    retryAfter = "1 minute"
+                });
+                return;
+            }
+
+            _cache.Set(cacheKey, requestCount + 1, TimeSpan.FromMinutes(1));
+        }
+
+        await _next(context);
+    }
+}
+```
+
+**Middleware Order:**
+```csharp
+// ApplicationConfiguration.cs
+app.UseHttpsRedirection();
+app.UseCors("MobileApp");
+
+// 1. IP rate limiting (protects auth endpoints)
+app.UseIpRateLimiting();
+
+// 2. Authentication & Authorization
+app.UseAuthentication();
+app.UseAuthorization();
+
+// 3. User-based rate limiting (protects API endpoints)
+app.UseMiddleware<UserRateLimitingMiddleware>();
+
+app.MapControllers();
+```
+
+**Configuration (appsettings.json):**
+```json
+{
+  "UserRateLimiting": {
+    "RequestsPerMinute": 100,
+    "RequestsPerHour": 1000,
+    "EnablePerUserLimits": true,
+    "PremiumUserMultiplier": 5
+  }
+}
+```
+
+**Acceptance Criteria:**
+- [ ] User-based rate limiting middleware created
+- [ ] Middleware extracts user ID from JWT claims
+- [ ] Per-user request quotas enforced (configurable)
+- [ ] Rate limit exceeded returns 429 with user-specific message
+- [ ] IP-based rate limiting remains for unauthenticated endpoints
+- [ ] Configuration supports different tiers (standard, premium)
+- [ ] Tests verify per-user rate limiting logic
+- [ ] Monitoring tracks per-user API usage
+
+**Benefits Over IP-Based Rate Limiting:**
+- ✅ Fair quotas per user (not per IP)
+- ✅ Works with VPNs, proxies, shared IPs
+- ✅ Prevents single user from abusing API across multiple IPs
+- ✅ Enables tiered pricing (premium users get higher limits)
+- ✅ Better observability (track usage by user)
+
+**Why IP-Based Rate Limiting Still Needed:**
+- Protects authentication endpoints BEFORE JWT validation
+- Blocks brute force attacks on sign-in
+- Prevents attackers from consuming auth resources
+- Defense in depth
+
+**Files to Create:**
+- Backend: `Middleware/UserRateLimitingMiddleware.cs`
+- Backend: `Configuration/UserRateLimitingOptions.cs`
+
+**Files to Modify:**
+- Backend: `Utility/Setup/ApplicationConfiguration.cs` - Add user rate limiting middleware
+- Backend: `Utility/Setup/ServiceConfiguration.cs` - Configure options
+
+**Estimated Timeline:** 3-5 hours
+**Priority:** MEDIUM (enhances existing IP-based rate limiting)
+**Dependencies:** Sprint 4 authentication complete
 
 ---
 

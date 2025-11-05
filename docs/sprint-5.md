@@ -1,40 +1,59 @@
-# Sprint 5: User Authentication & Mobile Integration
+# Sprint 5: User Authentication (Web + Mobile)
 
-**Sprint Goal:** Enable users to sign up and sign in via the FoodBudget mobile app, and securely access the protected backend API.
+**Sprint Goal:** Enable users to sign up and sign in via the FoodBudget web app (Phase 1) and mobile app (Phase 2), and securely access the protected backend API.
 
 **Status:** 📋 READY FOR IMPLEMENTATION (after Sprint 4 completes)
 **Prerequisites:** Sprint 4 complete (backend API protected with JWT validation)
 **Target Completion:** TBD
 **Priority Model:** MoSCoW (Must have, Should have, Could have, Won't have)
+**Implementation Approach:** Web-first, then mobile (shared UI components, platform-specific MSAL integration)
 
 ---
 
 ## Sprint Context
 
 **What This Sprint Delivers:**
-- Users can sign up and sign in via mobile app
-- Authentication with email + password or Google
-- Mobile app acquires access tokens from Entra
-- Mobile app calls protected backend API successfully
-- End-to-end authentication working
+
+**Phase 1: Web Authentication** (Priority 1 - ~20 hours)
+- ✅ Users can sign up and sign in via GitHub Pages web app
+- ✅ Authentication with email + password or Google
+- ✅ Web app acquires access tokens from Entra
+- ✅ Web app calls protected backend API successfully
+- ✅ End-to-end authentication working on web
+
+**Phase 2: Mobile Authentication** (Priority 2 - ~11 hours)
+- 📱 Users can sign up and sign in via React Native mobile app
+- 📱 Mobile app uses system browser for OAuth
+- 📱 Mobile app acquires access tokens from Entra
+- 📱 Mobile app calls protected backend API successfully
+- 📱 End-to-end authentication working on iOS and Android
 
 **What This Sprint Builds On (Sprint 4):**
-- ✅ Entra External ID tenant created
-- ✅ Backend API registration created
-- ✅ Mobile app registration created (Story 4.2)
-- ✅ Backend API protected with JWT validation (Microsoft.Identity.Web)
-- ✅ Token claims structure verified
-- ✅ API tested with manual tokens
+- ✅ Entra External ID tenant created (Story 4.1)
+- ✅ Backend API registration created (Story 4.1)
+- ✅ **Web app (SPA) registration created (Story 4.2) - ready for Phase 1**
+- ✅ Backend API protected with JWT validation (Story 4.3)
+- ✅ Token claims structure verified (Story 4.4)
+- ✅ API tested with manual tokens (Story 4.4)
+
+**Prerequisites for Sprint 5:**
+- ✅ Web app registration EXISTS from Sprint 4.2 (Client ID: `9eb59a1f-ffe8-49d7-844f-ff2ca7cf02ae`)
+- ⚠️ Mobile app registration NOT created yet (will be created in Phase 2, Story 5.0B)
+- 🌐 Web and mobile use SEPARATE registrations (different platforms, different redirect URIs)
 
 **Authentication Platform:** Microsoft Entra External ID (External Tenants)
-**Frontend:** React Native + Expo mobile app
+**Frontend:** React Native + Expo (runs on web AND mobile with shared code)
 **Backend:** ASP.NET Core Web API (.NET 8) - already protected in Sprint 4
 
-**Key Architectural Decision:**
-- Client-side authentication (mobile app → Entra directly)
-- Mobile app gets tokens, backend validates them
-- In-app browser for OAuth (SFSafariViewController on iOS, Chrome Custom Tabs on Android)
-- PKCE automatic via MSAL
+**Key Architectural Decisions:**
+- **Web-first approach:** Implement web authentication first (faster iteration, easier testing)
+- **Platform abstraction:** Shared UI components, platform-specific MSAL implementations
+- **Separate app registrations:** Web (SPA) and Mobile (native) use different registrations
+- **Client-side authentication:** Apps authenticate with Entra directly, backend validates tokens
+- **PKCE automatic:** Both web and mobile use MSAL libraries that handle PKCE
+- **OAuth flows:**
+  - Web: Browser redirect flow (SPA pattern)
+  - Mobile: System browser with deep linking (SFAuthenticationSession / Chrome Custom Tabs)
 
 **Reference Documentation:**
 - 📖 [Implementation Guide](./entra-external-id-setup-guide.md) - Complete technical reference
@@ -44,6 +63,12 @@
 ---
 
 ## User Stories
+
+### **PHASE 1: WEB AUTHENTICATION** (Do First - ~20 hours)
+
+Stories 5.1, 5.2, 5.3A, and 5.4A implement authentication for the web app (GitHub Pages). These stories use the web app registration created in Sprint 4.2.
+
+---
 
 ### Story 5.1: Configure Google Sign-In
 
@@ -67,9 +92,9 @@ As a **FoodBudget user**, I want to sign up and sign in using my Google account,
 
 **Technical Notes/Constraints:**
 
-**Prerequisites from Sprint 4:**
+**Prerequisites:**
 - ✅ Entra External ID tenant created (Sprint 4, Story 4.1)
-- ✅ Mobile app registration created (Sprint 4, Story 4.2)
+- ✅ Web app (SPA) registration created (Sprint 4, Story 4.2)
 - ✅ Backend API registration created (Sprint 4, Story 4.1)
 
 **Google Sign-In Configuration:**
@@ -120,7 +145,7 @@ As a **FoodBudget user**, I want to sign up for an account or sign in to my exis
 - [ ] Google social provider enabled (Story 5.1 dependency)
 - [ ] User attributes configured: Email (required), Display Name (required)
 - [ ] Given name, surname, and other optional fields NOT collected
-- [ ] Mobile app associated with user flow
+- [ ] **Web app associated with user flow** (Phase 1 - uses registration from Sprint 4.2)
 - [ ] Backend API NOT associated with user flow (APIs validate tokens, don't authenticate)
 - [ ] User flow tested with "Run user flow" feature
 - [ ] Email + Password sign-up works
@@ -130,14 +155,14 @@ As a **FoodBudget user**, I want to sign up for an account or sign in to my exis
 
 **Definition of Done:**
 - [ ] User flow visible in Entra admin center
-- [ ] FoodBudget Mobile App appears in flow's Applications list
+- [ ] **FoodBudget Web App** appears in flow's Applications list
 - [ ] Test accounts created via email and Google
 - [ ] All authentication methods work in test environment
-- [ ] User flow ready for mobile app integration (Story 5.3)
+- [ ] User flow ready for web app integration (Story 5.3A)
 
 **Technical Notes/Constraints:**
 - **Prerequisites:**
-  - Sprint 4 complete (tenant, API, and mobile app registered)
+  - Sprint 4 complete (tenant, API, and web app registered)
   - Story 5.1 complete (Google configured)
 - **Flow type:** Sign-up and sign-in combined (single flow for both actions)
 - **One app = one user flow:** Cannot assign mobile app to multiple flows
@@ -165,7 +190,7 @@ As a **FoodBudget user**, I want to sign up for an account or sign in to my exis
 5. Create user flow
 6. Associate application:
    - User flows → SignUpSignIn → Applications → Add application
-   - Select "FoodBudget Mobile App"
+   - Select **"FoodBudget Web App"** (created in Sprint 4.2)
    - Save
 7. Test with "Run user flow" button
 
@@ -183,7 +208,386 @@ As a **FoodBudget user**, I want to sign up for an account or sign in to my exis
 
 ---
 
-### Story 5.3: Integrate MSAL Authentication in Mobile App
+### Story 5.3A: Integrate MSAL Authentication in Web App
+
+**Title:** Enable users to sign in via web app (GitHub Pages)
+
+**User Story:**
+As a **FoodBudget user**, I want to sign in through the web app, so that I can access my food budget from my browser.
+
+**Acceptance Criteria:**
+- [ ] `@azure/msal-react` package installed and configured
+- [ ] Authority URL configured: `https://foodbudget.ciamlogin.com/644a9317-ded3-439a-8f0a-9a8491ce35e9`
+- [ ] Web app client ID configured (from Sprint 4.2): `9eb59a1f-ffe8-49d7-844f-ff2ca7cf02ae`
+- [ ] API scopes configured: `api://877ea87e-5be9-4102-9959-6763e3fdf243/access_as_user`
+- [ ] Redirect URIs match app registration (GitHub Pages, localhost, jwt.ms)
+- [ ] Sign-in/sign-up screens created with shared React Native components
+- [ ] Email + Password authentication works on web
+- [ ] Google authentication works on web
+- [ ] Access token acquired after successful authentication
+- [ ] Access token stored securely (sessionStorage)
+- [ ] Refresh token handled automatically by MSAL
+- [ ] Sign-out functionality works
+- [ ] App handles authentication errors gracefully
+- [ ] Protected routes redirect to sign-in if unauthenticated
+
+**Definition of Done:**
+- [ ] User can sign in with email + password on localhost:8081
+- [ ] User can sign in with Google on localhost:8081
+- [ ] User can sign in on GitHub Pages deployment
+- [ ] Access token visible in browser dev tools / app state
+- [ ] Sign-out clears token and returns to sign-in screen
+- [ ] Protected routes (recipe list) require authentication
+- [ ] Code reviewed
+- [ ] No hardcoded secrets (client ID from environment variable)
+
+**Technical Notes/Constraints:**
+
+**MSAL Package:** `@azure/msal-react` + `@azure/msal-browser`
+- **Why:** Official Microsoft library for React SPAs
+- **Version:** Latest v3.x
+- **Pattern:** React hooks and context provider
+
+**Configuration:**
+```javascript
+// lib/auth/msalConfig.web.ts
+import { Configuration } from '@azure/msal-browser';
+
+export const msalConfig: Configuration = {
+  auth: {
+    clientId: '9eb59a1f-ffe8-49d7-844f-ff2ca7cf02ae',
+    authority: 'https://foodbudget.ciamlogin.com/644a9317-ded3-439a-8f0a-9a8491ce35e9',
+    redirectUri: window.location.origin + '/RecipeTracker/',
+    postLogoutRedirectUri: window.location.origin + '/RecipeTracker/',
+  },
+  cache: {
+    cacheLocation: 'sessionStorage',
+    storeAuthStateInCookie: false,
+  },
+};
+
+export const loginRequest = {
+  scopes: ['api://877ea87e-5be9-4102-9959-6763e3fdf243/access_as_user'],
+};
+```
+
+**Files to Create:**
+```
+FoodBudgetMobileApp/
+├── src/
+│   ├── screens/auth/
+│   │   ├── SignInScreen.tsx (web-compatible)
+│   │   ├── SignUpScreen.tsx (web-compatible)
+│   │   └── AuthCallbackScreen.tsx (handle OAuth redirects)
+│   ├── components/auth/
+│   │   ├── AuthProvider.tsx (MSAL context wrapper)
+│   │   ├── SignInButton.tsx
+│   │   └── GoogleSignInButton.tsx
+│   ├── hooks/
+│   │   ├── useAuth.ts (platform abstraction)
+│   │   └── useMsal.web.ts (web-specific)
+│   └── lib/auth/
+│       ├── msalConfig.web.ts
+│       ├── authService.web.ts
+│       └── authTypes.ts (shared)
+```
+
+**Implementation Pattern:**
+```tsx
+// App.tsx (wrap with MSAL provider)
+import { MsalProvider } from '@azure/msal-react';
+import { PublicClientApplication } from '@azure/msal-browser';
+import { msalConfig } from './lib/auth/msalConfig.web';
+
+const msalInstance = new PublicClientApplication(msalConfig);
+
+export default function App() {
+  return (
+    <MsalProvider instance={msalInstance}>
+      <AppNavigator />
+    </MsalProvider>
+  );
+}
+
+// hooks/useMsal.web.ts
+import { useMsal as useMsalReact } from '@azure/msal-react';
+import { loginRequest } from '../lib/auth/msalConfig.web';
+
+export const useMsalWeb = () => {
+  const { instance, accounts } = useMsalReact();
+
+  const signIn = async () => {
+    try {
+      await instance.loginRedirect(loginRequest);
+    } catch (error) {
+      console.error('Sign in error:', error);
+    }
+  };
+
+  const signOut = async () => {
+    await instance.logoutRedirect();
+  };
+
+  const getAccessToken = async () => {
+    if (accounts.length === 0) return null;
+
+    try {
+      const response = await instance.acquireTokenSilent({
+        ...loginRequest,
+        account: accounts[0],
+      });
+      return response.accessToken;
+    } catch (error) {
+      // Silent acquisition failed, trigger interactive
+      await instance.acquireTokenRedirect(loginRequest);
+      return null;
+    }
+  };
+
+  return {
+    isAuthenticated: accounts.length > 0,
+    user: accounts[0] || null,
+    signIn,
+    signOut,
+    getAccessToken,
+  };
+};
+
+// hooks/useAuth.ts (platform abstraction)
+import { Platform } from 'react-native';
+import { useMsalWeb } from './useMsal.web';
+// import { useMsalNative } from './useMsal.native'; // Phase 2
+
+export const useAuth = () => {
+  if (Platform.OS === 'web') {
+    return useMsalWeb();
+  }
+  // Phase 2: return useMsalNative();
+  throw new Error('Mobile authentication not yet implemented (Sprint 5 Phase 2)');
+};
+```
+
+**Error Handling:**
+- User cancels authentication → Stay on sign-in screen
+- Network error → Show "Check internet connection" message
+- Invalid credentials → Display error from Entra
+- Token acquisition fails → Re-trigger interactive sign-in
+
+**Testing Checklist:**
+- [ ] Sign in works on `localhost:8081`
+- [ ] Sign in works on GitHub Pages
+- [ ] Sign in with email/password
+- [ ] Sign in with Google
+- [ ] Sign out clears session
+- [ ] Protected routes redirect to sign-in
+- [ ] Token refresh works (wait for expiration or force)
+- [ ] Error messages display correctly
+
+**Estimated Effort:** 6-8 hours
+
+**Priority:** 🔴 MUST HAVE (Users can't authenticate without this)
+
+---
+
+### Story 5.4A: Connect Web App to Protected API
+
+**Title:** Enable authenticated API calls from web app
+
+**User Story:**
+As a **FoodBudget user**, I want the web app to securely access my data from the backend, so that I can view and manage my food budget.
+
+**Acceptance Criteria:**
+- [ ] Web app includes access token in API requests (`Authorization: Bearer <token>`)
+- [ ] Axios interceptor configured with MSAL token injection
+- [ ] Successful API call returns user-specific data (recipes)
+- [ ] Expired token triggers automatic refresh via MSAL
+- [ ] Refreshed token used for subsequent requests
+- [ ] HTTP 401 from API triggers re-authentication flow
+- [ ] Network errors handled gracefully (user-friendly messages)
+- [ ] Loading states shown during API calls
+- [ ] Recipe list fetches user's recipes (not all recipes)
+
+**Definition of Done:**
+- [ ] Recipe list API call succeeds with valid token
+- [ ] Token refresh tested (wait for expiration or force expiration)
+- [ ] 401 error handling tested (remove token manually)
+- [ ] User sees appropriate error messages for auth failures
+- [ ] Recipes displayed are user-specific (verified by sub claim)
+- [ ] Code reviewed
+- [ ] Integration test verifies end-to-end flow (sign in → call API → get data)
+
+**Technical Notes/Constraints:**
+
+**Dependencies:**
+- Sprint 4 Story 4.3 complete (API validates JWT tokens)
+- Story 5.3A complete (web app can sign in and get tokens)
+
+**Implementation Pattern:**
+```typescript
+// lib/shared/api/fetch-client.ts (MODIFIED for web auth)
+import axios from 'axios';
+import { useAuth } from '../../hooks/useAuth';
+
+const apiClient = axios.create({
+  baseURL: process.env.EXPO_PUBLIC_API_URL,
+});
+
+// Add authentication interceptor
+apiClient.interceptors.request.use(
+  async (config) => {
+    // Platform-specific token acquisition
+    const { getAccessToken } = useAuth();
+    const token = await getAccessToken();
+
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Add response interceptor for error handling
+apiClient.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    if (error.response?.status === 401) {
+      // Token invalid or expired, trigger re-authentication
+      const { signIn } = useAuth();
+      await signIn();
+    }
+    return Promise.reject(error);
+  }
+);
+
+export default apiClient;
+```
+
+**Environment Variables:**
+```bash
+# .env
+EXPO_PUBLIC_API_URL=https://foodbudget-api.azurewebsites.net
+```
+
+**Testing Scenarios:**
+
+| Scenario | Expected Behavior | Status |
+|----------|-------------------|--------|
+| API call with valid token | 200 OK + user recipes returned | [ ] |
+| API call without token | 401 Unauthorized → redirect to sign-in | [ ] |
+| API call with expired token | MSAL auto-refreshes → 200 OK | [ ] |
+| API call with invalid token | 401 Unauthorized → redirect to sign-in | [ ] |
+| Network error | User-friendly error message | [ ] |
+| API returns empty recipes | Empty state component shown | [ ] |
+
+**Success Criteria:**
+- User signs in on web
+- Recipe list loads user-specific recipes
+- Token refresh happens automatically
+- 401 errors trigger re-authentication
+
+**Estimated Effort:** 4-5 hours
+
+**Priority:** 🔴 MUST HAVE (API integration required for functionality)
+
+---
+
+### **PHASE 2: MOBILE AUTHENTICATION** (Do Later - ~11 hours)
+
+Stories 5.0B, 5.3B, and 5.4B implement authentication for the mobile app (iOS/Android). These stories create a separate mobile app registration and use React Native MSAL.
+
+---
+
+### Story 5.0B: Register Mobile App (React Native)
+
+**Title:** Create mobile app registration for React Native with Expo
+
+**User Story:**
+As a **developer**, I want to register the React Native mobile app in Entra External ID, so that the mobile app can authenticate users and access the protected API.
+
+**Acceptance Criteria:**
+- [ ] Mobile app registration created in Entra External ID tenant
+- [ ] App type configured as "Public client (mobile & desktop)"
+- [ ] Redirect URI configured for MSAL: `msauth://com.foodbudget.app/callback`
+- [ ] Mobile app granted delegated permission to `access_as_user` scope
+- [ ] Admin consent granted for API permissions
+- [ ] Mobile app client ID documented securely
+- [ ] Public client flows enabled (required for mobile apps)
+- [ ] Native authentication disabled (using standard OAuth flow)
+
+**Definition of Done:**
+- [ ] Mobile app registration visible in Entra tenant
+- [ ] Public client flow enabled
+- [ ] Native authentication disabled
+- [ ] Redirect URI configured (MSAL custom scheme)
+- [ ] API permissions configured and consented to `access_as_user` scope
+- [ ] Mobile app client ID documented for Story 5.3B MSAL integration
+- [ ] Separate from web app registration (different platform requirements)
+
+**Technical Notes/Constraints:**
+
+**Prerequisites:**
+- ✅ Web authentication working (Phase 1 complete)
+- ✅ User flow exists (Story 5.2)
+
+**Why Separate from Web App Registration (Story 4.2):**
+- Web app (SPA) uses browser redirect flow (`https://` redirect URIs)
+- Mobile app uses system browser with deep linking (`msauth://` custom scheme)
+- Different MSAL libraries (`@azure/msal-react` vs `react-native-msal`)
+- Cleaner separation of concerns and easier troubleshooting
+- Follows Microsoft best practice: one registration per platform
+
+**Configuration Checklist:**
+
+**STEP 1: Create Mobile App Registration**
+1. Entra admin center → **App registrations** → **+ New registration**
+2. Name: "FoodBudget Mobile App"
+3. Supported account types: **Accounts in this organizational directory only** (FoodBudget-Tenent)
+4. **Skip redirect URI** (add after registration)
+5. Click **Register**
+6. **Record the Application (client) ID**
+
+**STEP 2: Configure Authentication & Redirect URI**
+1. Navigate to **Authentication** (left menu)
+2. Click **+ Add a platform**
+3. Select **Mobile and desktop applications**
+4. Add custom redirect URI: `msauth://com.foodbudget.app/callback`
+5. Click **Configure**
+6. Scroll to **Advanced settings**
+7. **Allow public client flows:** Set to **Yes**
+8. **Enable native authentication:** Set to **No**
+9. Click **Save**
+
+**STEP 3: Configure API Permissions**
+1. Navigate to **API permissions** (left menu)
+2. **(Optional)** Remove Microsoft Graph User.Read permission
+3. Click **+ Add a permission**
+4. Select **APIs my organization uses** tab
+5. Select **FoodBudgetAPI**
+6. Select **Delegated permissions**
+7. Check **access_as_user**
+8. Click **Add permissions**
+9. Click **Grant admin consent for FoodBudget-Tenent**
+10. Verify status shows "Granted for FoodBudget-Tenent" with green checkmark
+
+**STEP 4: Verify Configuration**
+1. Confirm redirect URI is listed under "Mobile and desktop applications"
+2. Confirm public client flows enabled
+3. Confirm native authentication disabled
+4. Confirm API permission granted and consented
+5. Document mobile app client ID securely
+6. Add mobile app to user flow (User flows → SignUpSignIn → Applications → Add application)
+
+**Estimated Effort:** 1 hour
+
+**Priority:** 🔴 MUST HAVE (Foundation for mobile authentication)
+
+---
+
+### Story 5.3B: Integrate MSAL Authentication in Mobile App
 
 **Title:** Enable users to sign in via React Native mobile app
 
@@ -749,13 +1153,46 @@ Optional Stories (parallel):
 -
 
 **Sprint 4 → Sprint 5 Handoff Notes:**
--
+- Web app (SPA) registration created in Sprint 4.2 (Client ID: `9eb59a1f-ffe8-49d7-844f-ff2ca7cf02ae`)
+- Backend API protected with JWT validation (Sprint 4.3)
+- API tested with manual tokens (Sprint 4.4)
+- Mobile app registration NOT created - deferred to Sprint 5 Phase 2
 
 ---
 
-**Last Updated:** 2025-01-29
-**Research Status:** Ready for implementation (after Sprint 4)
-**Prerequisites:** Sprint 4 must be complete (mobile app registration done in Sprint 4, Story 4.2)
-**Critical Path Stories:** 5.1, 5.2, 5.3, 5.4
-**Estimated Critical Path Effort:** 10-18 hours
-**Optional Story Effort:** +5-11 hours (Stories 5.5, 5.6, 5.7)
+## Sprint 5 Effort Summary
+
+### Phase 1: Web Authentication (Priority 1)
+| Story | Description | Hours |
+|-------|-------------|-------|
+| 5.1 | Configure Google Sign-In | 2h |
+| 5.2 | Create User Flow (web app) | 3h |
+| 5.3A | MSAL Integration (Web) | 7h |
+| 5.4A | Connect Web to Protected API | 4.5h |
+| 5.5 | Password Reset (optional) | 1h |
+| 5.6 | Custom Branding (optional) | 3h |
+| **Phase 1 Total** | **Web authentication complete** | **~20.5h** |
+
+### Phase 2: Mobile Authentication (Priority 2 - Do After Phase 1)
+| Story | Description | Hours |
+|-------|-------------|-------|
+| 5.0B | Register Mobile App | 1h |
+| 5.3B | MSAL Integration (Mobile) | 8h |
+| 5.4B | Connect Mobile to Protected API | 4h |
+| **Phase 2 Total** | **Mobile authentication complete** | **~13h** |
+
+### Total Sprint 5 Effort
+- **Must-Have (Phase 1 + Phase 2):** ~33.5 hours
+- **Optional (5.5, 5.6):** +4 hours
+- **Total with Optional:** ~37.5 hours
+
+---
+
+**Last Updated:** 2025-11-04
+**Research Status:** Ready for implementation (after Sprint 4 complete)
+**Implementation Approach:** Web-first (Phase 1), then mobile (Phase 2)
+**Prerequisites:** Sprint 4 must be complete (web app registration exists, backend API protected)
+**Phase 1 Critical Stories:** 5.1, 5.2, 5.3A, 5.4A (~16.5h without optional)
+**Phase 2 Critical Stories:** 5.0B, 5.3B, 5.4B (~13h)
+**Web Authentication Ready After:** Phase 1 complete (~20.5h)
+**Full Authentication (Web + Mobile) After:** Phase 1 + Phase 2 complete (~33.5h)

@@ -16,11 +16,11 @@ public class RateLimitingTests(HttpTestFactory<FoodBudgetAPI.Program> factory)
         HttpClient client = _factory.CreateClient();
         int rateLimitPerMinute = 60;
 
-        // Act - Make requests exceeding the rate limit
+        // Act - Make requests exceeding the rate limit (using public test endpoint)
         var responses = new List<HttpResponseMessage>();
         for (int i = 0; i < rateLimitPerMinute + 5; i++)
         {
-            responses.Add(await client.GetAsync("/api/Recipe"));
+            responses.Add(await client.GetAsync("/api/TestException/public-endpoint"));
         }
 
         // Assert

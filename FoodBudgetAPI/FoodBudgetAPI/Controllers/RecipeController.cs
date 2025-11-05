@@ -1,13 +1,16 @@
 using Asp.Versioning;
 using AutoMapper;
 using FoodBudgetAPI.Entities;
+using FoodBudgetAPI.Extensions;
 using FoodBudgetAPI.Models.DTOs.Requests;
 using FoodBudgetAPI.Models.DTOs.Responses;
 using FoodBudgetAPI.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FoodBudgetAPI.Controllers;
 
+[Authorize]
 [ApiController]
 [ApiVersion(1)]
 [Route("api/[controller]")]
@@ -19,16 +22,17 @@ public class RecipeController(IRecipeService recipeService, ILogger<RecipeContro
     private readonly IMapper _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
 
     [HttpGet]
-    public async Task<IActionResult> GetAllRecipes(Guid? userId = null, int? limit = null)
+    public async Task<IActionResult> GetAllRecipes(int? limit = null)
     {
-        _logger.LogInformation("GetAllRecipes called with userId: {UserId}, limit: {Limit}", userId, limit);
-        
-        if (userId == Guid.Empty) return BadRequest("Invalid user ID format");
+        // Extract user ID from JWT token (throws if invalid - handled by global exception middleware)
+        Guid userId = HttpContext.User.GetUserIdAsGuid();
+        _logger.LogInformation("GetAllRecipes called for user: {UserId}, limit: {Limit}", userId, limit);
+
         if (limit is <= 0) return BadRequest("Limit must be greater than zero");
-        
+
         IEnumerable<Recipe> recipes = await _recipeService.GetAllRecipesAsync(userId, limit);
         var recipeDTOs = _mapper.Map<IEnumerable<RecipeResponseDto>>(recipes);
-        
+
         return Ok(recipeDTOs);
     }
 

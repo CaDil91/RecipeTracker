@@ -39,14 +39,14 @@ public static class ApplicationConfiguration
         app.UseHttpsRedirection();
         app.UseCors("MobileApp");
 
-        // 5. Rate limiting
+        // 5. Authentication and authorization
+        app.UseAuthentication();
+        app.UseAuthorization();
+
+        // 6. Rate limiting
         app.UseIpRateLimiting();
 
-        // 6. Authentication and authorization would go here if implemented
-        // app.UseAuthentication();
-        // app.UseAuthorization();
-
-        // 6. Endpoints
+        // 7. Endpoints
         app.MapControllers();
         app.MapHealthChecks("/health");
 

@@ -9,6 +9,12 @@ import { useTheme, Icon } from 'react-native-paper';
 import RecipeListScreen from '../screens/RecipeListScreen';
 import RecipeDetailScreen from '../screens/RecipeDetailScreen';
 
+// Import authentication component
+import { ProtectedRoute } from '../components/ProtectedRoute';
+
+// Import Button for sign-out testing
+import { Button } from 'react-native-paper';
+
 // Create navigators
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<BottomTabParamList>();
@@ -26,10 +32,26 @@ const MealPlanScreen = () => {
 };
 
 const SettingsScreen = () => {
+  const { user, signOut } = require('../hooks/useAuth').useAuth();
+
   return (
     <View style={styles.placeholderContainer}>
       <Text style={styles.placeholderTitle}>Settings</Text>
       <Text style={styles.placeholderText}>Coming Soon</Text>
+
+      {/* Temporary sign-out button for Sprint 5 testing */}
+      {user && (
+        <View style={styles.testingSection}>
+          <Text style={styles.userInfo}>Signed in as: {user.email}</Text>
+          <Button
+            mode="outlined"
+            onPress={signOut}
+            style={styles.signOutButton}
+          >
+            Sign Out (Testing)
+          </Button>
+        </View>
+      )}
     </View>
   );
 };
@@ -127,7 +149,9 @@ const BottomTabs = () => {
 const AppNavigator: React.FC = () => {
   return (
     <NavigationContainer>
-      <BottomTabs />
+      <ProtectedRoute>
+        <BottomTabs />
+      </ProtectedRoute>
     </NavigationContainer>
   );
 };
@@ -147,6 +171,19 @@ const styles = StyleSheet.create({
   placeholderText: {
     fontSize: 16,
     color: '#666',
+  },
+  testingSection: {
+    marginTop: 32,
+    padding: 16,
+    alignItems: 'center',
+  },
+  userInfo: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 12,
+  },
+  signOutButton: {
+    marginTop: 8,
   },
 });
 

@@ -36,15 +36,30 @@ The web demo is connected to a live Azure-hosted API with a SQL Server database.
 
 ## 🎯 Current Sprint Goal
 
-**Sprint 4: Backend API Authentication** *(IN PROGRESS)*
+**Sprint 5: User Authentication - Web & Mobile Integration** *(NEXT UP)*
 
-Secure the FoodBudget backend API to require and validate JWT access tokens from Microsoft Entra External ID. This sprint establishes the authentication infrastructure needed for user-specific data isolation in Sprint 5.
+Complete the authentication integration by implementing Google Sign-In, creating user flows in Microsoft Entra External ID, and integrating MSAL authentication in both web and mobile apps. This sprint delivers end-to-end authentication from sign-up to protected API access.
 
-**Progress:** Stories 4.1 & 4.2 Complete ✅ (2/4 must-have stories)
+📖 **Full Sprint Documentation:** [`docs/sprint-5.md`](./docs/sprint-5.md) - Complete user stories, technical details, and acceptance criteria
+
+---
+
+## ✅ Sprint 4: Backend API Authentication *(COMPLETED)*
+
+**Goal:** Secure the FoodBudget backend API to require and validate JWT access tokens from Microsoft Entra External ID. This sprint establishes the authentication infrastructure needed for user-specific data isolation in Sprint 5.
+
+**Status:** ✅ All must-have stories completed (November 2025)
+
+**What Was Delivered:**
 - ✅ Story 4.1: Microsoft Entra External ID tenant created and configured
 - ✅ Story 4.2: Web app (SPA) registration for testing and web demo integration
-- ⏳ Story 4.3: Backend JWT validation configuration (next)
-- ⏳ Story 4.4: API protection testing with manual tokens
+- ✅ Story 4.3: Backend JWT validation with Microsoft.Identity.Web v4.0.1
+  - Protected RecipeController with `[Authorize]` attribute
+  - JWT token validation configured (audience, issuer, scopes)
+  - User ID extraction from `oid` claim via ClaimsPrincipalExtensions
+  - 401 Unauthorized responses for unauthenticated requests
+  - Integration tests for authentication middleware
+- ⏭️ Story 4.4: API protection testing **DEFERRED TO SPRINT 5** (will occur during MSAL integration)
 
 📖 **Full Sprint Documentation:** [`docs/sprint-4.md`](./docs/sprint-4.md) - Complete user stories, technical details, and acceptance criteria
 

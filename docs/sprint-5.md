@@ -2,8 +2,8 @@
 
 **Sprint Goal:** Enable users to sign up and sign in via the FoodBudget web app (Phase 1) and mobile app (Phase 2), and securely access the protected backend API.
 
-**Status:** 📋 READY FOR IMPLEMENTATION (after Sprint 4 completes)
-**Prerequisites:** Sprint 4 complete (backend API protected with JWT validation)
+**Status:** ⏳ IN PROGRESS (Story 5.1 Complete ✅ | 1/3 Phase 1 stories)
+**Prerequisites:** Sprint 4 complete (backend API protected with JWT validation) ✅
 **Target Completion:** TBD
 **Priority Model:** MoSCoW (Must have, Should have, Could have, Won't have)
 **Implementation Approach:** Web-first, then mobile (shared UI components, platform-specific MSAL integration)
@@ -14,19 +14,26 @@
 
 **What This Sprint Delivers:**
 
-**Phase 1: Web Authentication** (Priority 1 - ~20 hours)
-- ✅ Users can sign up and sign in via GitHub Pages web app
-- ✅ Authentication with email + password or Google
+**Phase 1: Web Authentication with Email/Password** (Priority 1 - ~15 hours)
+- ✅ Users can sign up and sign in via GitHub Pages web app using **email + password**
 - ✅ Web app acquires access tokens from Entra
 - ✅ Web app calls protected backend API successfully
 - ✅ End-to-end authentication working on web
+- 🎯 **MVP authentication complete** - Google Sign-In deferred to Phase 3
 
-**Phase 2: Mobile Authentication** (Priority 2 - ~11 hours)
-- 📱 Users can sign up and sign in via React Native mobile app
+**Phase 2: Mobile Authentication with Email/Password** (Priority 2 - ~11 hours)
+- 📱 Users can sign up and sign in via React Native mobile app using **email + password**
 - 📱 Mobile app uses system browser for OAuth
 - 📱 Mobile app acquires access tokens from Entra
 - 📱 Mobile app calls protected backend API successfully
 - 📱 End-to-end authentication working on iOS and Android
+
+**Phase 3: Post-Sprint Enhancements** (Optional - as needed)
+- 🔐 Rate limiting for authentication endpoints
+- 🖼️ User delegation SAS for recipe images
+- 🌐 Google Sign-In as social identity provider
+- 🔑 Self-service password reset
+- 🎨 Custom branding for sign-in pages
 
 **What This Sprint Builds On (Sprint 4):**
 - ✅ Entra External ID tenant created (Story 4.1)
@@ -62,153 +69,152 @@
 
 ---
 
-## User Stories
+## Table of Contents
 
-### **PHASE 1: WEB AUTHENTICATION** (Do First - ~20 hours)
+### Phase 1: Web Authentication (Email/Password) - ~15 hours
+- [Story 5.1: Create Email/Password User Flow](#story-51-create-emailpassword-user-flow) (1-2h) 🔴 MUST HAVE
+- [Story 5.2: Integrate MSAL Authentication in Web App](#story-52-integrate-msal-authentication-in-web-app) (5-7h) 🔴 MUST HAVE
+- [Story 5.3: Connect Web App to Protected API](#story-53-connect-web-app-to-protected-api) (4-5h) 🔴 MUST HAVE
 
-Stories 5.1, 5.2, 5.3A, and 5.4A implement authentication for the web app (GitHub Pages). These stories use the web app registration created in Sprint 4.2.
+### Phase 2: Mobile Authentication (Email/Password) - ~10 hours
+- [Story 5.4: Register Mobile App (React Native)](#story-54-register-mobile-app-react-native) (1h) 🔴 MUST HAVE
+- [Story 5.5: Integrate MSAL Authentication in Mobile App](#story-55-integrate-msal-authentication-in-mobile-app) (4-8h) 🔴 MUST HAVE
+- [Story 5.6: Connect Mobile App to Protected API](#story-56-connect-mobile-app-to-protected-api) (2-3h) 🔴 MUST HAVE
+
+### Phase 3: Post-Sprint Enhancements (Optional) - as needed
+- [Story 5.7: Implement Rate Limiting for Sign-Up Endpoints](#story-57-implement-rate-limiting-for-sign-up-endpoints) (2-4h) 🟡 SHOULD HAVE
+- [Story 5.8: Upgrade Recipe Image Upload to User Delegation SAS](#story-58-upgrade-recipe-image-upload-to-user-delegation-sas) (8-13h) 🟢 COULD HAVE
+- [Story 5.9: Add Google Sign-In (Social Identity Provider)](#story-59-add-google-sign-in-social-identity-provider) (3-5h) 🟢 COULD HAVE
+- [Story 5.10: Enable Self-Service Password Reset](#story-510-enable-self-service-password-reset-optional) (0.5-1h) 🟡 SHOULD HAVE
+- [Story 5.11: Apply Custom Branding](#story-511-apply-custom-branding-optional) (2-4h) 🟢 COULD HAVE
+- [Story 5.12: Add Facebook and Apple Authentication](#story-512-add-facebook-and-apple-authentication-optional) (6-10h) 🟢 COULD HAVE
 
 ---
 
-### Story 5.1: Configure Google Sign-In
+## User Stories
 
-**Title:** Set up Google as social identity provider
+### **PHASE 1: WEB AUTHENTICATION** (Do First - ~15 hours)
+
+Stories 5.1, 5.2, and 5.3 implement email/password authentication for the web app (GitHub Pages). These stories use the web app registration created in Sprint 4.2.
+
+**MVP Approach:** Email/password authentication ONLY. Google Sign-In deferred to Phase 3 (Story 5.9) to reduce complexity and external dependencies.
+
+---
+
+### Story 5.1: Create Email/Password User Flow
+
+**Title:** Configure user sign-up and sign-in flow with email/password authentication
 
 **User Story:**
-As a **FoodBudget user**, I want to sign up and sign in using my Google account, so that I can quickly access the app without creating a new password.
+As a **FoodBudget user**, I want to sign up for an account using my email and password, so that I can access my personalized food budget data.
 
 **Acceptance Criteria:**
-- [ ] Google OAuth credentials created in Google Cloud Console
-- [ ] OAuth consent screen configured with FoodBudget branding
-- [ ] All 7 required redirect URIs configured in Google Console
-- [ ] Google added as identity provider in Entra External ID
-- [ ] Google provider visible in Entra admin center
-- [ ] Google configuration ready for user flow association (Story 5.2)
+- [x] User flow named `SignUpSignIn` created in Entra External ID
+- [x] Email + Password authentication enabled
+- [x] **Google social provider NOT configured** (deferred to Phase 3, Story 5.9)
+- [x] User attributes configured: Email (required), Display Name (required)
+- [x] Given name, surname, and other optional fields NOT collected
+- [x] **Web app associated with user flow** (uses registration from Sprint 4.2)
+- [x] Backend API NOT associated with user flow (APIs validate tokens, don't authenticate)
+- [x] User flow tested with "Run user flow" feature
+- [x] Email + Password sign-up works
+- [x] Email + Password sign-in works
 
 **Definition of Done:**
-- [ ] Google Client ID and Client Secret securely stored
-- [ ] Google provider configured in Entra admin center
-- [ ] Configuration tested (provider visible and active)
+- [x] User flow visible in Entra admin center
+- [x] **FoodBudget Web App** appears in flow's Applications list
+- [x] Test account created via email/password
+- [x] Email/password authentication works in test environment
+- [x] User flow ready for web app integration (Story 5.2)
 
 **Technical Notes/Constraints:**
 
 **Prerequisites:**
+- ✅ Sprint 4 complete (tenant, API, and web app registered)
 - ✅ Entra External ID tenant created (Sprint 4, Story 4.1)
 - ✅ Web app (SPA) registration created (Sprint 4, Story 4.2)
 - ✅ Backend API registration created (Sprint 4, Story 4.1)
 
-**Google Sign-In Configuration:**
-- **Google account required:** Create dedicated account for FoodBudget development
-- **Authorized domains:** `ciamlogin.com`, `microsoftonline.com`
-- **7 redirect URIs required** (replace `<tenant-ID>` with actual tenant ID):
-  ```
-  https://login.microsoftonline.com
-  https://login.microsoftonline.com/te/<tenant-ID>/oauth2/authresp
-  https://login.microsoftonline.com/te/foodbudget.onmicrosoft.com/oauth2/authresp
-  https://<tenant-ID>.ciamlogin.com/<tenant-ID>/federation/oidc/accounts.google.com
-  https://<tenant-ID>.ciamlogin.com/foodbudget.onmicrosoft.com/federation/oidc/accounts.google.com
-  https://foodbudget.ciamlogin.com/<tenant-ID>/federation/oauth2
-  https://foodbudget.ciamlogin.com/foodbudget.onmicrosoft.com/federation/oauth2
-  ```
-- **Cost:** FREE
-- **Must configure BEFORE user flow creation** (Story 5.2 dependency)
-- **Reference:** [Google Setup](./entra-external-id-setup-guide.md) (lines 310-380)
-
-**Configuration Checklist:**
-
-1. Google Cloud Console → Create project "FoodBudget"
-2. OAuth consent screen → External → Configure
-3. Credentials → Create OAuth client ID → Web application
-4. Add all 7 redirect URIs
-5. Copy Client ID and Client Secret
-6. Entra admin center → External Identities → All identity providers
-7. Built-in tab → Configure Google
-8. Paste Client ID and Client Secret → Save
-9. Verify provider appears in identity providers list
-
-**Estimated Effort:** 1-2 hours
-
-**Priority:** 🔴 MUST HAVE (Foundation for user authentication)
-
----
-
-### Story 5.2: Create User Sign-Up and Sign-In Flow
-
-**Title:** Configure combined sign-up/sign-in user flow
-
-**User Story:**
-As a **FoodBudget user**, I want to sign up for an account or sign in to my existing account, so that I can access my personalized food budget data.
-
-**Acceptance Criteria:**
-- [ ] User flow named `SignUpSignIn` created
-- [ ] Email + Password authentication enabled
-- [ ] Google social provider enabled (Story 5.1 dependency)
-- [ ] User attributes configured: Email (required), Display Name (required)
-- [ ] Given name, surname, and other optional fields NOT collected
-- [ ] **Web app associated with user flow** (Phase 1 - uses registration from Sprint 4.2)
-- [ ] Backend API NOT associated with user flow (APIs validate tokens, don't authenticate)
-- [ ] User flow tested with "Run user flow" feature
-- [ ] Email + Password sign-up works
-- [ ] Email + Password sign-in works
-- [ ] Google sign-up works
-- [ ] Google sign-in works
-
-**Definition of Done:**
-- [ ] User flow visible in Entra admin center
-- [ ] **FoodBudget Web App** appears in flow's Applications list
-- [ ] Test accounts created via email and Google
-- [ ] All authentication methods work in test environment
-- [ ] User flow ready for web app integration (Story 5.3A)
-
-**Technical Notes/Constraints:**
-- **Prerequisites:**
-  - Sprint 4 complete (tenant, API, and web app registered)
-  - Story 5.1 complete (Google configured)
+**Configuration Details:**
 - **Flow type:** Sign-up and sign-in combined (single flow for both actions)
-- **One app = one user flow:** Cannot assign mobile app to multiple flows
+- **One app = one user flow:** Cannot assign an app to multiple flows
 - **Do NOT delete** `b2c-extensions-app` (auto-created for custom attributes)
 - **No terms/privacy checkbox:** Deferred post-sprint (no legal documents yet)
-- **Authentication methods:**
-  - Email + Password (FREE)
-  - Google (FREE)
+- **Authentication method:** Email + Password ONLY (FREE)
 - **User attributes collected:**
   - Email (required) - for authentication
   - Display Name (required) - for personalization
   - NO given name, surname, job title, address fields
 - **Reference:** [User Flow Configuration](./entra-external-id-setup-guide.md) (lines 570-672)
 
+**2025 Platform Context:**
+- **Entra External ID is future-proof**: Azure AD B2C new sales ended May 1, 2025 (Entra External ID is successor)
+- **SMS limitation**: NOT available for primary authentication (MFA second-factor only, additional cost)
+- **Built-in attribute labels**: Cannot be customized (e.g., "Display Name" label is fixed)
+- **Session control**: NOT supported in External ID tenants (standard Entra ID only)
+- **JavaScript customization**: NOT supported (use built-in branding options only - Story 5.11)
+
 **Configuration Steps:**
-1. Entra admin center → External Identities → User flows → New user flow
-2. Name: `SignUpSignIn`
-3. Identity providers:
-   - ✅ Email with password
-   - ✅ Google
-4. User attributes:
-   - ✅ Email Address
-   - ✅ Display Name
+1. Sign in to Microsoft Entra admin center as User Administrator (minimum role)
+2. Navigate: Entra ID → External Identities → User flows → **New user flow**
+3. Name: `SignUpSignIn` (auto-prefixed with `B2X_1_`)
+4. Identity providers:
+   - ✅ **Email with password** (default option - enables password auth + optional MFA)
+   - ❌ Google (deferred to Phase 3)
+5. User attributes (click "Show more" for full list):
+   - ✅ Email Address (required)
+   - ✅ Display Name (required)
    - ❌ Given name, Surname (not collecting)
-5. Create user flow
-6. Associate application:
-   - User flows → SignUpSignIn → Applications → Add application
+6. Click **Create**
+7. Associate application:
+   - Navigate: User flows → SignUpSignIn → **Applications** (under "Use" section)
+   - Click **Add application**
    - Select **"FoodBudget Web App"** (created in Sprint 4.2)
-   - Save
-7. Test with "Run user flow" button
+   - Click **Select**
+   - Verify app appears in Applications list
+
+**Pre-Testing Verification:**
+1. **Verify web app token version**: App registrations → FoodBudget Web App → Manifest
+   - Confirm `"accessTokenAcceptedVersion": 2` (not null)
+   - **Why**: Prevents "IDX20804" token validation error
+2. **Prepare test account**: Use email DIFFERENT from admin account (e.g., `testuser@example.com`)
+   - **Why**: Using admin email creates duplicate user and can lock out admin access
 
 **Testing User Flow:**
-1. Navigate to user flow → "Run user flow"
-2. Test email + password sign-up (create new test user)
-3. Test email + password sign-in (existing user)
-4. Test Google sign-up (new user with Google account)
-5. Test Google sign-in (existing Google user)
-6. Verify users created in Entra ID → Users list
+1. Navigate: User flows → SignUpSignIn → **"Run user flow"** button
+2. **Test panel configuration**:
+   - Application: Select "FoodBudget Web App"
+   - Response type: id_token (default for SPA)
+   - PKCE: Enable "Specify code challenge" if testing SPA flow
+3. Click **"Run user flow"** → Sign-in page opens in new browser tab
+4. **Test sign-up flow**:
+   - Click "Sign up now" link
+   - Enter test email (e.g., `testuser@example.com`)
+   - Create password (requirements shown on page)
+   - Enter Display Name
+   - Complete sign-up → Verify redirect back to app
+5. **Test sign-in flow**:
+   - Return to test panel, click "Run user flow" again
+   - Enter existing test user credentials
+   - Verify successful sign-in → Verify redirect
+6. **Verify user created**:
+   - Navigate: Entra ID → Users
+   - Search for test user email
+   - Confirm user exists with Display Name populated
+   - Verify authentication method: "Email with password"
 
-**Estimated Effort:** 2-3 hours
+**Common Testing Issues:**
+- **"Run user flow" button not appearing**: Confirm using External ID tenant (not standard Entra ID)
+- **Admin lockout after testing**: Used admin email for test account → Sign in via `entra.microsoft.com`
+- **Token validation error (IDX20804)**: Web app manifest has `accessTokenAcceptedVersion: null` → Set to `2`
 
-**Priority:** 🔴 MUST HAVE (Core authentication flow)
+**Estimated Effort:** 1-2 hours
+
+**Priority:** 🔴 MUST HAVE (Foundation for MVP authentication)
 
 ---
 
-### Story 5.3A: Integrate MSAL Authentication in Web App
+### Story 5.2: Integrate MSAL Authentication in Web App
 
 **Title:** Enable users to sign in via web app (GitHub Pages)
 
@@ -222,8 +228,7 @@ As a **FoodBudget user**, I want to sign in through the web app, so that I can a
 - [ ] API scopes configured: `api://877ea87e-5be9-4102-9959-6763e3fdf243/access_as_user`
 - [ ] Redirect URIs match app registration (GitHub Pages, localhost, jwt.ms)
 - [ ] Sign-in/sign-up screens created with shared React Native components
-- [ ] Email + Password authentication works on web
-- [ ] Google authentication works on web
+- [ ] **Email + Password authentication works on web** (MVP - Google deferred to Phase 3)
 - [ ] Access token acquired after successful authentication
 - [ ] Access token stored securely (sessionStorage)
 - [ ] Refresh token handled automatically by MSAL
@@ -233,32 +238,89 @@ As a **FoodBudget user**, I want to sign in through the web app, so that I can a
 
 **Definition of Done:**
 - [ ] User can sign in with email + password on localhost:8081
-- [ ] User can sign in with Google on localhost:8081
-- [ ] User can sign in on GitHub Pages deployment
+- [ ] User can sign in with email + password on GitHub Pages deployment
 - [ ] Access token visible in browser dev tools / app state
 - [ ] Sign-out clears token and returns to sign-in screen
 - [ ] Protected routes (recipe list) require authentication
 - [ ] Code reviewed
 - [ ] No hardcoded secrets (client ID from environment variable)
 
+---
+
+## Package Installation
+
+```bash
+# Install MSAL packages (TypeScript types included)
+npm install @azure/msal-react@^3.0.21 @azure/msal-browser@^4.26.0
+```
+
+**Versions (Verified January 2025):**
+- `@azure/msal-react`: v3.0.21 (latest stable, October 2025)
+  - Supports React 19 (current project version)
+  - Authorization Code Flow with PKCE
+- `@azure/msal-browser`: v4.26.0 (peer dependency)
+  - TypeScript types included
+  - No additional @types packages needed
+
+**Compatibility:**
+- ✅ React 19.0.0 (project version)
+- ✅ Expo SDK 52
+- ✅ TypeScript 5.x
+- ✅ React Native Web
+
+---
+
 **Technical Notes/Constraints:**
+
+**Prerequisites Verification:**
+Before implementation, verify the following in Sprint 4.2's web app registration:
+- [ ] Redirect URIs registered in Entra admin center:
+  - `http://localhost:8081/RecipeTracker/`
+  - `https://cadil91.github.io/RecipeTracker/`
+  - `https://jwt.ms`
+- [ ] Platform type is "Single-page application" (SPA) - enables CORS + PKCE
+- [ ] Token version set to v2 (`requestedAccessTokenVersion: 2` in manifest)
 
 **MSAL Package:** `@azure/msal-react` + `@azure/msal-browser`
 - **Why:** Official Microsoft library for React SPAs
-- **Version:** Latest v3.x
+- **Version:** v3.x (see Package Installation above)
 - **Pattern:** React hooks and context provider
+- **Platform Support:** Web ONLY (React Native mobile uses different library in Story 5.5)
+
+**Environment Variables:**
+
+Before configuration, add MSAL credentials to `.env`:
+
+```bash
+# .env (DO NOT commit to git)
+EXPO_PUBLIC_MSAL_CLIENT_ID=9eb59a1f-ffe8-49d7-844f-ff2ca7cf02ae
+EXPO_PUBLIC_MSAL_TENANT_ID=644a9317-ded3-439a-8f0a-9a8491ce35e9
+EXPO_PUBLIC_MSAL_API_SCOPE=api://877ea87e-5be9-4102-9959-6763e3fdf243/access_as_user
+```
+
+**Note:** `.env` is already in `.gitignore` (verified in project). These values are safe for development but should use different credentials for production deployments.
 
 **Configuration:**
-```javascript
-// lib/auth/msalConfig.web.ts
+```typescript
+// src/lib/shared/auth/msalConfig.web.ts
 import { Configuration } from '@azure/msal-browser';
+import { Platform } from 'react-native';
+
+// Type guard to ensure we're on web platform
+if (Platform.OS !== 'web') {
+  throw new Error('msalConfig.web.ts should only be imported on web platform');
+}
 
 export const msalConfig: Configuration = {
   auth: {
-    clientId: '9eb59a1f-ffe8-49d7-844f-ff2ca7cf02ae',
-    authority: 'https://foodbudget.ciamlogin.com/644a9317-ded3-439a-8f0a-9a8491ce35e9',
-    redirectUri: window.location.origin + '/RecipeTracker/',
-    postLogoutRedirectUri: window.location.origin + '/RecipeTracker/',
+    clientId: process.env.EXPO_PUBLIC_MSAL_CLIENT_ID!,
+    authority: `https://foodbudget.ciamlogin.com/${process.env.EXPO_PUBLIC_MSAL_TENANT_ID}`,
+    redirectUri: Platform.OS === 'web'
+      ? `${window.location.origin}/RecipeTracker/`
+      : undefined,
+    postLogoutRedirectUri: Platform.OS === 'web'
+      ? `${window.location.origin}/RecipeTracker/`
+      : undefined,
   },
   cache: {
     cacheLocation: 'sessionStorage',
@@ -267,22 +329,26 @@ export const msalConfig: Configuration = {
 };
 
 export const loginRequest = {
-  scopes: ['api://877ea87e-5be9-4102-9959-6763e3fdf243/access_as_user'],
+  scopes: [process.env.EXPO_PUBLIC_MSAL_API_SCOPE!],
 };
 ```
+
+**Expected Redirect URIs (by environment):**
+- Localhost: `http://localhost:8081/RecipeTracker/`
+- GitHub Pages: `https://cadil91.github.io/RecipeTracker/`
+- Testing: `https://jwt.ms` (manual token inspection)
 
 **Files to Create:**
 ```
 FoodBudgetMobileApp/
 ├── src/
 │   ├── screens/auth/
-│   │   ├── SignInScreen.tsx (web-compatible)
-│   │   ├── SignUpScreen.tsx (web-compatible)
+│   │   ├── SignInScreen.tsx (web-compatible, email/password)
+│   │   ├── SignUpScreen.tsx (web-compatible, email/password)
 │   │   └── AuthCallbackScreen.tsx (handle OAuth redirects)
 │   ├── components/auth/
 │   │   ├── AuthProvider.tsx (MSAL context wrapper)
-│   │   ├── SignInButton.tsx
-│   │   └── GoogleSignInButton.tsx
+│   │   └── SignInButton.tsx (email/password button)
 │   ├── hooks/
 │   │   ├── useAuth.ts (platform abstraction)
 │   │   └── useMsal.web.ts (web-specific)
@@ -292,9 +358,51 @@ FoodBudgetMobileApp/
 │       └── authTypes.ts (shared)
 ```
 
+**Note:** `GoogleSignInButton.tsx` will be added in Phase 3 (Story 5.9) when Google Sign-In is implemented.
+
+**TypeScript Interfaces:**
+```typescript
+// src/lib/auth/authTypes.ts (shared across web and mobile)
+
+/**
+ * User account information from authentication provider
+ */
+export interface AuthUser {
+  id: string;                    // User ID (oid claim from Entra)
+  email: string;                 // User email address
+  name?: string;                 // Display name (optional)
+  username?: string;             // Username (if applicable)
+}
+
+/**
+ * Authentication hook return type
+ * Used by both web (MSAL React) and mobile (react-native-msal)
+ */
+export interface UseAuthResult {
+  isAuthenticated: boolean;      // True if user is signed in
+  user: AuthUser | null;         // Current user or null
+  isLoading?: boolean;           // Optional: true during initialization
+  signIn: () => Promise<void>;   // Trigger sign-in flow
+  signOut: () => Promise<void>;  // Trigger sign-out flow
+  getAccessToken: () => Promise<string | null>; // Get access token for API calls
+}
+
+/**
+ * MSAL-specific error types (web only)
+ */
+export type MsalErrorCode =
+  | 'user_cancelled'
+  | 'network_error'
+  | 'invalid_grant'
+  | 'interaction_required'
+  | 'no_account_error'
+  | 'uninitialized_public_client_application';
+```
+
 **Implementation Pattern:**
 ```tsx
 // App.tsx (wrap with MSAL provider)
+import { useState, useEffect } from 'react';
 import { MsalProvider } from '@azure/msal-react';
 import { PublicClientApplication } from '@azure/msal-browser';
 import { msalConfig } from './lib/auth/msalConfig.web';
@@ -302,6 +410,20 @@ import { msalConfig } from './lib/auth/msalConfig.web';
 const msalInstance = new PublicClientApplication(msalConfig);
 
 export default function App() {
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  useEffect(() => {
+    // CRITICAL: MSAL Browser v4.x requires initialization before use
+    // Without this, app will crash with BrowserAuthError: uninitialized_public_client_application
+    msalInstance.initialize().then(() => {
+      setIsInitialized(true);
+    });
+  }, []);
+
+  if (!isInitialized) {
+    return <div>Loading...</div>; // Or your LoadingScreen component
+  }
+
   return (
     <MsalProvider instance={msalInstance}>
       <AppNavigator />
@@ -365,31 +487,189 @@ export const useAuth = () => {
   // Phase 2: return useMsalNative();
   throw new Error('Mobile authentication not yet implemented (Sprint 5 Phase 2)');
 };
+
+// src/navigation/ProtectedRoute.tsx (or similar - adapt to your navigation)
+import React from 'react';
+import { useAuth } from '../hooks/useAuth';
+import { ActivityIndicator, View } from 'react-native';
+
+interface ProtectedRouteProps {
+  children: React.ReactNode;
+  fallback?: React.ReactNode; // Optional custom loading screen
+}
+
+export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
+  children,
+  fallback
+}) => {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  // Show loading screen while checking authentication
+  if (isLoading) {
+    return fallback || (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
+  // Redirect to sign-in if not authenticated
+  // Note: Actual redirect implementation depends on your navigation library
+  // (React Navigation, Expo Router, etc.)
+  if (!isAuthenticated) {
+    // For React Navigation:
+    // navigation.navigate('SignIn');
+
+    // For Expo Router:
+    // router.replace('/sign-in');
+
+    // Placeholder:
+    console.log('User not authenticated - should redirect to sign-in');
+    return null;
+  }
+
+  // User is authenticated - render protected content
+  return <>{children}</>;
+};
+
+// Usage example:
+// <ProtectedRoute>
+//   <RecipeListScreen />
+// </ProtectedRoute>
 ```
 
+**Technical Notes:**
+
+1. **MSAL React Auto-Handles Redirects**: MSAL React's `MsalProvider` automatically calls `handleRedirectPromise()` on mount. You do NOT need to manually call this in App.tsx or any component. This is a key difference from vanilla MSAL Browser.
+
+2. **Token Storage**: Tokens are stored in `sessionStorage` (not `localStorage`):
+   - Tokens persist only for the browser tab session
+   - Closing the tab clears tokens (user must re-authenticate)
+   - More secure than `localStorage` (reduces XSS risk)
+   - `storeAuthStateInCookie: false` disables fallback to cookies (SameSite issues)
+
+3. **Platform Abstraction**: The `useAuth()` hook abstracts platform differences:
+   - Web: Uses `@azure/msal-react` (this story)
+   - Mobile: Will use `react-native-msal` (Story 5.5)
+   - Components should ONLY import `useAuth()`, never `useMsalWeb()` directly
+
+4. **Login Flow**: `loginRedirect` vs `loginPopup`:
+   - This story uses `loginRedirect` (user leaves app, returns after auth)
+   - `loginPopup` is NOT recommended for React Native Web (popup blockers)
+   - Redirect flow is more reliable across all browsers
+
+5. **Token Expiration**: MSAL automatically refreshes tokens:
+   - Access tokens expire after 1 hour (Entra default)
+   - `acquireTokenSilent()` uses refresh token automatically
+   - If refresh fails, `acquireTokenRedirect()` triggers interactive sign-in
+
 **Error Handling:**
-- User cancels authentication → Stay on sign-in screen
-- Network error → Show "Check internet connection" message
-- Invalid credentials → Display error from Entra
-- Token acquisition fails → Re-trigger interactive sign-in
+
+| Error Type | Error Code/Name | User-Facing Message | Action |
+|------------|----------------|---------------------|---------|
+| User cancels sign-in | `user_cancelled` | None (stay on sign-in screen) | Allow retry |
+| Network error | `network_error` | "Unable to connect. Check your internet connection." | Show retry button |
+| Invalid credentials | `invalid_grant` | "Email or password is incorrect." | Display Entra error message |
+| Uninitialized MSAL | `BrowserAuthError: uninitialized_public_client_application` | "Authentication system loading..." | Show loading screen (prevent rendering) |
+| Token acquisition fails (silent) | `interaction_required` | (Automatic) | Redirect to interactive sign-in |
+| Token acquisition fails (interactive) | `interaction_required` | "Please sign in again." | Trigger `loginRedirect()` |
+| Account not found | `no_account_error` | "No account found. Please sign in." | Redirect to sign-in |
+| Multiple accounts | N/A | (Use first account) | Log warning, use `accounts[0]` |
+
+**Implementation Example:**
+```typescript
+try {
+  await instance.loginRedirect(loginRequest);
+} catch (error: any) {
+  if (error.errorCode === 'user_cancelled') {
+    // User closed the sign-in window - do nothing
+    return;
+  }
+
+  if (error.errorCode === 'network_error') {
+    setError('Unable to connect. Check your internet connection.');
+    return;
+  }
+
+  // Generic error
+  setError(error.message || 'Sign-in failed. Please try again.');
+  console.error('Sign-in error:', error);
+}
+```
 
 **Testing Checklist:**
-- [ ] Sign in works on `localhost:8081`
-- [ ] Sign in works on GitHub Pages
-- [ ] Sign in with email/password
-- [ ] Sign in with Google
-- [ ] Sign out clears session
-- [ ] Protected routes redirect to sign-in
-- [ ] Token refresh works (wait for expiration or force)
-- [ ] Error messages display correctly
 
-**Estimated Effort:** 6-8 hours
+**Environment Setup:**
+1. [ ] Verify `.env` file exists with correct values (client ID, tenant ID, API scope)
+2. [ ] Verify MSAL packages installed (`npm list @azure/msal-react @azure/msal-browser`)
+3. [ ] Verify redirect URIs registered in Entra admin center
+
+**Localhost Testing (`localhost:8081`):**
+1. [ ] Run `npm start` and navigate to `http://localhost:8081/RecipeTracker/`
+2. [ ] Click sign-in button → Redirects to Entra sign-in page
+3. [ ] Sign up with new email + password → Redirects back to app
+4. [ ] Verify access token in browser dev tools (Application → sessionStorage)
+5. [ ] Navigate to protected route (e.g., recipe list) → Content loads
+6. [ ] Sign out → Token cleared from sessionStorage, redirected to sign-in
+
+**GitHub Pages Testing (Production):**
+1. [ ] Deploy to GitHub Pages (`npm run deploy`)
+2. [ ] Navigate to `https://cadil91.github.io/RecipeTracker/`
+3. [ ] Sign in with email/password → Verify redirect works correctly
+4. [ ] Verify access token in sessionStorage
+5. [ ] Test protected routes and sign-out
+
+**Email/Password Authentication:**
+1. [ ] Sign up with new email → Email format validation works
+2. [ ] Sign up with weak password → Password requirements shown
+3. [ ] Sign up with valid credentials → Account created, redirected
+4. [ ] Sign in with correct credentials → Access granted
+5. [ ] Sign in with wrong password → Error message displayed
+
+**Token Management:**
+1. [ ] Sign in → Verify `accessToken` in sessionStorage
+2. [ ] Close browser tab → Reopen app → Must sign in again (sessionStorage cleared)
+3. [ ] Keep tab open → Wait 60+ minutes → Token auto-refreshes on API call
+4. [ ] Manually delete token from sessionStorage → Navigate to protected route → Redirected to sign-in
+
+**Protected Routes:**
+1. [ ] Unauthenticated user navigates to `/recipes` → Redirected to sign-in
+2. [ ] After sign-in → Redirected back to originally requested route
+3. [ ] Authenticated user navigates to `/recipes` → Content loads immediately
+4. [ ] Sign out → Protected routes no longer accessible
+
+**Error Handling:**
+1. [ ] Cancel sign-in (close Entra window) → Stays on sign-in screen, no crash
+2. [ ] Disconnect internet → Click sign-in → "Network error" message shown
+3. [ ] Invalid credentials → "Email or password is incorrect" message shown
+4. [ ] Clear sessionStorage → Refresh app → Must re-authenticate (no crash)
+
+**Browser Compatibility:**
+1. [ ] Test on Chrome (latest)
+2. [ ] Test on Firefox (latest)
+3. [ ] Test on Safari (latest)
+4. [ ] Test on Edge (latest)
+
+**Performance:**
+1. [ ] Initial app load shows loading screen (MSAL initialization)
+2. [ ] After initialization, app renders without delay
+3. [ ] Sign-in redirect completes within 2-3 seconds
+4. [ ] Token acquisition doesn't block UI (async operations)
+
+**Story 5.3 Compatibility Note:**
+Story 5.3 (Connect Web App to Protected API) currently references Axios interceptors for API authentication. However, this project uses **FetchClient** (not Axios) for API calls. During Story 5.3 implementation:
+- Update `lib/shared/api/fetch-client.ts` (not an Axios instance)
+- Use native Fetch API with request/response interceptor pattern
+- Or implement a custom wrapper around fetch that injects the access token from `useAuth().getAccessToken()`
+- The pattern is similar but the implementation details will differ from the Axios example shown in Story 5.3
+
+**Estimated Effort:** 5-7 hours (reduced from 6-8 - Google Sign-In deferred)
 
 **Priority:** 🔴 MUST HAVE (Users can't authenticate without this)
 
 ---
 
-### Story 5.4A: Connect Web App to Protected API
+### Story 5.3: Connect Web App to Protected API
 
 **Title:** Enable authenticated API calls from web app
 
@@ -412,7 +692,7 @@ As a **FoodBudget user**, I want the web app to securely access my data from the
 - [ ] Token refresh tested (wait for expiration or force expiration)
 - [ ] 401 error handling tested (remove token manually)
 - [ ] User sees appropriate error messages for auth failures
-- [ ] Recipes displayed are user-specific (verified by sub claim)
+- [ ] Recipes displayed are user-specific (verified by oid claim)
 - [ ] Code reviewed
 - [ ] Integration test verifies end-to-end flow (sign in → call API → get data)
 
@@ -420,7 +700,7 @@ As a **FoodBudget user**, I want the web app to securely access my data from the
 
 **Dependencies:**
 - Sprint 4 Story 4.3 complete (API validates JWT tokens)
-- Story 5.3A complete (web app can sign in and get tokens)
+- Story 5.2 complete (web app can sign in and get tokens)
 
 **Implementation Pattern:**
 ```typescript
@@ -495,13 +775,15 @@ EXPO_PUBLIC_API_URL=https://foodbudget-api.azurewebsites.net
 
 ---
 
-### **PHASE 2: MOBILE AUTHENTICATION** (Do Later - ~11 hours)
+### **PHASE 2: MOBILE AUTHENTICATION** (Do Later - ~10 hours)
 
-Stories 5.0B, 5.3B, and 5.4B implement authentication for the mobile app (iOS/Android). These stories create a separate mobile app registration and use React Native MSAL.
+Stories 5.4, 5.5, and 5.6 implement email/password authentication for the mobile app (iOS/Android). These stories create a separate mobile app registration and use React Native MSAL.
+
+**MVP Approach:** Email/password authentication ONLY. Google Sign-In deferred to Phase 3 (Story 5.9).
 
 ---
 
-### Story 5.0B: Register Mobile App (React Native)
+### Story 5.4: Register Mobile App (React Native)
 
 **Title:** Create mobile app registration for React Native with Expo
 
@@ -587,23 +869,22 @@ As a **developer**, I want to register the React Native mobile app in Entra Exte
 
 ---
 
-### Story 5.3B: Integrate MSAL Authentication in Mobile App
+### Story 5.5: Integrate MSAL Authentication in Mobile App
 
-**Title:** Enable users to sign in via React Native mobile app
+**Title:** Enable users to sign in via React Native mobile app with email/password
 
 **User Story:**
-As a **FoodBudget user**, I want to sign in through the mobile app, so that I can access my food budget from my phone.
+As a **FoodBudget user**, I want to sign in through the mobile app using my email and password, so that I can access my food budget from my phone.
 
 **Acceptance Criteria:**
 - [ ] MSAL React Native package installed and configured
 - [ ] Authority URL configured: `https://foodbudget.ciamlogin.com/`
-- [ ] Mobile app client ID configured (from Sprint 4, Story 4.2)
+- [ ] Mobile app client ID configured (from Story 5.4)
 - [ ] API scopes configured (e.g., `api://<backend-api-id>/access_as_user`)
-- [ ] Redirect URI matches app registration (Sprint 4, Story 4.2)
+- [ ] Redirect URI matches app registration (from Story 5.4)
 - [ ] Sign-in button triggers authentication flow
 - [ ] User sees branded sign-in page in in-app browser
-- [ ] Email + Password authentication works
-- [ ] Google authentication works
+- [ ] **Email + Password authentication works** (MVP - Google deferred to Phase 3)
 - [ ] Access token acquired after successful authentication
 - [ ] Access token stored securely (MSAL handles token storage)
 - [ ] Refresh token acquired and stored
@@ -612,7 +893,6 @@ As a **FoodBudget user**, I want to sign in through the mobile app, so that I ca
 
 **Definition of Done:**
 - [ ] User can sign in with email + password
-- [ ] User can sign in with Google
 - [ ] Access token visible in app state/debug logs
 - [ ] Sign-out clears token and returns to sign-in screen
 - [ ] Code reviewed
@@ -707,7 +987,7 @@ const getAccessToken = async () => {
 
 ---
 
-### Story 5.4: Connect Mobile App to Protected API
+### Story 5.6: Connect Mobile App to Protected API
 
 **Title:** Enable authenticated API calls from mobile app
 
@@ -736,7 +1016,7 @@ As a **FoodBudget user**, I want the mobile app to securely access my data from 
 **Technical Notes/Constraints:**
 - **Dependencies:**
   - Sprint 4 complete (API protected with JWT validation)
-  - Story 5.3 complete (mobile app can sign in and get tokens)
+  - Story 5.5 complete (mobile app can sign in and get tokens)
 - **Authorization header format:** `Authorization: Bearer <access_token>`
 - **Token acquisition:** Use MSAL's `acquireTokenSilent()` before each API call
   - Returns cached token if valid
@@ -818,7 +1098,7 @@ export const getRecipes = async () => {
 
 ---
 
-### Story 5.5: Enable Self-Service Password Reset (Optional)
+### Story 5.10: Enable Self-Service Password Reset (Optional)
 
 **Title:** Allow users to reset forgotten passwords
 
@@ -828,7 +1108,7 @@ As a **FoodBudget user**, I want to reset my password if I forget it, so that I 
 **Acceptance Criteria:**
 - [ ] Email OTP authentication method enabled in Entra
 - [ ] "Forgot password?" link visible on sign-in page
-- [ ] User can request password reset from mobile app
+- [ ] User can request password reset from web and mobile apps
 - [ ] One-time passcode delivered via email
 - [ ] User can enter OTP and set new password
 - [ ] New password meets security requirements (displayed to user)
@@ -837,19 +1117,19 @@ As a **FoodBudget user**, I want to reset my password if I forget it, so that I 
 
 **Definition of Done:**
 - [ ] Email OTP enabled for all users in Entra admin center
-- [ ] "Show self-service password reset" enabled in Company Branding (if Story 5.6 implemented)
+- [ ] "Show self-service password reset" enabled in Company Branding (if Story 5.11 implemented)
 - [ ] Test user successfully resets password
 - [ ] Email delivery confirmed (check spam folder during testing)
-- [ ] Password reset flow works from mobile app
+- [ ] Password reset flow works from both web and mobile apps
 
 **Technical Notes/Constraints:**
-- **Prerequisites:** Story 5.2 complete (user flow configured)
+- **Prerequisites:** Phase 1 & 2 complete (email/password auth working)
 - **Email OTP:** FREE (email-based, not SMS)
 - **Configuration location:** Entra admin center → Authentication methods → Email OTP
 - **Enable for:** "All users"
 - **Branding dependency:** "Forgot password?" link appears if:
   - Email OTP enabled, AND
-  - "Show self-service password reset" enabled in Company Branding (Story 5.6)
+  - "Show self-service password reset" enabled in Company Branding (Story 5.11)
 - **Password requirements:** Displayed on reset page (Entra defaults)
 - **Testing:** Use test user account, verify email delivery
 - **Reference:** [SSPR Configuration](./entra-external-id-setup-guide.md) (lines 676-729)
@@ -868,7 +1148,7 @@ As a **FoodBudget user**, I want to reset my password if I forget it, so that I 
 
 ---
 
-### Story 5.6: Apply Custom Branding (Optional)
+### Story 5.11: Apply Custom Branding (Optional)
 
 **Title:** Brand authentication experience with FoodBudget identity
 
@@ -880,7 +1160,7 @@ As a **FoodBudget user**, I want to see FoodBudget branding during sign-in, so t
 - [ ] Background color or image matches brand (temporary branding acceptable)
 - [ ] Favicon shows in browser tab
 - [ ] Footer links include Privacy Policy and Terms of Service (placeholder pages)
-- [ ] "Forgot password?" link visible (if Story 5.5 implemented)
+- [ ] "Forgot password?" link visible (if Story 5.10 implemented)
 - [ ] Branding tested across desktop and mobile browsers
 - [ ] Fallback to neutral branding works if custom assets fail to load
 
@@ -925,7 +1205,7 @@ As a **FoodBudget user**, I want to see FoodBudget branding during sign-in, so t
 **5. Sign-in Form Tab:**
 - Username hint text
 - Sign-in page text (optional)
-- ✅ Show self-service password reset (if Story 5.5 implemented)
+- ✅ Show self-service password reset (if Story 5.10 implemented)
 
 **Testing:**
 1. Run user flow → Preview branding
@@ -940,12 +1220,12 @@ As a **FoodBudget user**, I want to see FoodBudget branding during sign-in, so t
 
 ---
 
-### Story 5.7: Add Facebook and Apple Authentication (Optional)
+### Story 5.12: Add Facebook and Apple Authentication (Optional)
 
 **Title:** Enable additional social identity providers
 
 **User Story:**
-As a **FoodBudget user**, I want to sign up and sign in using my Facebook or Apple account, so that I have more authentication options.
+As a **FoodBudget user**, I want to sign up and sign in using my Facebook or Apple account, so that I have more authentication options beyond email/password and Google.
 
 **Acceptance Criteria:**
 
@@ -954,7 +1234,7 @@ As a **FoodBudget user**, I want to sign up and sign in using my Facebook or App
 - [ ] Facebook Login configured with redirect URIs
 - [ ] Privacy Policy, Terms of Service, User Data Deletion URLs provided (placeholder pages)
 - [ ] Facebook added as identity provider in Entra
-- [ ] Facebook enabled in user flow (Story 5.2)
+- [ ] Facebook enabled in user flow (Story 5.1)
 - [ ] Test user can sign up and sign in with Facebook
 
 **Apple:**
@@ -963,7 +1243,7 @@ As a **FoodBudget user**, I want to sign up and sign in using my Facebook or App
 - [ ] Services ID created and configured
 - [ ] Private key (.p8) generated and securely stored
 - [ ] Apple added as identity provider in Entra
-- [ ] Apple enabled in user flow (Story 5.2)
+- [ ] Apple enabled in user flow (Story 5.1)
 - [ ] Test user can sign up and sign in with Apple
 
 **Definition of Done:**
@@ -1157,6 +1437,409 @@ Optional Stories (parallel):
 - Backend API protected with JWT validation (Sprint 4.3)
 - API tested with manual tokens (Sprint 4.4)
 - Mobile app registration NOT created - deferred to Sprint 5 Phase 2
+
+---
+
+## **PHASE 3: POST-SPRINT ENHANCEMENTS** (Optional - Do After Full Authentication Complete)
+
+Stories 5.7-5.12 are optional enhancements that can be implemented after both web and mobile authentication are working. Story 5.9 (Google Sign-In) adds social authentication as an alternative to email/password.
+
+---
+
+### Story 5.9: Add Google Sign-In (Social Identity Provider)
+
+**Title:** Enable Google authentication as alternative to email/password
+
+**User Story:**
+As a **FoodBudget user**, I want to sign up and sign in using my Google account, so that I can quickly access the app without creating a new password.
+
+**Acceptance Criteria:**
+- [ ] Google OAuth credentials created in Google Cloud Console
+- [ ] OAuth consent screen configured with FoodBudget branding
+- [ ] All 7 required redirect URIs configured in Google Console
+- [ ] Google added as identity provider in Entra External ID
+- [ ] Google provider visible in Entra admin center
+- [ ] Google enabled in existing `SignUpSignIn` user flow (from Story 5.1)
+- [ ] **Both web and mobile apps** can authenticate with Google
+- [ ] Google sign-up works
+- [ ] Google sign-in works
+- [ ] User can switch between email/password and Google authentication
+
+**Definition of Done:**
+- [ ] Google Client ID and Client Secret securely stored
+- [ ] Google provider configured in Entra admin center
+- [ ] Google added to user flow identity providers
+- [ ] Test accounts created via Google
+- [ ] Google authentication works on web (localhost and GitHub Pages)
+- [ ] Google authentication works on mobile (iOS and Android)
+- [ ] Code reviewed
+- [ ] `GoogleSignInButton.tsx` component created (web/mobile compatible)
+
+**Technical Notes/Constraints:**
+
+**Prerequisites:**
+- ✅ Phase 1 & 2 complete (email/password auth working on web and mobile)
+- ✅ User flow exists (Story 5.1)
+- ✅ Web and mobile apps integrated with MSAL (Stories 5.2, 5.5)
+
+**Google Sign-In Configuration:**
+- **Google account required:** Create dedicated account for FoodBudget development
+- **Authorized domains:** `ciamlogin.com`, `microsoftonline.com`
+- **7 redirect URIs required** (replace `<tenant-ID>` with actual tenant ID):
+  ```
+  https://login.microsoftonline.com
+  https://login.microsoftonline.com/te/<tenant-ID>/oauth2/authresp
+  https://login.microsoftonline.com/te/foodbudget.onmicrosoft.com/oauth2/authresp
+  https://<tenant-ID>.ciamlogin.com/<tenant-ID>/federation/oidc/accounts.google.com
+  https://<tenant-ID>.ciamlogin.com/foodbudget.onmicrosoft.com/federation/oidc/accounts.google.com
+  https://foodbudget.ciamlogin.com/<tenant-ID>/federation/oauth2
+  https://foodbudget.ciamlogin.com/foodbudget.onmicrosoft.com/federation/oauth2
+  ```
+- **Cost:** FREE
+- **Reference:** [Google Setup](./entra-external-id-setup-guide.md) (lines 310-380)
+
+**Configuration Steps:**
+
+1. **Google Cloud Console Setup:**
+   - Create project "FoodBudget"
+   - OAuth consent screen → External → Configure
+   - Credentials → Create OAuth client ID → Web application
+   - Add all 7 redirect URIs
+   - Copy Client ID and Client Secret
+
+2. **Entra External ID Configuration:**
+   - Entra admin center → External Identities → All identity providers
+   - Built-in tab → Configure Google
+   - Paste Client ID and Client Secret → Save
+   - Verify provider appears in identity providers list
+
+3. **Update User Flow:**
+   - User flows → SignUpSignIn → Identity providers
+   - Add Google to available providers
+   - Save changes
+
+4. **Update App Code:**
+   - Create `GoogleSignInButton.tsx` component
+   - Add Google button to sign-in screens (web and mobile)
+   - Test authentication flow
+
+**Testing Checklist:**
+- [ ] Google sign-up works on web (localhost:8081)
+- [ ] Google sign-up works on web (GitHub Pages)
+- [ ] Google sign-up works on mobile (iOS)
+- [ ] Google sign-up works on mobile (Android)
+- [ ] Google sign-in works (all platforms)
+- [ ] Users can switch between email/password and Google
+- [ ] Access token acquired after Google authentication
+- [ ] Protected API calls work with Google-authenticated users
+
+**Estimated Effort:** 3-5 hours
+
+**Priority:** 🟢 COULD HAVE (Nice-to-have social auth option, not critical for MVP)
+
+---
+
+### Story 5.7: Implement Rate Limiting for Sign-Up Endpoints
+
+**Title:** Protect sign-up endpoints from bot-driven mass registrations
+
+**Moved from:** Sprint 4 Story 4.5 (depends on user flows from Story 5.2)
+
+**User Story:**
+As a **FoodBudget developer**, I want to rate-limit authentication endpoints, so that bots cannot abuse the API and increase our costs.
+
+**Acceptance Criteria:**
+- [ ] Sign-up endpoints rate-limited to 10 requests per IP per hour
+- [ ] Sign-in endpoints rate-limited to 50 requests per IP per hour (more lenient)
+- [ ] Password reset rate-limited to 5 requests per IP per hour
+- [ ] Rate-limited requests return HTTP 429 Too Many Requests
+- [ ] Error response includes retry-after time
+- [ ] Rate limiting does not affect legitimate users
+- [ ] Configuration is environment-specific (stricter in production)
+- [ ] Tests verify rate limiting behavior
+
+**Definition of Done:**
+- [ ] Rate limiting middleware configured in backend
+- [ ] Manual testing confirms 11th request blocked
+- [ ] Unit tests verify rate limit logic
+- [ ] Rate limits documented in API documentation
+- [ ] Monitoring alerts configured for unusual patterns (optional)
+
+**Technical Notes/Constraints:**
+- **Implementation options:**
+  - ASP.NET Core built-in rate limiting (.NET 7+) - simpler
+  - AspNetCoreRateLimit package - more features
+- **Rate by IP address:** Not user ID (users may not be authenticated for some endpoints)
+- **Defense in depth:**
+  - Email verification (Sprint 5) - Slows bots
+  - Backend rate limiting (this story) - Prevents mass creation
+  - Social login (60%+ of users) - Google/Facebook handle bots
+  - Entra baseline security (automatic) - DDoS protection
+- **Cost protection:** Prevents bot-driven MAU costs (Entra charges per active user >50K)
+- **X-Forwarded-For header:** Consider if behind proxy/load balancer
+- **Note:** Story 5.1B (User-Based Rate Limiting) already exists in backlog.md for authenticated endpoints
+
+**Implementation Example (ASP.NET Core Built-In):**
+```csharp
+// Program.cs
+using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
+
+builder.Services.AddRateLimiter(options =>
+{
+    // Fixed window rate limiter for sign-up
+    options.AddFixedWindowLimiter("signup", rateLimitOptions =>
+    {
+        rateLimitOptions.PermitLimit = 10;
+        rateLimitOptions.Window = TimeSpan.FromHours(1);
+        rateLimitOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        rateLimitOptions.QueueLimit = 0;
+    });
+
+    options.OnRejected = async (context, cancellationToken) =>
+    {
+        context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+        await context.HttpContext.Response.WriteAsJsonAsync(new
+        {
+            error = "Too many requests. Please try again later.",
+            retryAfter = "1 hour"
+        }, cancellationToken);
+    };
+});
+
+var app = builder.Build();
+app.UseRateLimiter();
+```
+
+**Testing:**
+```bash
+# Test rate limiting with curl
+for i in {1..15}; do
+  curl -X POST http://localhost:5000/api/auth/signup \
+    -H "Content-Type: application/json" \
+    -d '{"email":"test'$i'@example.com","password":"Test123!"}'
+  echo "Request $i completed"
+done
+
+# Expected: First 10 succeed, requests 11-15 return 429
+```
+
+**Estimated Effort:** 2-4 hours
+
+**Priority:** 🟡 SHOULD HAVE (Important for cost control, but not critical path)
+
+**Prerequisites:**
+- Sprint 5 Phase 1 & 2 complete (user flows exist)
+- Authentication endpoints in use
+
+---
+
+### Story 5.8: Upgrade Recipe Image Upload to User Delegation SAS
+
+**Title:** Enhance image upload security with Microsoft Entra-signed SAS tokens
+
+**Moved from:** Sprint 4 Story 4.6 (Post-MVP enhancement)
+
+**User Story:**
+As a **FoodBudget developer**, I want to upgrade from Account Key SAS to User Delegation SAS for recipe image uploads, so that we leverage Microsoft Entra credentials for enhanced security and RBAC integration.
+
+**Acceptance Criteria:**
+- [ ] BlobServiceClient configured with `DefaultAzureCredential` (not connection string)
+- [ ] `GetUserDelegationKeyAsync()` implemented in ImageUploadService
+- [ ] SAS tokens signed with user delegation key (not account key)
+- [ ] API service identity has "Storage Blob Data Contributor" RBAC role
+- [ ] Local development works with `az login` or Visual Studio authentication
+- [ ] Production uses Managed Identity for authentication
+- [ ] All 21 unit tests updated and passing with new authentication pattern
+- [ ] Account keys removed from appsettings.json configuration
+
+**Definition of Done:**
+- [ ] Azure.Identity NuGet package installed
+- [ ] AzureStorageOptions updated (AccountName instead of ConnectionString)
+- [ ] ImageUploadService updated to use `GetUserDelegationKeyAsync()`
+- [ ] DI registration updated to use `DefaultAzureCredential`
+- [ ] RBAC roles assigned to API identity (App Service Managed Identity)
+- [ ] Tests updated to mock `GetUserDelegationKeyAsync()`
+- [ ] Local development guide updated with authentication setup
+- [ ] Account keys rotated after migration complete
+- [ ] Code reviewed and deployed
+
+**Technical Notes/Constraints:**
+
+**Prerequisites:**
+- ✅ Sprint 4 authentication complete (Stories 4.1-4.3)
+- ✅ Sprint 5 authentication stable and tested
+- ✅ Recipe image upload MVP working with Account Key SAS
+
+**Why Post-MVP:**
+This story is deferred to post-Sprint 5 because:
+1. **Dependency:** Requires Microsoft Entra authentication infrastructure to be stable
+2. **Risk reduction:** Account Key SAS is secure enough for MVP (5-min expiration)
+3. **Complexity:** User Delegation adds ~8-13 hours of work including Azure RBAC setup
+4. **Testing:** Requires stable authentication before adding another moving part
+5. **Value timing:** Security enhancement best done after core features are proven
+
+**Security Comparison:**
+
+| Security Control | Account Key SAS (MVP) | User Delegation SAS (Enhanced) |
+|------------------|----------------------|-------------------------------|
+| Expiration | ✅ 5 minutes | ✅ 5 minutes |
+| Clock skew protection | ✅ -5 min buffer | ✅ -5 min buffer |
+| Minimal permissions | ✅ Create+Write only | ✅ Create+Write only |
+| GUID filenames | ✅ Prevents guessing | ✅ Prevents guessing |
+| User folders | ✅ Isolation | ✅ Isolation |
+| Credential type | ⚠️ Account key | ✅ Entra credentials |
+| RBAC integration | ❌ No | ✅ Yes |
+| Audit logs | ⚠️ Limited | ✅ Comprehensive |
+| Key rotation | ⚠️ Manual | ✅ Automatic |
+
+**Implementation Changes Required:**
+
+**1. Install Azure.Identity Package:**
+```bash
+dotnet add package Azure.Identity
+```
+
+**2. Update Configuration (AzureStorageOptions.cs):**
+```csharp
+public class AzureStorageOptions
+{
+    public const string SECTION_NAME = "AzureStorage";
+    public required string AccountName { get; set; }  // Changed from ConnectionString
+    public string ContainerName { get; set; } = "recipe-images";
+}
+```
+
+**3. Update appsettings.json:**
+```json
+{
+  "AzureStorage": {
+    "AccountName": "foodbudgetstorage",
+    "ContainerName": "recipe-images"
+  }
+}
+```
+
+**4. Update DI Registration:**
+```csharp
+// ServiceRegistrationExtensions.cs
+services.AddSingleton(sp =>
+{
+    var options = sp.GetRequiredService<IOptions<AzureStorageOptions>>().Value;
+    var endpoint = new Uri($"https://{options.AccountName}.blob.core.windows.net");
+    return new BlobServiceClient(endpoint, new DefaultAzureCredential());
+});
+```
+
+**5. Update ImageUploadService:**
+```csharp
+public async Task<UploadTokenResponse> GenerateUploadTokenAsync(
+    string userId,
+    string fileName,
+    string contentType,
+    long fileSizeBytes)
+{
+    ValidateParameters(userId, fileName, contentType, fileSizeBytes);
+
+    // Get user delegation key (NOW ASYNC!)
+    UserDelegationKey userDelegationKey = await _blobServiceClient
+        .GetUserDelegationKeyAsync(
+            DateTimeOffset.UtcNow.AddMinutes(-CLOCK_SKEW_MINUTES),
+            DateTimeOffset.UtcNow.AddMinutes(_imageUploadOptions.TokenExpirationMinutes));
+
+    // ... rest of validation logic ...
+
+    var sasBuilder = new BlobSasBuilder { ... };
+    sasBuilder.SetPermissions(BlobSasPermissions.Create | BlobSasPermissions.Write);
+
+    // Sign with user delegation key
+    BlobUriBuilder blobUriBuilder = new BlobUriBuilder(blobClient.Uri)
+    {
+        Sas = sasBuilder.ToSasQueryParameters(
+            userDelegationKey,
+            _blobServiceClient.AccountName)
+    };
+
+    return new UploadTokenResponse {
+        UploadUrl = blobUriBuilder.ToUri().ToString(),
+        PublicUrl = blobClient.Uri.ToString(),
+        ExpiresAt = sasBuilder.ExpiresOn
+    };
+}
+```
+
+**6. Update Unit Tests:**
+```csharp
+// Mock GetUserDelegationKeyAsync
+_mockBlobServiceClient
+    .Setup(x => x.GetUserDelegationKeyAsync(
+        It.IsAny<DateTimeOffset>(),
+        It.IsAny<DateTimeOffset>(),
+        It.IsAny<CancellationToken>()))
+    .ReturnsAsync(new UserDelegationKey { /* mock properties */ });
+```
+
+**Azure Infrastructure Setup:**
+
+**1. Assign RBAC Role to API Identity:**
+```bash
+# Get API App Service identity
+az webapp identity show --name foodbudget-api --resource-group foodbudget-rg
+
+# Assign Storage Blob Data Contributor role
+az role assignment create \
+  --assignee <api-app-object-id> \
+  --role "Storage Blob Data Contributor" \
+  --scope /subscriptions/<sub-id>/resourceGroups/<rg>/providers/Microsoft.Storage/storageAccounts/foodbudgetstorage
+```
+
+**2. Enable Managed Identity on App Service:**
+```bash
+az webapp identity assign \
+  --name foodbudget-api \
+  --resource-group foodbudget-rg
+```
+
+**Local Development Setup:**
+
+**Option 1: Azure CLI Authentication**
+```bash
+az login
+az account set --subscription <subscription-id>
+```
+
+**Option 2: Visual Studio Authentication**
+- Sign in to Visual Studio with Azure account
+- `DefaultAzureCredential` automatically detects Visual Studio auth
+
+**Testing Strategy:**
+1. Update all 21 unit tests to mock `GetUserDelegationKeyAsync()`
+2. Test locally with `az login` authentication
+3. Deploy to dev environment with Managed Identity
+4. Verify SAS tokens work identically to Account Key SAS
+5. Test all error scenarios (expired token, wrong permissions, etc.)
+
+**Rollback Plan:**
+If issues arise, revert to Account Key SAS:
+1. Revert DI registration to use connection string
+2. Revert ImageUploadService to synchronous token generation
+3. Restore connection string in appsettings.json
+4. All code changes isolated to 3 files (easy rollback)
+
+**Estimated Effort:** 8-13 hours
+- Code changes: 2-3 hours
+- Azure RBAC setup: 1-2 hours
+- Local dev auth setup: 1 hour
+- CI/CD updates: 1-2 hours
+- Testing: 2-3 hours
+- Production migration: 1-2 hours
+
+**Priority:** 🟢 COULD HAVE (Security enhancement, not critical for MVP)
+
+**Depends On:**
+- Sprint 4 complete (Entra tenant, backend JWT validation)
+- Sprint 5 Phase 1 & 2 complete (authentication stable)
+- Recipe Image Upload MVP working with Account Key SAS
 
 ---
 

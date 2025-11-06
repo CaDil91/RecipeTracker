@@ -20,6 +20,8 @@
     "deploy": "gh-pages --nojekyll -d dist"
   },
   "dependencies": {
+    "@azure/msal-browser": "^4.26.0",
+    "@azure/msal-react": "^3.0.21",
     "@expo-google-fonts/poppins": "^0.2.3",
     "@expo/metro-runtime": "~5.0.4",
     "@expo/vector-icons": "^14.1.0",
@@ -42,11 +44,11 @@
     "react-hook-form": "^7.65.0",
     "react-native": "^0.79.5",
     "react-native-paper": "^5.14.5",
+    "react-native-reanimated": "~3.17.4",
     "react-native-safe-area-context": "5.4.0",
     "react-native-screens": "~4.11.1",
     "react-native-web": "^0.20.0",
-    "zod": "^4.1.5",
-    "react-native-reanimated": "~3.17.4"
+    "zod": "^4.1.5"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

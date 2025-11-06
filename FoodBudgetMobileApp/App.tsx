@@ -20,6 +20,11 @@ import { ErrorBoundary } from './src/components/ErrorBoundary';
 import { ErrorFallbackScreen } from './src/screens/ErrorFallbackScreen';
 import { OfflineBanner } from './src/components/OfflineBanner';
 
+// MSAL imports (web only)
+import { MsalProvider } from '@azure/msal-react';
+import { PublicClientApplication } from '@azure/msal-browser';
+import { msalConfig } from './src/lib/auth/msalConfig.web';
+
 // Initialize MSW for development if enabled
 if (__DEV__ && process.env.EXPO_PUBLIC_USE_MSW === 'true') {
   require('./src/mocks/browser');
@@ -33,7 +38,7 @@ if (Platform.OS === 'web') {
     reachabilityUrl: window.location.href,
     reachabilityTest: async (response) => response.status >= 200 && response.status < 400,
     reachabilityShortTimeout: 2 * 1000, // 2s
-    reachabilityLongTimeout: 5 * 1000, // 5s - Check every 5s when online
+    reachabilityLongTimeout: 5 * 1000, // 5 s - Check every 5s when online
     reachabilityRequestTimeout: 3 * 1000, // 3 s timeout for the check itself
     useNativeReachability: false,
   });
@@ -86,9 +91,45 @@ const queryClient = new QueryClient({
   },
 });
 
+// Initialize MSAL instance for web authentication (Phase 1: Web only)
+// Phase 2 will add mobile authentication with react-native-msal
+const msalInstance = Platform.OS === 'web'
+  ? new PublicClientApplication(msalConfig)
+  : null;
+
+/**
+ * Conditional MSAL Provider wrapper
+ * - Web: Wraps children with MsalProvider for authentication
+ * - Mobile: Returns children unwrapped (Phase 2 will add mobile auth)
+ */
+const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  if (Platform.OS === 'web' && msalInstance) {
+    return <MsalProvider instance={msalInstance}>{children}</MsalProvider>;
+  }
+  return <>{children}</>;
+};
+
 export default function App() {
   const colorScheme = useColorScheme();
   const theme = getCustomTheme(colorScheme);
+  const [msalInitialized, setMsalInitialized] = React.useState(false);
+
+  // Initialize MSAL before rendering the app
+  // CRITICAL: MSAL Browser v4.x requires initialization before use
+  React.useEffect(() => {
+    if (Platform.OS === 'web' && msalInstance) {
+      msalInstance.initialize().then(() => {
+        setMsalInitialized(true);
+      }).catch((error) => {
+        console.error('MSAL initialization error:', error);
+        // Still set initialized to true to avoid infinite loading
+        setMsalInitialized(true);
+      });
+    } else {
+      // Non-web platforms don't need MSAL initialization
+      setMsalInitialized(true);
+    }
+  }, []);
 
   // Load custom fonts (Poppins) and icon fonts
   const [fontsLoaded] = useFonts({
@@ -99,8 +140,8 @@ export default function App() {
     ...MaterialCommunityIcons.font,
   });
 
-  // Show loading indicator while fonts are loading
-  if (!fontsLoaded) {
+  // Show loading indicator while fonts or MSAL are loading
+  if (!fontsLoaded || !msalInitialized) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" />
@@ -124,15 +165,17 @@ export default function App() {
       }
     >
       <SafeAreaProvider>
-        <QueryClientProvider client={queryClient}>
-          <PaperProvider theme={theme}>
-            <OfflineBanner />
-            <WebContainer>
-              <AppNavigator />
-              <StatusBar style="auto" />
-            </WebContainer>
-          </PaperProvider>
-        </QueryClientProvider>
+        <AuthProvider>
+          <QueryClientProvider client={queryClient}>
+            <PaperProvider theme={theme}>
+              <OfflineBanner />
+              <WebContainer>
+                <AppNavigator />
+                <StatusBar style="auto" />
+              </WebContainer>
+            </PaperProvider>
+          </QueryClientProvider>
+        </AuthProvider>
       </SafeAreaProvider>
     </ErrorBoundary>
   );

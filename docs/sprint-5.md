@@ -216,59 +216,49 @@ As a **FoodBudget user**, I want to sign up for an account using my email and pa
 
 ### Story 5.2: Integrate MSAL Authentication in Web App
 
-**Title:** Enable users to sign in via web app (GitHub Pages)
+**Title:** Enable users to sign in via web app with Microsoft Entra External ID
 
 **User Story:**
-As a **FoodBudget user**, I want to sign in through the web app, so that I can access my food budget from my browser.
+As a **FoodBudget user**, I want to sign in through the web app using my email and password, so that I can securely access my food budget data from my browser.
 
 **Acceptance Criteria:**
-- [ ] `@azure/msal-react` package installed and configured
-- [ ] Authority URL configured: `https://foodbudget.ciamlogin.com/644a9317-ded3-439a-8f0a-9a8491ce35e9`
-- [ ] Web app client ID configured (from Sprint 4.2): `9eb59a1f-ffe8-49d7-844f-ff2ca7cf02ae`
-- [ ] API scopes configured: `api://877ea87e-5be9-4102-9959-6763e3fdf243/access_as_user`
-- [ ] Redirect URIs match app registration (GitHub Pages, localhost, jwt.ms)
-- [ ] Sign-in/sign-up screens created with shared React Native components
-- [ ] **Email + Password authentication works on web** (MVP - Google deferred to Phase 3)
-- [ ] Access token acquired after successful authentication
-- [ ] Access token stored securely (sessionStorage)
-- [ ] Refresh token handled automatically by MSAL
-- [ ] Sign-out functionality works
-- [ ] App handles authentication errors gracefully
-- [ ] Protected routes redirect to sign-in if unauthenticated
+
+*Authentication Flow:*
+- [ ] User can click "Sign In" and is redirected to Entra External ID sign-in page
+- [ ] User can sign up with new email + password (email validation, password requirements enforced)
+- [ ] User can sign in with existing email + password credentials
+- [ ] After successful authentication, user is redirected back to the web app
+- [ ] User can sign out and token is cleared from browser storage
+
+*Security & Token Management:*
+- [ ] Access token acquired automatically after successful authentication
+- [ ] Access token stored securely in sessionStorage (not localStorage)
+- [ ] Refresh token handled automatically by MSAL (no manual intervention)
+- [ ] Tokens expire after 1 hour and auto-refresh when needed
+- [ ] Closing browser tab clears tokens (session-scoped security)
+
+*Protected Routes:*
+- [ ] Unauthenticated users are blocked from recipe list and other protected content
+- [ ] Protected routes show sign-in UI when user is not authenticated
+- [ ] After sign-in, user is automatically taken to requested protected route
+- [ ] Sign-out immediately blocks access to protected routes
+
+*Error Handling:*
+- [ ] User cancellation (closing Entra window) doesn't crash app
+- [ ] Network errors show user-friendly message with retry option
+- [ ] Invalid credentials show error message from Entra
+- [ ] MSAL initialization errors show loading state until resolved
 
 **Definition of Done:**
-- [ ] User can sign in with email + password on localhost:8081
+- [x] User can sign in with email + password on localhost:8081
 - [ ] User can sign in with email + password on GitHub Pages deployment
-- [ ] Access token visible in browser dev tools / app state
-- [ ] Sign-out clears token and returns to sign-in screen
-- [ ] Protected routes (recipe list) require authentication
+- [x] Access token visible in browser dev tools (Application → sessionStorage)
+- [x] Sign-out clears token and returns to sign-in screen
+- [x] Protected routes (recipe list) require authentication
 - [ ] Code reviewed
-- [ ] No hardcoded secrets (client ID from environment variable)
-
----
-
-## Package Installation
-
-```bash
-# Install MSAL packages (TypeScript types included)
-npm install @azure/msal-react@^3.0.21 @azure/msal-browser@^4.26.0
-```
-
-**Versions (Verified January 2025):**
-- `@azure/msal-react`: v3.0.21 (latest stable, October 2025)
-  - Supports React 19 (current project version)
-  - Authorization Code Flow with PKCE
-- `@azure/msal-browser`: v4.26.0 (peer dependency)
-  - TypeScript types included
-  - No additional @types packages needed
-
-**Compatibility:**
-- ✅ React 19.0.0 (project version)
-- ✅ Expo SDK 52
-- ✅ TypeScript 5.x
-- ✅ React Native Web
-
----
+- [x] No hardcoded secrets (credentials in `.env`, not committed to Git)
+- [x] Unit tests pass (55 tests: useMsal.web, useAuth, ProtectedRoute, AppNavigator)
+- [x] Integration tests pass (navigation + theme + auth state)
 
 **Technical Notes/Constraints:**
 

@@ -10,17 +10,39 @@ export interface FetchOptions extends RequestInit {
 }
 
 /**
- * Enhanced fetch with timeout, retry, and logging support
+ * Enhanced fetch client with timeout, retry, and automatic authentication
+ *
+ * Singleton pattern - configure once in App.tsx, use everywhere
+ * Follows 2025 best practices for React Native authentication
  */
-export class FetchClient {
-  private static get isDevelopment() {
+class FetchClient {
+  private getAccessToken: (() => Promise<string | null>) | null = null;
+
+  private get isDevelopment() {
     return __DEV__ ?? false;
   }
 
   /**
-   * Make an HTTP request with timeout and retry support
+   * Configure the fetch client with authentication
+   *
+   * Call this ONCE in App.tsx after authentication is initialized:
+   * ```ts
+   * const { getAccessToken } = useAuth();
+   * fetchClient.configure(getAccessToken);
+   * ```
    */
-  static async request(
+  configure(getAccessToken: () => Promise<string | null>): void {
+    this.getAccessToken = getAccessToken;
+    if (this.isDevelopment) {
+      console.log('✅ FetchClient configured with authentication');
+    }
+  }
+
+  /**
+   * Make an HTTP request with timeout and retry support
+   * Automatically injects Authorization header if configured
+   */
+  async request(
     url: string,
     options: FetchOptions = {}
   ): Promise<Response> {
@@ -30,6 +52,24 @@ export class FetchClient {
       retryDelay = 1000,
       ...fetchOptions
     } = options;
+
+    // Automatically inject Authorization header if configured
+    if (this.getAccessToken) {
+      try {
+        const token = await this.getAccessToken();
+        if (token) {
+          fetchOptions.headers = {
+            ...fetchOptions.headers,
+            Authorization: `Bearer ${token}`,
+          };
+        }
+      } catch (error) {
+        if (this.isDevelopment) {
+          console.warn('⚠️ Failed to get access token:', error);
+        }
+        // Continue without token - API will return 401 if needed
+      }
+    }
 
     let lastError: Error | undefined;
 
@@ -42,13 +82,15 @@ export class FetchClient {
             try {
               parsedBody = JSON.parse(fetchOptions.body as string);
             } catch {
-              // If JSON.parse fails, leave body as undefined
+              // If JSON.parse fails, leave the body as undefined
               parsedBody = undefined;
             }
           }
+          const headers = fetchOptions.headers as Record<string, string> | undefined;
           console.log(`🔵 API Request [${fetchOptions.method || 'GET'}] ${url}`, {
             body: parsedBody,
             attempt: attempt + 1,
+            hasAuth: !!(headers && 'Authorization' in headers),
           });
         }
 
@@ -107,13 +149,13 @@ export class FetchClient {
   /**
    * Parse response as JSON and handle ProblemDetails
    */
-  static async parseResponse<T>(response: Response): Promise<T> {
+  async parseResponse<T>(response: Response): Promise<T> {
     if (response.status === 204) {
       return undefined as T;
     }
 
     const contentType = response.headers.get('content-type');
-    
+
     if (!contentType?.includes('application/json')) {
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -128,7 +170,7 @@ export class FetchClient {
       if (this.isProblemDetails(data)) {
         throw data; // Throw ProblemDetails directly to maintain RFC 9457 compliance
       }
-      
+
       // Fallback for non-standard error responses
       throw new Error(data.message || `HTTP ${response.status}: ${response.statusText}`);
     }
@@ -139,7 +181,7 @@ export class FetchClient {
   /**
    * Type guard for ProblemDetails
    */
-  private static isProblemDetails(obj: any): obj is ProblemDetails {
+  private isProblemDetails(obj: any): obj is ProblemDetails {
     return obj && (
       typeof obj.type === 'string' ||
       typeof obj.title === 'string' ||
@@ -151,14 +193,14 @@ export class FetchClient {
   /**
    * Sleep utility for retry delays
    */
-  private static sleep(ms: number): Promise<void> {
+  private sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   /**
-   * Check if error is retryable
+   * Check if the error is retryable
    */
-  static isRetryableError(error: any): boolean {
+  isRetryableError(error: any): boolean {
     // Network errors are retryable
     if (error instanceof Error) {
       if (error.message.includes('fetch')) return true;
@@ -174,3 +216,9 @@ export class FetchClient {
     return false;
   }
 }
+
+/**
+ * Singleton instance of FetchClient
+ * Configure once in App.tsx, use everywhere
+ */
+export const fetchClient = new FetchClient();

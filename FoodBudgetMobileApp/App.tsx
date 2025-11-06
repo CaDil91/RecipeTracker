@@ -25,6 +25,10 @@ import { MsalProvider } from '@azure/msal-react';
 import { PublicClientApplication } from '@azure/msal-browser';
 import { msalConfig } from './src/lib/auth/msalConfig.web';
 
+// API client imports
+import { fetchClient } from './src/lib/shared/api/fetch-client';
+import { useAuth } from './src/hooks/useAuth';
+
 // Initialize MSW for development if enabled
 if (__DEV__ && process.env.EXPO_PUBLIC_USE_MSW === 'true') {
   require('./src/mocks/browser');
@@ -109,6 +113,25 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   return <>{children}</>;
 };
 
+/**
+ * FetchClient Configurator
+ * Configures the global fetchClient with authentication from useAuth()
+ *
+ * IMPORTANT: Must be inside AuthProvider and QueryClientProvider, 
+ * so it has access to useAuth() hook
+ */
+const FetchClientConfigurator: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { getAccessToken } = useAuth();
+
+  React.useEffect(() => {
+    // Configure fetchClient with authentication
+    // This happens once when the app loads
+    fetchClient.configure(getAccessToken);
+  }, [getAccessToken]);
+
+  return <>{children}</>;
+};
+
 export default function App() {
   const colorScheme = useColorScheme();
   const theme = getCustomTheme(colorScheme);
@@ -167,13 +190,15 @@ export default function App() {
       <SafeAreaProvider>
         <AuthProvider>
           <QueryClientProvider client={queryClient}>
-            <PaperProvider theme={theme}>
-              <OfflineBanner />
-              <WebContainer>
-                <AppNavigator />
-                <StatusBar style="auto" />
-              </WebContainer>
-            </PaperProvider>
+            <FetchClientConfigurator>
+              <PaperProvider theme={theme}>
+                <OfflineBanner />
+                <WebContainer>
+                  <AppNavigator />
+                  <StatusBar style="auto" />
+                </WebContainer>
+              </PaperProvider>
+            </FetchClientConfigurator>
           </QueryClientProvider>
         </AuthProvider>
       </SafeAreaProvider>

@@ -59,6 +59,23 @@ jest.mock('react-native-paper', () => ({
   },
 }));
 
+// Mock useAuth to return authenticated state (ProtectedRoute allows access)
+jest.mock('../../hooks/useAuth', () => ({
+  useAuth: () => ({
+    isAuthenticated: true,
+    isLoading: false,
+    user: {
+      id: 'test-user-123',
+      email: 'test@example.com',
+      name: 'Test User',
+      username: 'test@example.com',
+    },
+    signIn: jest.fn(),
+    signOut: jest.fn(),
+    getAccessToken: jest.fn().mockResolvedValue('mock-token'),
+  }),
+}));
+
 describe('AppNavigator - Unit Tests', () => {
   /**
    * UNIT TEST 1: Component Structure

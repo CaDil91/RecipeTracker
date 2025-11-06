@@ -1912,6 +1912,12 @@ export function SettingsScreen() {
 - [ ] Contract tests between frontend and backend
 - [ ] Visual regression testing (Chromatic or Percy)
 - [ ] Accessibility audit and automated testing
+  - [ ] WCAG 2.2 Authentication UI Compliance (Sprint 5 Phase 1)
+    - [ ] Add `accessibilityRole="progressbar"` to ProtectedRoute loading state
+    - [ ] Add `accessibilityLabel="Loading authentication"` to loading indicator
+    - [ ] Add `accessibilityHint="Opens Microsoft sign-in page"` to sign-in button
+    - [ ] Test with screen readers (iOS VoiceOver, Android TalkBack)
+    - [ ] Verify WCAG 2.2 Success Criterion 4.1.3 (Status Messages) compliance
 
 ### DevOps
 - [ ] Blue-green deployment strategy

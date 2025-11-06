@@ -114,6 +114,7 @@ jest.mock('react-native-paper', () => ({
       primary: '#6200EE',
       onSurfaceVariant: '#49454F',
       surface: '#FFFBFE',
+      background: '#FFFBFE',
     },
   })),
   Icon: function MockIcon({ source, color }: { source: string; color?: string }) {
@@ -124,6 +125,23 @@ jest.mock('react-native-paper', () => ({
       </Text>
     );
   },
+}));
+
+// Mock useAuth to return an authenticated state (ProtectedRoute allows access)
+jest.mock('../../hooks/useAuth', () => ({
+  useAuth: () => ({
+    isAuthenticated: true,
+    isLoading: false,
+    user: {
+      id: 'test-user-123',
+      email: 'test@example.com',
+      name: 'Test User',
+      username: 'test@example.com',
+    },
+    signIn: jest.fn(),
+    signOut: jest.fn(),
+    getAccessToken: jest.fn().mockResolvedValue('mock-token'),
+  }),
 }));
 
 const renderNavigationWithTheme = (component: React.ReactElement) => {

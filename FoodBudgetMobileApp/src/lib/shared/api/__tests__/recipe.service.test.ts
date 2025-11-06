@@ -1,11 +1,14 @@
 import {RecipeService} from '../recipe.service';
-import {FetchClient} from '../fetch-client';
+import {fetchClient} from '../fetch-client';
 import {ProblemDetails, RecipeRequestDto, RecipeResponseDto} from '../../types';
 
-// Mock FetchClient with proper static method mocking
+// Mock fetchClient singleton (2025 pattern)
 jest.mock('../fetch-client', () => ({
-  FetchClient: {
+  fetchClient: {
     request: jest.fn(),
+    configure: jest.fn(),
+    parseResponse: jest.fn(),
+    isRetryableError: jest.fn(),
   },
 }));
 
@@ -13,11 +16,10 @@ jest.mock('../fetch-client', () => ({
 jest.mock('../../schemas', () => ({
   parseRecipeResponse: jest.fn((data) => data),
   parseRecipeRequest: jest.fn((data) => data),
-  safeParseRecipeResponse: jest.fn((data) => ({ success: true, data })),
 }));
 
 describe('RecipeService', () => {
-  const mockRequest = FetchClient.request as jest.MockedFunction<typeof FetchClient.request>;
+  const mockRequest = fetchClient.request as jest.MockedFunction<typeof fetchClient.request>;
 
   beforeEach(() => {
     jest.clearAllMocks();

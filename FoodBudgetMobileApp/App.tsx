@@ -26,7 +26,7 @@ import { PublicClientApplication } from '@azure/msal-browser';
 import { msalConfig } from './src/lib/auth/msalConfig.web';
 
 // API client imports
-import { fetchClient } from './src/lib/shared/api/fetch-client';
+import { fetchClient } from './src/lib/shared';
 import { useAuth } from './src/hooks/useAuth';
 
 // Initialize MSW for development if enabled

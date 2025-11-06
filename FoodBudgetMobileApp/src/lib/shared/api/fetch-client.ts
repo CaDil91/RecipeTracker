@@ -54,7 +54,10 @@ class FetchClient {
     } = options;
 
     // Automatically inject Authorization header if configured
-    if (this.getAccessToken) {
+    // Only inject if Authorization header not already provided (preserves manual overrides)
+    const hasManualAuth = fetchOptions.headers && 'Authorization' in fetchOptions.headers;
+
+    if (this.getAccessToken && !hasManualAuth) {
       try {
         const token = await this.getAccessToken();
         if (token) {

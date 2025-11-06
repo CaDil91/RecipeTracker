@@ -6,8 +6,7 @@ import {
 } from '../types';
 import {
   parseRecipeResponse,
-  parseRecipeRequest,
-  safeParseRecipeResponse
+  parseRecipeRequest
 } from '../schemas';
 import { fetchClient } from './fetch-client';
 

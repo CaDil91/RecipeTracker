@@ -3,8 +3,6 @@
  * Used by both MSAL React (web) and react-native-msal (mobile)
  */
 
-import { InteractionStatus } from '@azure/msal-browser';
-
 /**
  * User account information from an authentication provider
  */
@@ -23,7 +21,7 @@ export interface UseAuthResult {
   isAuthenticated: boolean;      // True if a user is signed in
   user: AuthUser | null;         // Current user or null
   isLoading?: boolean;           // Optional: true during initialization
-  inProgress?: InteractionStatus; // Optional: MSAL interaction status (prevents race conditions)
+  isTokenReady: boolean;         // True only after token has been successfully acquired from the cache
   signIn: () => Promise<void>;   // Trigger sign-in flow
   signOut: () => Promise<void>;  // Trigger sign-out flow
   getAccessToken: () => Promise<string | null>; // Get an access token for API calls

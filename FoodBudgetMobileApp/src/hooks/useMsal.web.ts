@@ -8,6 +8,7 @@
  * Use the platform abstraction in useAuth() instead.
  */
 
+import { useState, useEffect } from 'react';
 import { useMsal } from '@azure/msal-react';
 import { AccountInfo } from '@azure/msal-browser';
 import { loginRequest } from '../lib/auth/msalConfig.web';
@@ -29,7 +30,11 @@ const mapAccountToAuthUser = (account: AccountInfo): AuthUser => ({
  * @returns Authentication state and methods
  */
 export const useMsalWeb = (): UseAuthResult => {
-  const { instance, accounts, inProgress } = useMsal();
+  const { instance, accounts } = useMsal();
+
+  // Track whether the token has been successfully acquired from cache
+  // This prevents queries from executing before the token is ready
+  const [isTokenReady, setIsTokenReady] = useState(false);
 
   /**
    * Sign in using Microsoft Entra External ID
@@ -89,10 +94,40 @@ export const useMsalWeb = (): UseAuthResult => {
     }
   };
 
+  /**
+   * Proactively acquire token on mount when authenticated
+   * This ensures the token is ready before queries execute
+   */
+  useEffect(() => {
+    const acquireToken = async () => {
+      if (accounts.length === 0) {
+        // Not authenticated - token not ready
+        setIsTokenReady(false);
+        return;
+      }
+
+      try {
+        // Attempt to acquire token from cache
+        await instance.acquireTokenSilent({
+          ...loginRequest,
+          account: accounts[0],
+        });
+        // Success - token is ready
+        setIsTokenReady(true);
+      } catch (error) {
+        // Failed to acquire token silently
+        setIsTokenReady(false);
+        // Note: acquireTokenRedirect will be called when getAccessToken is invoked
+      }
+    };
+
+    void acquireToken();
+  }, [accounts, instance]);
+
   return {
     isAuthenticated: accounts.length > 0,
     user: accounts[0] ? mapAccountToAuthUser(accounts[0]) : null,
-    inProgress, // Add interaction status to prevent race conditions with token acquisition
+    isTokenReady, // True only after token successfully acquired from the cache
     signIn,
     signOut,
     getAccessToken,

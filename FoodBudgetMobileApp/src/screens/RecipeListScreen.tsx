@@ -2,7 +2,6 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { View, StyleSheet, Alert } from 'react-native';
 import { FAB, useTheme, Snackbar, ActivityIndicator, Button, Text } from 'react-native-paper';
 import { useQuery } from '@tanstack/react-query';
-import { InteractionStatus } from '@azure/msal-browser';
 import { RecipeListScreenNavigationProp } from '../types/navigation';
 import { Container } from '../components/shared';
 import { RecipeResponseDto } from '../lib/shared';
@@ -25,18 +24,7 @@ const RecipeListScreen: React.FC<RecipeListScreenProps> = ({ navigation }) => {
   const theme = useTheme();
 
   // Authentication state - needed to prevent race condition with token acquisition
-  const { isAuthenticated, inProgress } = useAuth();
-
-  // 🔍 DEBUG - Check auth state (remove after fixing)
-  console.log('🔍 RecipeListScreen Auth State:', {
-    isAuthenticated,
-    inProgress,
-    inProgressType: typeof inProgress,
-    inProgressValue: String(inProgress),
-    InteractionStatusNone: InteractionStatus.None,
-    comparison: inProgress === InteractionStatus.None,
-    shouldQueryRun: isAuthenticated && inProgress === InteractionStatus.None,
-  });
+  const { isAuthenticated, isTokenReady } = useAuth();
 
   // UI state
   const [searchQuery, setSearchQuery] = useState('');
@@ -51,9 +39,7 @@ const RecipeListScreen: React.FC<RecipeListScreenProps> = ({ navigation }) => {
   const deleteMutation = useDeleteRecipe();
 
   // Fetch recipes using TanStack Query
-  const queryEnabled = isAuthenticated && inProgress === InteractionStatus.None;
-  console.log('🔍 Query enabled:', queryEnabled); // Debug
-
+  // Wait for a token to be ready to prevent 401 errors on page refresh
   const {
     data: recipesData,
     isLoading,
@@ -63,7 +49,6 @@ const RecipeListScreen: React.FC<RecipeListScreenProps> = ({ navigation }) => {
   } = useQuery({
     queryKey: ['recipes'],
     queryFn: async () => {
-      console.log('🚀 Query executing - this should NOT happen until token ready!');
       const response = await RecipeService.getAllRecipes();
       if (!response.success) {
         throw new Error(
@@ -74,7 +59,7 @@ const RecipeListScreen: React.FC<RecipeListScreenProps> = ({ navigation }) => {
       }
       return response.data;
     },
-    enabled: queryEnabled, // Wait for token acquisition
+    enabled: isAuthenticated && isTokenReady, // Wait for token acquisition
   });
 
   // Use an empty array if no data yet

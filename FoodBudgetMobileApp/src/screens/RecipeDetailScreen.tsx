@@ -14,7 +14,6 @@
 import React, { useState, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { InteractionStatus } from '@azure/msal-browser';
 import { ActivityIndicator, useTheme, IconButton, Surface, Snackbar, FAB, Portal, Dialog, Button } from 'react-native-paper';
 import { RecipeDetailScreenNavigationProp, RecipeDetailScreenRouteProp } from '../types/navigation';
 import { RecipeService, RecipeRequestDto } from '../lib/shared';
@@ -53,7 +52,7 @@ const RecipeDetailScreen: React.FC<RecipeDetailScreenProps> = ({ navigation, rou
   const recipeFormRef = useRef<RecipeFormRef>(null);
 
   // Authentication state - needed to prevent race condition with token acquisition
-  const { isAuthenticated, inProgress } = useAuth();
+  const { isAuthenticated, isTokenReady } = useAuth();
 
   // Derive mode from recipeId and edit state (React 19 best practice: derive from props)
   const currentMode: 'view' | 'edit' | 'create' =
@@ -82,7 +81,7 @@ const RecipeDetailScreen: React.FC<RecipeDetailScreenProps> = ({ navigation, rou
       }
       return response.data;
     },
-    enabled: !!recipeId && isAuthenticated && inProgress === InteractionStatus.None, // Wait for token acquisition
+    enabled: !!recipeId && isAuthenticated && isTokenReady, // Wait for token acquisition
   });
 
   // Extract recipe data (undefined in CREATE mode or while loading)

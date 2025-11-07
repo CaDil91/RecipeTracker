@@ -20,4 +20,18 @@ public static class MiddlewareExtensions
     {
         return app.UseMiddleware<RequestResponseLoggingMiddleware>();
     }
+
+    /// <summary>
+    /// Adds security headers middleware to the application pipeline.
+    /// Implements Content Security Policy (CSP) and OWASP-recommended security headers.
+    /// </summary>
+    /// <remarks>
+    /// This middleware should be registered early in the pipeline to ensure
+    /// security headers are added to all responses.
+    /// Required for security for SPAs storing tokens in browser storage.
+    /// </remarks>
+    public static IApplicationBuilder UseSecurityHeaders(this IApplicationBuilder app)
+    {
+        return app.UseMiddleware<SecurityHeadersMiddleware>();
+    }
 }

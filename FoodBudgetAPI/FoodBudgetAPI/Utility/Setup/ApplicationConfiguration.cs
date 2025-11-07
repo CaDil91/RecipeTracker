@@ -13,15 +13,17 @@ public static class ApplicationConfiguration
         // Configure the HTTP request pipeline
         // The order in which you register middleware is crucial. Each middleware gets a chance to process the
         // request in the order registered and then process the response in reverse order.
-        // The middleware pipeline creates a nested structure like Russian dolls. Each middleware wraps
-        // around all later middleware.
+        
         // 1. Exception handling should be the first to catch any errors in later middleware
         app.UseGlobalExceptionHandler();
-        
+
         // 2. Request/response logging early in the pipeline
         app.UseRequestResponseLogging();
-        
-        // 3. Swagger middleware (enabled for demo purposes)
+
+        // 3. Security headers (CSP, X-Content-Type-Options, etc.) - critical for SPA security
+        app.UseSecurityHeaders();
+
+        // 4. Swagger middleware (enabled for demo purposes)
         app.UseSwagger();
         app.UseSwaggerUI(options =>
         {
@@ -35,18 +37,18 @@ public static class ApplicationConfiguration
             }
         });
 
-        // 4. Security and routing middleware
+        // 5. Security and routing middleware
         app.UseHttpsRedirection();
         app.UseCors("MobileApp");
 
-        // 5. Authentication and authorization
+        // 6. Authentication and authorization
         app.UseAuthentication();
         app.UseAuthorization();
 
-        // 6. Rate limiting
+        // 7. Rate limiting
         app.UseIpRateLimiting();
 
-        // 7. Endpoints
+        // 8. Endpoints
         app.MapControllers();
         app.MapHealthChecks("/health");
 

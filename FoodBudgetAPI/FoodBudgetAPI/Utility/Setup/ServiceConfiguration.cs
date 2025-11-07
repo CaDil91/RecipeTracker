@@ -97,13 +97,27 @@ public static class ServiceConfiguration
     
     private static void ConfigureCors(WebApplicationBuilder builder)
     {
+        // Get allowed origins from configuration
+        var allowedOrigins = builder.Configuration.GetSection("Security:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+
         builder.Services.AddCors(options =>
         {
             options.AddPolicy("MobileApp", policy =>
             {
-                policy.AllowAnyOrigin()
-                    .AllowAnyMethod()
-                    .AllowAnyHeader();
+                if (allowedOrigins.Length > 0)
+                {
+                    policy.WithOrigins(allowedOrigins)
+                        .AllowAnyMethod()
+                        .AllowAnyHeader()
+                        .AllowCredentials(); // Required for cookies/auth headers
+                }
+                else
+                {
+                    // Development fallback: allow any origin (TODO: NOT SECURE - configure appsettings.json)
+                    policy.AllowAnyOrigin()
+                        .AllowAnyMethod()
+                        .AllowAnyHeader();
+                }
             });
         });
     }

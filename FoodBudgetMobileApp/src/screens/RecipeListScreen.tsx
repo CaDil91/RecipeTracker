@@ -27,6 +27,17 @@ const RecipeListScreen: React.FC<RecipeListScreenProps> = ({ navigation }) => {
   // Authentication state - needed to prevent race condition with token acquisition
   const { isAuthenticated, inProgress } = useAuth();
 
+  // 🔍 DEBUG - Check auth state (remove after fixing)
+  console.log('🔍 RecipeListScreen Auth State:', {
+    isAuthenticated,
+    inProgress,
+    inProgressType: typeof inProgress,
+    inProgressValue: String(inProgress),
+    InteractionStatusNone: InteractionStatus.None,
+    comparison: inProgress === InteractionStatus.None,
+    shouldQueryRun: isAuthenticated && inProgress === InteractionStatus.None,
+  });
+
   // UI state
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState<FilterType>('All');
@@ -40,6 +51,9 @@ const RecipeListScreen: React.FC<RecipeListScreenProps> = ({ navigation }) => {
   const deleteMutation = useDeleteRecipe();
 
   // Fetch recipes using TanStack Query
+  const queryEnabled = isAuthenticated && inProgress === InteractionStatus.None;
+  console.log('🔍 Query enabled:', queryEnabled); // Debug
+
   const {
     data: recipesData,
     isLoading,
@@ -49,6 +63,7 @@ const RecipeListScreen: React.FC<RecipeListScreenProps> = ({ navigation }) => {
   } = useQuery({
     queryKey: ['recipes'],
     queryFn: async () => {
+      console.log('🚀 Query executing - this should NOT happen until token ready!');
       const response = await RecipeService.getAllRecipes();
       if (!response.success) {
         throw new Error(
@@ -59,7 +74,7 @@ const RecipeListScreen: React.FC<RecipeListScreenProps> = ({ navigation }) => {
       }
       return response.data;
     },
-    enabled: isAuthenticated && inProgress === InteractionStatus.None, // Wait for token acquisition
+    enabled: queryEnabled, // Wait for token acquisition
   });
 
   // Use an empty array if no data yet

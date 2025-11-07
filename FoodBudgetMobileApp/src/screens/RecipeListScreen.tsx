@@ -2,6 +2,7 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { View, StyleSheet, Alert } from 'react-native';
 import { FAB, useTheme, Snackbar, ActivityIndicator, Button, Text } from 'react-native-paper';
 import { useQuery } from '@tanstack/react-query';
+import { InteractionStatus } from '@azure/msal-browser';
 import { RecipeListScreenNavigationProp } from '../types/navigation';
 import { Container } from '../components/shared';
 import { RecipeResponseDto } from '../lib/shared';
@@ -10,6 +11,7 @@ import FilterChips, { FilterType } from '../components/FilterChips';
 import { RecipeGrid } from '../components/shared/recipe/RecipeGrid';
 import { RecipeService } from '../lib/shared';
 import { useDeleteRecipe } from '../hooks/useRecipeMutations';
+import { useAuth } from '../hooks/useAuth';
 
 // TODO: Move grid column selection (2/3/4) to a Settings menu/screen
 type GridColumns = 2 | 3 | 4;
@@ -21,6 +23,9 @@ type RecipeListScreenProps = {
 // Main screen component for displaying and managing recipes
 const RecipeListScreen: React.FC<RecipeListScreenProps> = ({ navigation }) => {
   const theme = useTheme();
+
+  // Authentication state - needed to prevent race condition with token acquisition
+  const { isAuthenticated, inProgress } = useAuth();
 
   // UI state
   const [searchQuery, setSearchQuery] = useState('');
@@ -54,6 +59,7 @@ const RecipeListScreen: React.FC<RecipeListScreenProps> = ({ navigation }) => {
       }
       return response.data;
     },
+    enabled: isAuthenticated && inProgress === InteractionStatus.None, // Wait for token acquisition
   });
 
   // Use an empty array if no data yet

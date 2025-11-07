@@ -14,11 +14,13 @@
 import React, { useState, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { InteractionStatus } from '@azure/msal-browser';
 import { ActivityIndicator, useTheme, IconButton, Surface, Snackbar, FAB, Portal, Dialog, Button } from 'react-native-paper';
 import { RecipeDetailScreenNavigationProp, RecipeDetailScreenRouteProp } from '../types/navigation';
 import { RecipeService, RecipeRequestDto } from '../lib/shared';
 import { RecipeForm, RecipeFormRef } from '../components/shared';
 import { useUpdateRecipe, useCreateRecipe } from '../hooks/useRecipeMutations';
+import { useAuth } from '../hooks/useAuth';
 import { spacing } from '../theme/typography';
 
 type RecipeDetailScreenProps = {
@@ -50,6 +52,9 @@ const RecipeDetailScreen: React.FC<RecipeDetailScreenProps> = ({ navigation, rou
   // Ref to access RecipeForm's hasFormChanges function (2025 pattern: useImperativeHandle)
   const recipeFormRef = useRef<RecipeFormRef>(null);
 
+  // Authentication state - needed to prevent race condition with token acquisition
+  const { isAuthenticated, inProgress } = useAuth();
+
   // Derive mode from recipeId and edit state (React 19 best practice: derive from props)
   const currentMode: 'view' | 'edit' | 'create' =
     !recipeId ? 'create' :    // No ID = CREATE mode
@@ -77,7 +82,7 @@ const RecipeDetailScreen: React.FC<RecipeDetailScreenProps> = ({ navigation, rou
       }
       return response.data;
     },
-    enabled: !!recipeId, // Only fetch when recipeId is present (VIEW/EDIT mode)
+    enabled: !!recipeId && isAuthenticated && inProgress === InteractionStatus.None, // Wait for token acquisition
   });
 
   // Extract recipe data (undefined in CREATE mode or while loading)
@@ -208,7 +213,7 @@ const RecipeDetailScreen: React.FC<RecipeDetailScreenProps> = ({ navigation, rou
     }
   };
 
-  // Dynamic styles using theme (MD3 8px grid spacing system)
+  // Dynamic styles using theme (MD3 8 px grid spacing system)
   const dynamicStyles = StyleSheet.create({
     container: {
       flex: 1,

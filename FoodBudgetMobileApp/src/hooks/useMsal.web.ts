@@ -29,7 +29,7 @@ const mapAccountToAuthUser = (account: AccountInfo): AuthUser => ({
  * @returns Authentication state and methods
  */
 export const useMsalWeb = (): UseAuthResult => {
-  const { instance, accounts } = useMsal();
+  const { instance, accounts, inProgress } = useMsal();
 
   /**
    * Sign in using Microsoft Entra External ID
@@ -92,6 +92,7 @@ export const useMsalWeb = (): UseAuthResult => {
   return {
     isAuthenticated: accounts.length > 0,
     user: accounts[0] ? mapAccountToAuthUser(accounts[0]) : null,
+    inProgress, // Add interaction status to prevent race conditions with token acquisition
     signIn,
     signOut,
     getAccessToken,

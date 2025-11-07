@@ -21,19 +21,8 @@ export interface UseAuthResult {
   isAuthenticated: boolean;      // True if a user is signed in
   user: AuthUser | null;         // Current user or null
   isLoading?: boolean;           // Optional: true during initialization
+  inProgress?: string;           // Optional: MSAL interaction status (prevents race conditions)
   signIn: () => Promise<void>;   // Trigger sign-in flow
   signOut: () => Promise<void>;  // Trigger sign-out flow
   getAccessToken: () => Promise<string | null>; // Get an access token for API calls
 }
-
-/**
- * MSAL-specific error types (web only)
- * These error codes are returned by @azure/msal-browser
- */
-export type YesMsalErrorCode =
-  | 'user_cancelled'
-  | 'network_error'
-  | 'invalid_grant'
-  | 'interaction_required'
-  | 'no_account_error'
-  | 'uninitialized_public_client_application';

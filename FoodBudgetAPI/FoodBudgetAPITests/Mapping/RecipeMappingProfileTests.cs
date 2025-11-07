@@ -69,6 +69,7 @@ public class RecipeMappingProfileTests
     public void Recipe_To_RecipeResponseDto_Should_Handle_Null_Properties()
     {
         // Arrange
+        var userId = Guid.NewGuid();
         var recipe = new Recipe
         {
             Id = Guid.NewGuid(),
@@ -77,7 +78,7 @@ public class RecipeMappingProfileTests
             Servings = 1,
             Category = null, // Nullable property
             ImageUrl = null, // Nullable property
-            UserId = null, // Nullable property
+            UserId = userId, // Required property
             CreatedAt = DateTime.UtcNow
         };
 
@@ -91,7 +92,7 @@ public class RecipeMappingProfileTests
         dto.Servings.Should().Be(recipe.Servings);
         dto.Category.Should().BeNull();
         dto.ImageUrl.Should().BeNull();
-        dto.UserId.Should().BeNull();
+        dto.UserId.Should().Be(userId);
         dto.CreatedAt.Should().Be(recipe.CreatedAt);
     }
 
@@ -140,8 +141,7 @@ public class RecipeMappingProfileTests
             Instructions = "Mix ingredients and cook",
             Servings = 6,
             Category = "Main Course",
-            ImageUrl = "https://example.com/new-recipe.jpg",
-            UserId = Guid.NewGuid()
+            ImageUrl = "https://example.com/new-recipe.jpg"
         };
 
         // Act
@@ -153,7 +153,7 @@ public class RecipeMappingProfileTests
         recipe.Servings.Should().Be(dto.Servings);
         recipe.Category.Should().Be(dto.Category);
         recipe.ImageUrl.Should().Be(dto.ImageUrl);
-        recipe.UserId.Should().Be(dto.UserId);
+        recipe.UserId.Should().Be(Guid.Empty, "because UserId must be set from JWT in controller, not from DTO");
     }
 
     [Fact]
@@ -166,8 +166,7 @@ public class RecipeMappingProfileTests
             Instructions = "Test instructions",
             Servings = 4,
             Category = "Test Category",
-            ImageUrl = "https://example.com/test.jpg",
-            UserId = Guid.NewGuid()
+            ImageUrl = "https://example.com/test.jpg"
         };
 
         // Act
@@ -187,8 +186,7 @@ public class RecipeMappingProfileTests
             Instructions = "Test instructions",
             Servings = 4,
             Category = "Test Category",
-            ImageUrl = "https://example.com/test.jpg",
-            UserId = Guid.NewGuid()
+            ImageUrl = "https://example.com/test.jpg"
         };
 
         // Act
@@ -206,7 +204,7 @@ public class RecipeMappingProfileTests
         {
             Title = "Minimal Recipe",
             Servings = 1
-            // Instructions, Category, ImageUrl and UserId are null
+            // Instructions, Category, and ImageUrl are optional
         };
 
         // Act
@@ -218,7 +216,7 @@ public class RecipeMappingProfileTests
         recipe.Servings.Should().Be(dto.Servings);
         recipe.Category.Should().BeNull();
         recipe.ImageUrl.Should().BeNull();
-        recipe.UserId.Should().BeNull();
+        recipe.UserId.Should().Be(Guid.Empty, "because UserId must be set from JWT in controller, not from DTO");
         recipe.Id.Should().Be(Guid.Empty);
         recipe.CreatedAt.Should().Be(default(DateTime));
     }
@@ -229,8 +227,8 @@ public class RecipeMappingProfileTests
         // Arrange
         var dtos = new List<RecipeRequestDto>
         {
-            new() { Title = "Recipe 1", Servings = 2, Category = "Appetizer", ImageUrl = "https://example.com/recipe1.jpg", UserId = Guid.NewGuid() },
-            new() { Title = "Recipe 2", Servings = 4, Category = "Main Course", ImageUrl = "https://example.com/recipe2.jpg", UserId = Guid.NewGuid() }
+            new() { Title = "Recipe 1", Servings = 2, Category = "Appetizer", ImageUrl = "https://example.com/recipe1.jpg" },
+            new() { Title = "Recipe 2", Servings = 4, Category = "Main Course", ImageUrl = "https://example.com/recipe2.jpg" }
         };
 
         // Act
@@ -240,16 +238,16 @@ public class RecipeMappingProfileTests
         IEnumerable<Recipe> enumerable = recipes as Recipe[] ?? recipes.ToArray();
         enumerable.Should().HaveCount(2);
         List<Recipe> recipeList = enumerable.ToList();
-        
+
         recipeList[0].Title.Should().Be(dtos[0].Title);
         recipeList[0].Servings.Should().Be(dtos[0].Servings);
-        recipeList[0].UserId.Should().Be(dtos[0].UserId);
+        recipeList[0].UserId.Should().Be(Guid.Empty, "because UserId must be set from JWT in controller, not from DTO");
         recipeList[0].Id.Should().Be(Guid.Empty);
         recipeList[0].CreatedAt.Should().Be(default(DateTime));
-        
+
         recipeList[1].Title.Should().Be(dtos[1].Title);
         recipeList[1].Servings.Should().Be(dtos[1].Servings);
-        recipeList[1].UserId.Should().Be(dtos[1].UserId);
+        recipeList[1].UserId.Should().Be(Guid.Empty, "because UserId must be set from JWT in controller, not from DTO");
         recipeList[1].Id.Should().Be(Guid.Empty);
         recipeList[1].CreatedAt.Should().Be(default(DateTime));
     }

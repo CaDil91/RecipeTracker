@@ -8,7 +8,6 @@ using FoodBudgetAPI.Models.DTOs.Requests;
 using FoodBudgetAPI.Models.DTOs.Responses;
 using FoodBudgetAPI.Services;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -36,7 +35,7 @@ public class RecipeControllerTests
 
         _subjectUnderTest = new RecipeController(_mockRecipeService.Object, _mockLogger.Object, _mapper);
 
-        // Setup authenticated user with 'oid' claim (required for GetObjectId())
+        // Set up an authenticated user with 'oid' claim (required for GetObjectId())
         SetupAuthenticatedUser(_testUserId);
     }
 
@@ -137,7 +136,7 @@ public class RecipeControllerTests
         // Act
         IActionResult result = await _subjectUnderTest.GetAllRecipes();
 
-        // Assert - Verify user ID was extracted from token and passed to service
+        // Assert - Verify user ID was extracted from a token and passed to service
         _mockRecipeService.Verify(x => x.GetAllRecipesAsync(_testUserId, null), Times.Once);
         OkObjectResult? okResult = result.Should().BeOfType<OkObjectResult>().Subject;
         okResult.StatusCode.Should().Be(200);
@@ -278,7 +277,7 @@ public class RecipeControllerTests
     {
         // Arrange
         var recipeId = Guid.NewGuid();
-        var recipe = new Recipe { Id = recipeId, Title = "Test Recipe", Servings = 4 };
+        var recipe = new Recipe { Id = recipeId, Title = "Test Recipe", Servings = 4, UserId = _testUserId };
         _mockRecipeService.Setup(x => x.GetRecipeByIdAsync(recipeId)).ReturnsAsync(recipe);
 
         // Act
@@ -358,6 +357,167 @@ public class RecipeControllerTests
             Times.Once);
     }
 
+    #region GetRecipeById Ownership Validation Tests (Story 5.4)
+
+    #region Happy Path
+
+    [Fact]
+    public async Task Given_UserOwnsRecipe_When_GetRecipeById_Then_ReturnsOkWithRecipeData()
+    {
+        // Arrange
+        var recipeId = Guid.NewGuid();
+        var recipe = new Recipe
+        {
+            Id = recipeId,
+            Title = "Test Recipe",
+            Servings = 4,
+            UserId = _testUserId // Recipe belongs to an authenticated user
+        };
+        _mockRecipeService.Setup(x => x.GetRecipeByIdAsync(recipeId)).ReturnsAsync(recipe);
+
+        // Act
+        IActionResult result = await _subjectUnderTest.GetRecipeById(recipeId);
+
+        // Assert
+        _mockRecipeService.Verify(x => x.GetRecipeByIdAsync(recipeId), Times.Once);
+        OkObjectResult? okResult = result.Should().BeOfType<OkObjectResult>().Subject;
+        okResult.StatusCode.Should().Be(200);
+        okResult.Value.Should().BeOfType<RecipeResponseDto>();
+        var recipeDto = (RecipeResponseDto)okResult.Value!;
+        recipeDto.Id.Should().Be(recipeId);
+        recipeDto.UserId.Should().Be(_testUserId);
+    }
+
+    #endregion
+
+    #region Business Rules (Security)
+
+    [Fact]
+    public async Task Given_UserDoesNotOwnRecipe_When_GetRecipeById_Then_ReturnsNotFound()
+    {
+        // Arrange
+        var recipeId = Guid.NewGuid();
+        var differentUserId = Guid.NewGuid(); // Different user owns the recipe
+        var recipe = new Recipe
+        {
+            Id = recipeId,
+            Title = "Test Recipe",
+            Servings = 4,
+            UserId = differentUserId // Recipe belongs to a different user
+        };
+        _mockRecipeService.Setup(x => x.GetRecipeByIdAsync(recipeId)).ReturnsAsync(recipe);
+
+        // Act
+        IActionResult result = await _subjectUnderTest.GetRecipeById(recipeId);
+
+        // Assert
+        result.Should().BeOfType<NotFoundResult>();
+        _mockRecipeService.Verify(x => x.GetRecipeByIdAsync(recipeId), Times.Once);
+    }
+
+    [Fact]
+    public async Task Given_UserDoesNotOwnRecipe_When_GetRecipeById_Then_LogsSecurityWarning()
+    {
+        // Arrange
+        var recipeId = Guid.NewGuid();
+        var differentUserId = Guid.NewGuid();
+        var recipe = new Recipe
+        {
+            Id = recipeId,
+            Title = "Test Recipe",
+            Servings = 4,
+            UserId = differentUserId
+        };
+        _mockRecipeService.Setup(x => x.GetRecipeByIdAsync(recipeId)).ReturnsAsync(recipe);
+
+        // Act
+        await _subjectUnderTest.GetRecipeById(recipeId);
+
+        // Assert
+        _mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Warning,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("attempted unauthorized access")),
+                null,
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
+
+    #endregion
+
+    #region Null/Empty/Invalid Input
+
+    [Fact]
+    public async Task Given_RecipeDoesNotExist_When_GetRecipeById_Then_ReturnsNotFound()
+    {
+        // Arrange
+        var recipeId = Guid.NewGuid();
+        _mockRecipeService.Setup(x => x.GetRecipeByIdAsync(recipeId)).ReturnsAsync((Recipe?)null);
+
+        // Act
+        IActionResult result = await _subjectUnderTest.GetRecipeById(recipeId);
+
+        // Assert
+        result.Should().BeOfType<NotFoundResult>();
+        _mockRecipeService.Verify(x => x.GetRecipeByIdAsync(recipeId), Times.Once);
+        // Verify NO warning logged (a recipe doesn't exist vs. unauthorized)
+        _mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Warning,
+                It.IsAny<EventId>(),
+                It.IsAny<It.IsAnyType>(),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task Given_EmptyGuid_When_GetRecipeById_Then_ReturnsBadRequest()
+    {
+        // Arrange - no setup needed (validation happens before service call)
+
+        // Act
+        IActionResult result = await _subjectUnderTest.GetRecipeById(Guid.Empty);
+
+        // Assert
+        BadRequestObjectResult? badRequestResult = result.Should().BeOfType<BadRequestObjectResult>().Subject;
+        badRequestResult.StatusCode.Should().Be(400);
+        badRequestResult.Value.Should().Be("Invalid recipe ID format");
+        // Verify service was never called
+        _mockRecipeService.Verify(x => x.GetRecipeByIdAsync(It.IsAny<Guid>()), Times.Never);
+    }
+
+    #endregion
+
+    #region Boundaries
+
+    [Fact]
+    public async Task Given_RecipeExistsButUserIdIsEmpty_When_GetRecipeById_Then_ReturnsNotFound()
+    {
+        // Arrange - edge case for orphaned recipes (data migration scenario)
+        var recipeId = Guid.NewGuid();
+        var recipe = new Recipe
+        {
+            Id = recipeId,
+            Title = "Orphaned Recipe",
+            Servings = 4,
+            UserId = Guid.Empty // Orphaned recipe (shouldn't happen after migration)
+        };
+        _mockRecipeService.Setup(x => x.GetRecipeByIdAsync(recipeId)).ReturnsAsync(recipe);
+
+        // Act
+        IActionResult result = await _subjectUnderTest.GetRecipeById(recipeId);
+
+        // Assert
+        result.Should().BeOfType<NotFoundResult>();
+        _mockRecipeService.Verify(x => x.GetRecipeByIdAsync(recipeId), Times.Once);
+    }
+
+    #endregion
+
+    #endregion
+
     #endregion
 
     #region POST /api/recipes Tests
@@ -370,8 +530,7 @@ public class RecipeControllerTests
         {
             Title = "New Recipe",
             Instructions = "Test instructions",
-            Servings = 4,
-            UserId = Guid.NewGuid()
+            Servings = 4
         };
         var createdRecipe = new Recipe
         {
@@ -379,7 +538,7 @@ public class RecipeControllerTests
             Title = "New Recipe",
             Instructions = "Test instructions",
             Servings = 4,
-            UserId = requestDto.UserId,
+            UserId = _testUserId, // Controller sets this from JWT
             CreatedAt = DateTime.UtcNow
         };
 
@@ -429,6 +588,51 @@ public class RecipeControllerTests
         createdResult.Value.Should().BeOfType<RecipeResponseDto>();
     }
 
+    [Fact]
+    public async Task Given_ValidRecipeRequest_When_CreateRecipe_Then_InjectsUserIdFromJWT()
+    {
+        // Arrange
+        var requestDto = new RecipeRequestDto
+        {
+            Title = "Security Test Recipe",
+            Instructions = "Test userId injection",
+            Servings = 4
+            // UserId NOT in DTO (removed for security - Story 5.4)
+        };
+
+        var createdRecipe = new Recipe
+        {
+            Id = Guid.NewGuid(),
+            Title = "Security Test Recipe",
+            Instructions = "Test userId injection",
+            Servings = 4,
+            UserId = _testUserId,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        _mockRecipeService.Setup(x => x.CreateRecipeAsync(It.Is<Recipe>(r => r.UserId == _testUserId)))
+            .ReturnsAsync(createdRecipe);
+
+        // Act
+        IActionResult result = await _subjectUnderTest.CreateRecipe(requestDto);
+
+        // Assert - Verify service was called with Recipe containing userId from JWT
+        _mockRecipeService.Verify(
+            x => x.CreateRecipeAsync(It.Is<Recipe>(r =>
+                r.UserId == _testUserId &&
+                r.Title == requestDto.Title &&
+                r.Instructions == requestDto.Instructions &&
+                r.Servings == requestDto.Servings
+            )),
+            Times.Once,
+            "Controller must inject userId from JWT token, not from DTO");
+
+        CreatedAtActionResult? createdResult = result.Should().BeOfType<CreatedAtActionResult>().Subject;
+        createdResult.StatusCode.Should().Be(201);
+        var recipeDto = createdResult.Value.Should().BeOfType<RecipeResponseDto>().Subject;
+        recipeDto.UserId.Should().Be(_testUserId, "Response DTO must include userId from JWT");
+    }
+
     #endregion
 
     #region PUT /api/recipes/{id} Tests
@@ -442,8 +646,16 @@ public class RecipeControllerTests
         {
             Title = "Updated Recipe",
             Instructions = "Updated instructions",
-            Servings = 6,
-            UserId = Guid.NewGuid()
+            Servings = 6
+        };
+        var existingRecipe = new Recipe
+        {
+            Id = recipeId,
+            Title = "Original Recipe",
+            Instructions = "Original instructions",
+            Servings = 4,
+            UserId = _testUserId, // Recipe belongs to authenticated user
+            CreatedAt = DateTime.UtcNow.AddDays(-1)
         };
         var updatedRecipe = new Recipe
         {
@@ -451,10 +663,11 @@ public class RecipeControllerTests
             Title = "Updated Recipe",
             Instructions = "Updated instructions",
             Servings = 6,
-            UserId = requestDto.UserId,
+            UserId = _testUserId, // Controller maintains userId from an existing recipe
             CreatedAt = DateTime.UtcNow.AddDays(-1)
         };
 
+        _mockRecipeService.Setup(x => x.GetRecipeByIdAsync(recipeId)).ReturnsAsync(existingRecipe);
         _mockRecipeService.Setup(x => x.UpdateRecipeAsync(recipeId, It.IsAny<Recipe>()))
             .ReturnsAsync(updatedRecipe);
 
@@ -466,7 +679,8 @@ public class RecipeControllerTests
         okResult.StatusCode.Should().Be(200);
         okResult.Value.Should().BeOfType<RecipeResponseDto>();
 
-        // Verify mapper and service were called correctly
+        // Verify ownership check and update were called
+        _mockRecipeService.Verify(x => x.GetRecipeByIdAsync(recipeId), Times.Once);
         _mockRecipeService.Verify(x => x.UpdateRecipeAsync(recipeId, It.IsAny<Recipe>()), Times.Once);
     }
 
@@ -481,16 +695,25 @@ public class RecipeControllerTests
             Servings = 3
             // Instructions and UserId are null/not provided
         };
-        var updatedRecipe = new Recipe 
-        { 
-            Id = recipeId, 
-            Title = "Partial Update", 
-            Servings = 3,
+        var existingRecipe = new Recipe
+        {
+            Id = recipeId,
+            Title = "Original Recipe",
+            Servings = 4,
+            UserId = _testUserId, // Recipe belongs to authenticated user
             CreatedAt = DateTime.UtcNow.AddDays(-1)
         };
-        
-        _mockRecipeService.Setup(x => x.UpdateRecipeAsync(recipeId, It.IsAny<Recipe>()))
-            .ReturnsAsync(updatedRecipe);
+        var updatedRecipe = new Recipe
+        {
+            Id = recipeId,
+            Title = "Partial Update",
+            Servings = 3,
+            UserId = _testUserId,
+            CreatedAt = DateTime.UtcNow.AddDays(-1)
+        };
+
+        _mockRecipeService.Setup(x => x.GetRecipeByIdAsync(recipeId)).ReturnsAsync(existingRecipe);
+        _mockRecipeService.Setup(x => x.UpdateRecipeAsync(recipeId, It.IsAny<Recipe>())).ReturnsAsync(updatedRecipe);
 
         // Act
         IActionResult result = await _subjectUnderTest.UpdateRecipe(recipeId, requestDto);
@@ -499,8 +722,9 @@ public class RecipeControllerTests
         OkObjectResult? okResult = result.Should().BeOfType<OkObjectResult>().Subject;
         okResult.StatusCode.Should().Be(200);
         okResult.Value.Should().BeOfType<RecipeResponseDto>();
-        
-        // Verify mapper and service were called correctly
+
+        // Verify ownership check and update were called correctly
+        _mockRecipeService.Verify(x => x.GetRecipeByIdAsync(recipeId), Times.Once);
         _mockRecipeService.Verify(x => x.UpdateRecipeAsync(recipeId, It.IsAny<Recipe>()), Times.Once);
     }
 
@@ -517,20 +741,6 @@ public class RecipeControllerTests
         BadRequestObjectResult? badRequestResult = result.Should().BeOfType<BadRequestObjectResult>().Subject;
         badRequestResult.StatusCode.Should().Be(400);
         badRequestResult.Value.Should().Be("Invalid recipe ID format");
-    }
-
-    [Fact]
-    public async Task UpdateRecipe_WithNonExistentId_ThrowsKeyNotFoundException()
-    {
-        // Arrange
-        var recipeId = Guid.NewGuid();
-        var requestDto = new RecipeRequestDto { Title = "Test Recipe", Servings = 4 };
-        _mockRecipeService.Setup(x => x.UpdateRecipeAsync(recipeId, It.IsAny<Recipe>()))
-            .ThrowsAsync(new KeyNotFoundException($"Recipe with ID {recipeId} not found"));
-
-        // Act & Assert
-        await Assert.ThrowsAsync<KeyNotFoundException>(() => 
-            _subjectUnderTest.UpdateRecipe(recipeId, requestDto));
     }
 
     [Fact]
@@ -568,6 +778,151 @@ public class RecipeControllerTests
             Times.Once);
     }
 
+    [Fact]
+    public async Task Given_UserOwnsRecipe_When_UpdateRecipe_Then_UpdatesSuccessfully()
+    {
+        // Arrange
+        var recipeId = Guid.NewGuid();
+        var requestDto = new RecipeRequestDto
+        {
+            Title = "Updated Title",
+            Instructions = "Updated instructions",
+            Servings = 6
+        };
+        var existingRecipe = new Recipe
+        {
+            Id = recipeId,
+            Title = "Original Title",
+            Instructions = "Original instructions",
+            Servings = 4,
+            UserId = _testUserId, // Recipe belongs to an authenticated user
+            CreatedAt = DateTime.UtcNow.AddDays(-1)
+        };
+        var updatedRecipe = new Recipe
+        {
+            Id = recipeId,
+            Title = "Updated Title",
+            Instructions = "Updated instructions",
+            Servings = 6,
+            UserId = _testUserId, // UserId preserved
+            CreatedAt = DateTime.UtcNow.AddDays(-1)
+        };
+
+        _mockRecipeService.Setup(x => x.GetRecipeByIdAsync(recipeId)).ReturnsAsync(existingRecipe);
+        _mockRecipeService.Setup(x => x.UpdateRecipeAsync(recipeId, It.IsAny<Recipe>())).ReturnsAsync(updatedRecipe);
+
+        // Act
+        IActionResult result = await _subjectUnderTest.UpdateRecipe(recipeId, requestDto);
+
+        // Assert
+        _mockRecipeService.Verify(x => x.GetRecipeByIdAsync(recipeId), Times.Once);
+        _mockRecipeService.Verify(x => x.UpdateRecipeAsync(recipeId, It.IsAny<Recipe>()), Times.Once);
+        OkObjectResult? okResult = result.Should().BeOfType<OkObjectResult>().Subject;
+        okResult.StatusCode.Should().Be(200);
+        var recipeDto = okResult.Value.Should().BeOfType<RecipeResponseDto>().Subject;
+        recipeDto.UserId.Should().Be(_testUserId);
+    }
+
+    [Fact]
+    public async Task Given_UserDoesNotOwnRecipe_When_UpdateRecipe_Then_ReturnsNotFound()
+    {
+        // Arrange
+        var recipeId = Guid.NewGuid();
+        var differentUserId = Guid.NewGuid();
+        var requestDto = new RecipeRequestDto
+        {
+            Title = "Attempted Update",
+            Servings = 6
+        };
+        var existingRecipe = new Recipe
+        {
+            Id = recipeId,
+            Title = "Original Recipe",
+            Servings = 4,
+            UserId = differentUserId, // Recipe belongs to a different user
+            CreatedAt = DateTime.UtcNow.AddDays(-1)
+        };
+
+        _mockRecipeService.Setup(x => x.GetRecipeByIdAsync(recipeId)).ReturnsAsync(existingRecipe);
+
+        // Act
+        IActionResult result = await _subjectUnderTest.UpdateRecipe(recipeId, requestDto);
+
+        // Assert
+        result.Should().BeOfType<NotFoundResult>();
+        _mockRecipeService.Verify(x => x.GetRecipeByIdAsync(recipeId), Times.Once);
+        // Verify UpdateRecipeAsync was never called (ownership check failed)
+        _mockRecipeService.Verify(x => x.UpdateRecipeAsync(It.IsAny<Guid>(), It.IsAny<Recipe>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Given_UserDoesNotOwnRecipe_When_UpdateRecipe_Then_LogsSecurityWarning()
+    {
+        // Arrange
+        var recipeId = Guid.NewGuid();
+        var differentUserId = Guid.NewGuid();
+        var requestDto = new RecipeRequestDto
+        {
+            Title = "Attempted Update",
+            Servings = 6
+        };
+        var existingRecipe = new Recipe
+        {
+            Id = recipeId,
+            Title = "Original Recipe",
+            Servings = 4,
+            UserId = differentUserId,
+            CreatedAt = DateTime.UtcNow.AddDays(-1)
+        };
+
+        _mockRecipeService.Setup(x => x.GetRecipeByIdAsync(recipeId)).ReturnsAsync(existingRecipe);
+
+        // Act
+        await _subjectUnderTest.UpdateRecipe(recipeId, requestDto);
+
+        // Assert
+        _mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Warning,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("attempted unauthorized update")),
+                null,
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Given_RecipeDoesNotExist_When_UpdateRecipe_Then_ReturnsNotFound()
+    {
+        // Arrange
+        var recipeId = Guid.NewGuid();
+        var requestDto = new RecipeRequestDto
+        {
+            Title = "Update Non-Existent",
+            Servings = 4
+        };
+
+        _mockRecipeService.Setup(x => x.GetRecipeByIdAsync(recipeId)).ReturnsAsync((Recipe?)null);
+
+        // Act
+        IActionResult result = await _subjectUnderTest.UpdateRecipe(recipeId, requestDto);
+
+        // Assert
+        result.Should().BeOfType<NotFoundResult>();
+        _mockRecipeService.Verify(x => x.GetRecipeByIdAsync(recipeId), Times.Once);
+        // Verify NO warning logged (a recipe doesn't exist vs. unauthorized)
+        _mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Warning,
+                It.IsAny<EventId>(),
+                It.IsAny<It.IsAnyType>(),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Never);
+        // Verify UpdateRecipeAsync was never called
+        _mockRecipeService.Verify(x => x.UpdateRecipeAsync(It.IsAny<Guid>(), It.IsAny<Recipe>()), Times.Never);
+    }
+
     #endregion
 
     #region DELETE /api/recipes/{id} Tests
@@ -577,6 +932,16 @@ public class RecipeControllerTests
     {
         // Arrange
         var recipeId = Guid.NewGuid();
+        var existingRecipe = new Recipe
+        {
+            Id = recipeId,
+            Title = "Recipe to Delete",
+            Servings = 4,
+            UserId = _testUserId, // Recipe belongs to authenticated user
+            CreatedAt = DateTime.UtcNow.AddDays(-1)
+        };
+
+        _mockRecipeService.Setup(x => x.GetRecipeByIdAsync(recipeId)).ReturnsAsync(existingRecipe);
         _mockRecipeService.Setup(x => x.DeleteRecipeAsync(recipeId))
             .ReturnsAsync(true);
 
@@ -584,6 +949,8 @@ public class RecipeControllerTests
         IActionResult result = await _subjectUnderTest.DeleteRecipe(recipeId);
 
         // Assert
+        _mockRecipeService.Verify(x => x.GetRecipeByIdAsync(recipeId), Times.Once);
+        _mockRecipeService.Verify(x => x.DeleteRecipeAsync(recipeId), Times.Once);
         result.Should().BeOfType<NoContentResult>();
     }
 
@@ -634,6 +1001,117 @@ public class RecipeControllerTests
                 null,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
+    }
+
+    [Fact]
+    public async Task Given_UserOwnsRecipe_When_DeleteRecipe_Then_DeletesSuccessfully()
+    {
+        // Arrange
+        var recipeId = Guid.NewGuid();
+        var existingRecipe = new Recipe
+        {
+            Id = recipeId,
+            Title = "Recipe to Delete",
+            Servings = 4,
+            UserId = _testUserId, // Recipe belongs to an authenticated user
+            CreatedAt = DateTime.UtcNow.AddDays(-1)
+        };
+
+        _mockRecipeService.Setup(x => x.GetRecipeByIdAsync(recipeId)).ReturnsAsync(existingRecipe);
+        _mockRecipeService.Setup(x => x.DeleteRecipeAsync(recipeId)).ReturnsAsync(true);
+
+        // Act
+        IActionResult result = await _subjectUnderTest.DeleteRecipe(recipeId);
+
+        // Assert
+        _mockRecipeService.Verify(x => x.GetRecipeByIdAsync(recipeId), Times.Once);
+        _mockRecipeService.Verify(x => x.DeleteRecipeAsync(recipeId), Times.Once);
+        result.Should().BeOfType<NoContentResult>();
+    }
+
+    [Fact]
+    public async Task Given_UserDoesNotOwnRecipe_When_DeleteRecipe_Then_ReturnsNotFound()
+    {
+        // Arrange
+        var recipeId = Guid.NewGuid();
+        var differentUserId = Guid.NewGuid();
+        var existingRecipe = new Recipe
+        {
+            Id = recipeId,
+            Title = "Someone Else's Recipe",
+            Servings = 4,
+            UserId = differentUserId, // Recipe belongs to a different user
+            CreatedAt = DateTime.UtcNow.AddDays(-1)
+        };
+
+        _mockRecipeService.Setup(x => x.GetRecipeByIdAsync(recipeId)).ReturnsAsync(existingRecipe);
+
+        // Act
+        IActionResult result = await _subjectUnderTest.DeleteRecipe(recipeId);
+
+        // Assert
+        result.Should().BeOfType<NotFoundResult>();
+        _mockRecipeService.Verify(x => x.GetRecipeByIdAsync(recipeId), Times.Once);
+        // Verify DeleteRecipeAsync was never called (ownership check failed)
+        _mockRecipeService.Verify(x => x.DeleteRecipeAsync(It.IsAny<Guid>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Given_UserDoesNotOwnRecipe_When_DeleteRecipe_Then_LogsSecurityWarning()
+    {
+        // Arrange
+        var recipeId = Guid.NewGuid();
+        var differentUserId = Guid.NewGuid();
+        var existingRecipe = new Recipe
+        {
+            Id = recipeId,
+            Title = "Someone Else's Recipe",
+            Servings = 4,
+            UserId = differentUserId,
+            CreatedAt = DateTime.UtcNow.AddDays(-1)
+        };
+
+        _mockRecipeService.Setup(x => x.GetRecipeByIdAsync(recipeId)).ReturnsAsync(existingRecipe);
+
+        // Act
+        await _subjectUnderTest.DeleteRecipe(recipeId);
+
+        // Assert
+        _mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Warning,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("attempted unauthorized deletion")),
+                null,
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Given_RecipeDoesNotExist_When_DeleteRecipe_Then_ReturnsNotFound()
+    {
+        // Arrange
+        var recipeId = Guid.NewGuid();
+
+        _mockRecipeService.Setup(x => x.GetRecipeByIdAsync(recipeId)).ReturnsAsync((Recipe?)null);
+
+        // Act
+        IActionResult result = await _subjectUnderTest.DeleteRecipe(recipeId);
+
+        // Assert
+        result.Should().BeOfType<NotFoundResult>();
+        _mockRecipeService.Verify(x => x.GetRecipeByIdAsync(recipeId), Times.Once);
+        // Verify NO warning logged (a recipe doesn't exist vs. unauthorized)
+        _mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Warning,
+                It.IsAny<EventId>(),
+                It.IsAny<It.IsAnyType>(),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Never);
+        // Verify DeleteRecipeAsync was never called
+        _mockRecipeService.Verify(x => x.DeleteRecipeAsync(It.IsAny<Guid>()), Times.Never);
     }
 
     #endregion

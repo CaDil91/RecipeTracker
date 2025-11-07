@@ -52,15 +52,6 @@ export const RecipeRequestSchema = z.object({
       { message: 'Invalid image URL format' }
     )
     .optional(),
-
-  userId: z
-    .string()
-    .refine(
-      (val) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val),
-      { message: 'Invalid user ID format' }
-    )
-    .nullable()
-    .optional(),
 });
 
 /**
@@ -118,9 +109,7 @@ export const RecipeResponseSchema = z.object({
     .refine(
       (val) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val),
       { message: 'Invalid user ID format' }
-    )
-    .nullable()
-    .optional(),
+    ),
 });
 
 /**

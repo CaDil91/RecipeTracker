@@ -41,7 +41,7 @@ public class Recipe
     public DateTime CreatedAt { get; set; }
     
     /// <summary>
-    /// Optional identifier of the user who created this recipe
+    /// Identifier of the user who created this recipe (required)
     /// </summary>
-    public Guid? UserId { get; set; }
+    public Guid UserId { get; set; }
 }

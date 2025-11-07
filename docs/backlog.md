@@ -1932,6 +1932,165 @@ export function SettingsScreen() {
 - [ ] Dependency vulnerability scanning
 - [ ] Automated code review (CodeRabbit, Codacy)
 
+### Infrastructure & API Client
+
+#### Story: Migrate FetchClient to Axios with Interceptors
+
+**Status:** 🟡 OPTIONAL - Not Blocking
+**Priority:** LOW
+**Estimated Effort:** 6-8 hours
+**Dependencies:** Sprint 5 Phase 1 complete (FetchClient with auth working)
+
+**Context:**
+Sprint 5 Phase 1 implemented a singleton FetchClient pattern with manual authentication injection. This approach works well for React Native but differs from industry-standard HTTP client patterns. This story explores migrating to Axios with interceptors for potential maintainability benefits.
+
+**Current Implementation (FetchClient Singleton):**
+- ✅ Singleton pattern with global `configure(getAccessToken)` call
+- ✅ Automatic Bearer token injection on all requests
+- ✅ Manual override support (preserves manually-provided Authorization headers)
+- ✅ Retry logic with exponential backoff (3 retries, 30s timeout)
+- ✅ ProblemDetails (RFC 9457) error handling
+- ✅ 29 unit tests passing (93.42% coverage)
+- ✅ Works on web and mobile (React Native compatible)
+
+**Proposed Implementation (Axios Interceptors):**
+```typescript
+// lib/shared/api/apiClient.ts
+import axios from 'axios';
+
+const apiClient = axios.create({
+  baseURL: process.env.EXPO_PUBLIC_API_URL,
+  timeout: 30000,
+});
+
+// Request interceptor for auth injection
+apiClient.interceptors.request.use(
+  async (config) => {
+    // Problem: How to access useAuth() hook here?
+    // Option 1: Store getAccessToken globally (similar to current)
+    // Option 2: Pass token to each service method
+    const token = await getStoredAccessToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// Response interceptor for error handling
+apiClient.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    if (error.response?.status === 401) {
+      // Trigger re-authentication
+      await triggerReauth();
+    }
+    return Promise.reject(error);
+  }
+);
+
+export default apiClient;
+```
+
+**Pros of Axios Migration:**
+
+1. **Industry Standard Pattern:**
+   - Axios is the most popular HTTP client in React ecosystem
+   - Interceptors are well-documented and widely understood
+   - More Stack Overflow answers and community resources
+
+2. **Built-In Features:**
+   - Automatic JSON transformation (request/response)
+   - Request/response interceptors (cleaner separation of concerns)
+   - Cancel tokens (abort pending requests)
+   - Progress events (useful for file uploads)
+   - Better TypeScript support with generics
+
+3. **Developer Experience:**
+   - Familiar API for most React developers
+   - Easier to onboard new developers
+   - Cleaner service layer code (no manual Response parsing)
+   - Better IDE autocomplete and type inference
+
+4. **Testing:**
+   - Mature mocking libraries (axios-mock-adapter, jest-mock-axios)
+   - Easier to mock interceptors in tests
+   - More examples and patterns available
+
+**Cons of Axios Migration:**
+
+1. **React Native Hooks Issue:**
+   - **CRITICAL:** Cannot call `useAuth()` inside Axios interceptors (not React components)
+   - Must use global state or singleton pattern (same as current FetchClient)
+   - No advantage over current approach for auth injection
+
+2. **Bundle Size:**
+   - Axios: ~13KB gzipped
+   - Native Fetch: 0KB (built into browser/React Native)
+   - Current FetchClient: <1KB (minimal wrapper)
+   - Adds 13KB+ to bundle for features we may not need
+
+3. **Migration Effort:**
+   - 6-8 hours to migrate all services and tests
+   - Risk of introducing bugs during migration
+   - No immediate user-facing benefit
+   - Current implementation is working and tested
+
+4. **React Native Compatibility:**
+   - Fetch API is native to React Native (works everywhere)
+   - Axios requires polyfills for some features
+   - Current FetchClient already optimized for React Native
+
+5. **Loss of Current Features:**
+   - Current FetchClient has retry logic with exponential backoff
+   - Manual Authorization header override support
+   - ProblemDetails-aware error handling
+   - Would need to reimplement these in Axios interceptors
+
+**Decision Factors:**
+
+| Factor | FetchClient (Current) | Axios Interceptors |
+|--------|----------------------|-------------------|
+| Auth injection | ✅ Singleton pattern | 🟡 Same pattern needed |
+| Bundle size | ✅ <1KB | ❌ +13KB |
+| React Native compat | ✅ Native | 🟡 Needs polyfills |
+| Developer familiarity | 🟡 Custom pattern | ✅ Industry standard |
+| Retry logic | ✅ Built-in | 🟡 Need to add |
+| Error handling | ✅ ProblemDetails | 🟡 Need to add |
+| Test coverage | ✅ 93.42% (29 tests) | ❌ Need to rewrite |
+| Migration risk | ✅ No change | ❌ 6-8 hours + risk |
+
+**Recommendation:**
+**DEFER** - The current FetchClient singleton pattern is working well and optimized for React Native. Axios migration provides minimal benefit since:
+1. We still need singleton pattern for auth (can't use hooks in interceptors)
+2. Adds 13KB+ to bundle size
+3. Requires 6-8 hours of migration work with risk
+4. Current implementation has 93.42% test coverage
+
+**When to Reconsider:**
+- If we need Axios-specific features (cancel tokens, progress events)
+- If multiple developers struggle with the custom FetchClient pattern
+- If we migrate to a backend framework that provides Axios client generation
+- After mobile authentication is complete (Phase 2) - verify pattern works for both platforms
+
+**Acceptance Criteria (if implemented):**
+- [ ] Axios installed (`npm install axios`)
+- [ ] Request interceptor configured with auth injection
+- [ ] Response interceptor handles 401/403/500 errors
+- [ ] Retry logic with exponential backoff implemented
+- [ ] ProblemDetails error handling preserved
+- [ ] All 29+ fetch-client tests rewritten for Axios
+- [ ] RecipeService and other services migrated
+- [ ] Auth injection works on web and mobile
+- [ ] No regression in authentication flow
+- [ ] Bundle size impact documented and approved
+
+**References:**
+- Current FetchClient: `src/lib/shared/api/fetch-client.ts`
+- Axios Docs: https://axios-http.com/docs/interceptors
+- Sprint 5.3: Connect Web App to Protected API (completed with FetchClient)
+
 ---
 
 ## Archive: Completed Sprints

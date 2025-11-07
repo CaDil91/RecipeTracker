@@ -17,10 +17,8 @@ public class RecipeRequestDto
     
     [StringLength(100, ErrorMessage = "Category cannot exceed 100 characters")]
     public string? Category { get; set; }
-    
-    [Url(ErrorMessage = "ImageUrl must be a valid URL")]
+
+    // TODO: Add proper validation after Sprint 4 (Azure Blob URLs with query strings)
     [StringLength(2000, ErrorMessage = "ImageUrl cannot exceed 2000 characters")]
     public string? ImageUrl { get; set; }
-    
-    public Guid? UserId { get; set; }
 }

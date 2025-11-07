@@ -225,7 +225,6 @@ public class RecipeRepositoryTests(DbTestFactory<FoodBudgetAPI.Program> factory)
         await repository.AddAsync(new Recipe { Title = "User1 Recipe 1", UserId = userId1, Servings = 4, CreatedAt = DateTime.UtcNow });
         await repository.AddAsync(new Recipe { Title = "User1 Recipe 2", UserId = userId1, Servings = 2, CreatedAt = DateTime.UtcNow });
         await repository.AddAsync(new Recipe { Title = "User2 Recipe", UserId = userId2, Servings = 6, CreatedAt = DateTime.UtcNow });
-        await repository.AddAsync(new Recipe { Title = "No User Recipe", UserId = null, Servings = 8, CreatedAt = DateTime.UtcNow });
         await repository.SaveChangesAsync();
 
         // Act

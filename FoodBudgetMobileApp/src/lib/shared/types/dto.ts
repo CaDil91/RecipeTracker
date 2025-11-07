@@ -20,9 +20,6 @@ export interface RecipeRequestDto {
 
   /** Image URL for the recipe (optional, must be valid URL) */
   imageUrl?: string | null;
-
-  /** Optional user ID */
-  userId?: string | null;
 }
 
 /**
@@ -50,8 +47,8 @@ export interface RecipeResponseDto {
   /** Creation timestamp */
   createdAt: string;
 
-  /** User ID who created the recipe */
-  userId?: string | null;
+  /** User ID who created the recipe (required for security) */
+  userId: string;
 }
 
 /**

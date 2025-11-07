@@ -35,7 +35,7 @@ export const recipeHandlers = [
     });
   }),
 
-  // GET /api/Recipe/:id - Get recipe by ID
+  // GET /api/Recipe/:id - Get a recipe by ID
   http.get('*/api/Recipe/:id', ({ params }) => {
     const { id } = params;
     const recipe = recipes.find(r => r.id === id);
@@ -95,6 +95,7 @@ export const recipeHandlers = [
         instructions: newRecipeData.instructions,
         servings: newRecipeData.servings,
         createdAt: new Date().toISOString(),
+        userId: '123e4567-e89b-12d3-a456-426614174000', // Mock user ID (injected from JWT in real API)
         category: 'All', // Default category for new recipes
         imageUrl: 'https://images.unsplash.com/photo-1547592180-85f173990554?w=400&h=500&fit=crop', // Default image
       };

@@ -166,7 +166,7 @@ describe('RecipeListScreen Integration Tests', () => {
               category: 'Dinner',
               imageUrl: null,
               createdAt: new Date().toISOString(),
-              userId: null
+              userId: '123e4567-e89b-12d3-a456-426614174000'
             }
           ];
           console.log(`🔧 MSW Handler - Request ${requestCount}:`, JSON.stringify(mockData, null, 2));
@@ -240,7 +240,7 @@ describe('RecipeListScreen Integration Tests', () => {
     /**
      * NARROW TEST: Optional fields handling
      */
-    test('Should handle optional fields (category, imageUrl, userId) from API', async () => {
+    test('Should handle optional fields (category, imageUrl) from API', async () => {
       // Arrange: Set up MSW to return minimal required fields only
       server.use(
         http.get('*/api/Recipe', () => {
@@ -249,7 +249,8 @@ describe('RecipeListScreen Integration Tests', () => {
               id: '550e8400-e29b-41d4-a716-446655440001',
               title: 'Minimal Recipe',
               servings: 2,
-              createdAt: '2024-01-15T10:30:00.000Z'
+              createdAt: '2024-01-15T10:30:00.000Z',
+              userId: '123e4567-e89b-12d3-a456-426614174000'
             }
           ]);
         })
@@ -345,7 +346,8 @@ describe('RecipeListScreen Integration Tests', () => {
               id: 'delayed-123',
               title: 'Delayed Recipe',
               servings: 4,
-              createdAt: '2024-01-15T10:30:00.000Z'
+              createdAt: '2024-01-15T10:30:00.000Z',
+              userId: '123e4567-e89b-12d3-a456-426614174000'
             }
           ]);
         })
@@ -416,6 +418,7 @@ describe('RecipeListScreen Integration Tests', () => {
               title: `Recipe Version ${version++}`,
               servings: 4,
               createdAt: '2024-01-15T10:30:00.000Z',
+              userId: '123e4567-e89b-12d3-a456-426614174000'
             }
           ];
           return HttpResponse.json(data);
@@ -492,7 +495,8 @@ describe('RecipeListScreen Integration Tests', () => {
                 id: randomUUID(),
                 title: 'Intermittent Success',
                 servings: 4,
-                createdAt: '2024-01-15T10:30:00.000Z'
+                createdAt: '2024-01-15T10:30:00.000Z',
+                userId: '123e4567-e89b-12d3-a456-426614174000'
               }
             ]);
           }
@@ -531,6 +535,7 @@ describe('RecipeListScreen Integration Tests', () => {
               title: 'Future Recipe',
               servings: 4,
               createdAt: '2024-01-15T10:30:00.000Z',
+              userId: '123e4567-e89b-12d3-a456-426614174000',
               // New fields from a future API version
               preparationTime: 30,
               cookingTime: 45,
@@ -569,8 +574,9 @@ describe('RecipeListScreen Integration Tests', () => {
               id: randomUUID(),
               title: 'Minimal Recipe',
               servings: 2,
-              createdAt: '2024-01-15 10:30:00' // Different date format
-              // No category, imageUrl, instructions, or userId
+              createdAt: '2024-01-15 10:30:00', // Different date format
+              userId: '123e4567-e89b-12d3-a456-426614174000'
+              // No category, imageUrl, or instructions
             }
           ]);
         })
@@ -613,12 +619,14 @@ describe('RecipeListScreen Integration Tests', () => {
               title: 'Recipe To Delete',
               servings: 4,
               createdAt: new Date().toISOString(),
+              userId: '123e4567-e89b-12d3-a456-426614174000'
             },
             {
               id: randomUUID(),
               title: 'Other Recipe',
               servings: 2,
               createdAt: new Date().toISOString(),
+              userId: '123e4567-e89b-12d3-a456-426614174000'
             },
           ]);
         }),
@@ -661,6 +669,7 @@ describe('RecipeListScreen Integration Tests', () => {
               title: 'Quick Delete Test',
               servings: 4,
               createdAt: new Date().toISOString(),
+              userId: '123e4567-e89b-12d3-a456-426614174000'
             },
           ]);
         }),
@@ -700,6 +709,7 @@ describe('RecipeListScreen Integration Tests', () => {
               title: 'Rollback Test Recipe',
               servings: 4,
               createdAt: new Date().toISOString(),
+              userId: '123e4567-e89b-12d3-a456-426614174000'
             },
           ]);
         }),
@@ -748,6 +758,7 @@ describe('RecipeListScreen Integration Tests', () => {
               title: 'No Refetch Test',
               servings: 4,
               createdAt: new Date().toISOString(),
+              userId: '123e4567-e89b-12d3-a456-426614174000'
             },
           ]);
         }),
@@ -790,6 +801,7 @@ describe('RecipeListScreen Integration Tests', () => {
               title: 'Timeout Test Recipe',
               servings: 4,
               createdAt: new Date().toISOString(),
+              userId: '123e4567-e89b-12d3-a456-426614174000'
             },
           ]);
         }),
@@ -829,6 +841,7 @@ describe('RecipeListScreen Integration Tests', () => {
               title: 'RFC 9457 Test',
               servings: 4,
               createdAt: new Date().toISOString(),
+              userId: '123e4567-e89b-12d3-a456-426614174000'
             },
           ]);
         }),
@@ -877,12 +890,14 @@ describe('RecipeListScreen Integration Tests', () => {
               title: 'Concurrent Delete 1',
               servings: 4,
               createdAt: new Date().toISOString(),
+              userId: '123e4567-e89b-12d3-a456-426614174000'
             },
             {
               id: recipe2Id,
               title: 'Concurrent Delete 2',
               servings: 2,
               createdAt: new Date().toISOString(),
+              userId: '123e4567-e89b-12d3-a456-426614174000'
             },
           ]);
         }),

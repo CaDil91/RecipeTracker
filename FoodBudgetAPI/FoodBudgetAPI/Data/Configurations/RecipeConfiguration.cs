@@ -48,9 +48,13 @@ public class RecipeConfiguration : IEntityTypeConfiguration<Recipe>
         // CreatedAt is required
         builder.Property(e => e.CreatedAt)
             .IsRequired();
-        
-        // UserId is optional
+
+        // UserId is required
         builder.Property(e => e.UserId)
-            .IsRequired(false);
+            .IsRequired();
+
+        // Add index for performance on userId queries
+        builder.HasIndex(e => e.UserId)
+            .HasDatabaseName("IX_Recipes_UserId");
     }
 }

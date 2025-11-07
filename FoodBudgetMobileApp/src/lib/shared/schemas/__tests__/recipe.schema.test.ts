@@ -24,8 +24,7 @@ describe('Recipe Schemas', () => {
         const validRequest = {
           title: 'Test Recipe',
           instructions: 'Step 1: Do something',
-          servings: 4,
-          userId: '123e4567-e89b-12d3-a456-426614174000',
+          servings: 4
         };
 
         // Act
@@ -171,13 +170,12 @@ describe('Recipe Schemas', () => {
         expect(result.success).toBe(true);
       });
 
-      it('given null instructions and userId, when validated, then succeeds (optional fields)', () => {
+      it('given null instructions, when validated, then succeeds (optional field)', () => {
         // Arrange
         const requestWithNulls = {
           title: 'Test Recipe',
           instructions: null,
           servings: 50,
-          userId: null,
         };
 
         // Act
@@ -192,7 +190,7 @@ describe('Recipe Schemas', () => {
         const requestMissingOptional = {
           title: 'Test Recipe',
           servings: 4,
-          // instructions, userId, category, imageUrl omitted
+          // instructions, category, imageUrl omitted
         };
 
         // Act
@@ -212,21 +210,6 @@ describe('Recipe Schemas', () => {
 
         // Act
         const result = RecipeRequestSchema.safeParse(invalidImageUrl);
-
-        // Assert
-        expect(result.success).toBe(false);
-      });
-
-      it('given invalid userId format, when validated, then fails', () => {
-        // Arrange
-        const invalidUserId = {
-          title: 'Test Recipe',
-          servings: 4,
-          userId: 'not-a-uuid',
-        };
-
-        // Act
-        const result = RecipeRequestSchema.safeParse(invalidUserId);
 
         // Assert
         expect(result.success).toBe(false);
@@ -462,6 +445,7 @@ describe('Recipe Schemas', () => {
           category: 'Breakfast',
           imageUrl: 'https://example.com/image.jpg',
           createdAt: '2023-01-01T12:00:00.000Z',
+          userId: '123e4567-e89b-12d3-a456-426614174001'
         };
 
         // Act
@@ -489,6 +473,7 @@ describe('Recipe Schemas', () => {
             title: 'Test Recipe',
             servings: 4,
             createdAt: datetime,
+            userId: '123e4567-e89b-12d3-a456-426614174001'
           };
 
           // Act
@@ -515,7 +500,7 @@ describe('Recipe Schemas', () => {
           category: null,
           imageUrl: null,
           createdAt: '2023-01-01T12:00:00.000Z',
-          userId: null,
+          userId: '123e4567-e89b-12d3-a456-426614174001'
         };
 
         // Act
@@ -531,6 +516,7 @@ describe('Recipe Schemas', () => {
           title: 'Test',
           servings: 4,
           createdAt: '2023-01-01T12:00:00.000Z',
+          userId: '123e4567-e89b-12d3-a456-426614174001'
         };
 
         // Act
@@ -546,6 +532,7 @@ describe('Recipe Schemas', () => {
           id: '123e4567-e89b-12d3-a456-426614174000',
           servings: 4,
           createdAt: '2023-01-01T12:00:00.000Z',
+          userId: '123e4567-e89b-12d3-a456-426614174001',
         };
 
         // Act
@@ -561,6 +548,7 @@ describe('Recipe Schemas', () => {
           id: '123e4567-e89b-12d3-a456-426614174000',
           title: 'Test',
           createdAt: '2023-01-01T12:00:00.000Z',
+          userId: '123e4567-e89b-12d3-a456-426614174001',
         };
 
         // Act
@@ -576,6 +564,7 @@ describe('Recipe Schemas', () => {
           id: '123e4567-e89b-12d3-a456-426614174000',
           title: 'Test',
           servings: 4,
+          userId: '123e4567-e89b-12d3-a456-426614174001',
         };
 
         // Act
@@ -600,6 +589,7 @@ describe('Recipe Schemas', () => {
             title: 'Test Recipe',
             servings: 4,
             createdAt: '2023-01-01T12:00:00.000Z',
+            userId: '123e4567-e89b-12d3-a456-426614174001',
           };
 
           // Act
@@ -619,6 +609,7 @@ describe('Recipe Schemas', () => {
           servings: 4,
           imageUrl: 'not-a-valid-url',
           createdAt: '2023-01-01T12:00:00.000Z',
+          userId: '123e4567-e89b-12d3-a456-426614174001',
         };
 
         // Act
@@ -663,6 +654,7 @@ describe('Recipe Schemas', () => {
           title: 'Test Recipe',
           servings: 4,
           createdAt: '2023-01-01T12:00:00.000Z',
+          userId: '123e4567-e89b-12d3-a456-426614174001',
         };
 
         expect(isValidRecipeResponse(validResponse)).toBe(true);
@@ -674,6 +666,7 @@ describe('Recipe Schemas', () => {
           title: 'Test Recipe',
           servings: 4,
           createdAt: '2023-01-01T12:00:00.000Z',
+          userId: '123e4567-e89b-12d3-a456-426614174001',
         };
 
         expect(isValidRecipeResponse(invalidResponse)).toBe(false);
@@ -692,6 +685,7 @@ describe('Recipe Schemas', () => {
           title: 'Test Recipe',
           servings: 4,
           createdAt: '2023-01-01T12:00:00.000Z',
+          userId: '123e4567-e89b-12d3-a456-426614174001',
         };
 
         expect(isValidRecipe(validRecipe)).toBe(true);
@@ -742,6 +736,7 @@ describe('Recipe Schemas', () => {
           title: 'Test Recipe',
           servings: 4,
           createdAt: '2023-01-01T12:00:00.000Z',
+          userId: '123e4567-e89b-12d3-a456-426614174001',
         };
 
         const result = parseRecipeResponse(validResponse);
@@ -754,6 +749,7 @@ describe('Recipe Schemas', () => {
           title: 'Test Recipe',
           servings: 4,
           createdAt: '2023-01-01T12:00:00.000Z',
+          userId: '123e4567-e89b-12d3-a456-426614174001',
         };
 
         expect(() => parseRecipeResponse(invalidResponse)).toThrow();
@@ -767,6 +763,7 @@ describe('Recipe Schemas', () => {
           title: 'Test Recipe',
           servings: 4,
           createdAt: '2023-01-01T12:00:00.000Z',
+          userId: '123e4567-e89b-12d3-a456-426614174001',
         };
 
         const result = parseRecipe(validRecipe);
@@ -816,6 +813,7 @@ describe('Recipe Schemas', () => {
           title: 'Test Recipe',
           servings: 4,
           createdAt: '2023-01-01T12:00:00.000Z',
+          userId: '123e4567-e89b-12d3-a456-426614174001',
         };
 
         const result = safeParseRecipeResponse(validResponse);
@@ -831,6 +829,7 @@ describe('Recipe Schemas', () => {
           title: 'Test Recipe',
           servings: 4,
           createdAt: '2023-01-01T12:00:00.000Z',
+          userId: '123e4567-e89b-12d3-a456-426614174001',
         };
 
         const result = safeParseRecipeResponse(invalidResponse);
@@ -845,6 +844,7 @@ describe('Recipe Schemas', () => {
           title: 'Test Recipe',
           servings: 4,
           createdAt: '2023-01-01T12:00:00.000Z',
+          userId: '123e4567-e89b-12d3-a456-426614174001',
         };
 
         const result = safeParseRecipe(validRecipe);

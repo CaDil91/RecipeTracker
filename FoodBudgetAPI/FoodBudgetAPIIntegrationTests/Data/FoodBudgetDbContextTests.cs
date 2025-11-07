@@ -284,29 +284,7 @@ public class RecipeDbContextTests(DbTestFactory<Program> factory) : IClassFixtur
     }
 
     [Fact]
-    public async Task UserId_Optional_CanBeNull()
-    {
-        // Arrange
-        await using FoodBudgetDbContext context = factory.CreateContext();
-        var recipe = new Recipe
-        {
-            Title = "Recipe without user",
-            UserId = null,
-            Servings = 4,
-            CreatedAt = DateTime.UtcNow
-        };
-
-        // Act
-        context.Recipes.Add(recipe);
-        await context.SaveChangesAsync();
-
-        // Assert
-        Recipe? saved = await context.Recipes.FindAsync(recipe.Id);
-        saved!.UserId.Should().BeNull();
-    }
-
-    [Fact]
-    public async Task UserId_CanBeSet_StoresProperly()
+    public async Task UserId_Required_StoresProperly()
     {
         // Arrange
         await using FoodBudgetDbContext context = factory.CreateContext();

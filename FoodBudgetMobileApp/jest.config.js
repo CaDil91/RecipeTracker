@@ -24,10 +24,18 @@ export const coveragePathIgnorePatterns = [
     '/src/.*/index\\.tsx$',
     '/src/types/.*\\.ts$',
     '/src/lib/shared/types/.*\\.ts$',
+    '/src/lib/auth/authTypes\\.ts$',         // Type-only file (interfaces/types)
     '/src/navigation/AppNavigator\\.tsx$',
     '/src/test/.*\\.(ts|tsx)$',
-    '/src/mocks/.*\\.(ts|tsx)$',           // MSW mock setup files
-    '/src/data/mockRecipes\\.ts$',          // Test fixtures
-    '/src/theme/customTheme\\.ts$',         // Theme configuration/constants
-    '/src/components/WebContainer\\.tsx$'   // Web platform-specific code
+    '/src/mocks/.*\\.(ts|tsx)$',             // MSW mock setup files
+    '/src/data/mockRecipes\\.ts$',           // Test fixtures
+    '/src/theme/customTheme\\.ts$',          // Theme configuration/constants
+    '/src/theme/typography\\.ts$',           // Theme constants (spacing, fonts)
+    '/src/components/WebContainer\\.tsx$',   // Web platform-specific wrapper
+    '/src/screens/ErrorFallbackScreen\\.tsx$',  // Error boundary fallback UI
+    '/src/lib/shared/api/config\\.ts$',      // API configuration constants
+    'App\\.tsx$',                             // Entry point (provider/config setup)
+    'app\\.config\\.js$',                    // Expo configuration
+    '\\.config\\.js$',                       // Configuration files (babel, metro, jest)
+    '/src/navigation/types\\.ts$'            // Navigation type definitions
 ];

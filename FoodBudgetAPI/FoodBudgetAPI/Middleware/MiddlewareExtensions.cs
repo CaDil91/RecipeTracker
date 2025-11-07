@@ -1,4 +1,4 @@
-﻿namespace FoodBudgetAPI.Middleware;
+namespace FoodBudgetAPI.Middleware;
 
 /// <summary>
 /// Extension methods for registering custom middleware
@@ -34,4 +34,16 @@ public static class MiddlewareExtensions
     {
         return app.UseMiddleware<SecurityHeadersMiddleware>();
     }
+
+    /// <summary>
+    /// Adds CORS logging middleware to the application pipeline.
+    /// Logs CORS requests for security monitoring and debugging (2025 standard).
+    /// </summary>
+    /// <remarks>
+    /// This middleware should be registered AFTER UseCors() to properly detect
+    /// whether CORS headers were added or rejected by the CORS middleware.
+    /// Logs rejected CORS requests at WARNING level for security monitoring.
+    /// </remarks>
+    public static IApplicationBuilder UseCorsLogging(this IApplicationBuilder app) => return app.UseMiddleware<CorsLoggingMiddleware>();
+    
 }

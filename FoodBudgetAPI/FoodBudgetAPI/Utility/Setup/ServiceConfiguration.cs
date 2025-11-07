@@ -100,26 +100,47 @@ public static class ServiceConfiguration
         // Get allowed origins from configuration
         var allowedOrigins = builder.Configuration.GetSection("Security:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
 
+        if (allowedOrigins.Length == 0)
+        {
+            throw new InvalidOperationException(
+                "CORS configuration missing. Set Security:AllowedOrigins in app settings.json or environment variables. " +
+                "Example: Security__AllowedOrigins__0=https://example.com");
+        }
+        ValidateOrigins(allowedOrigins);
+
         builder.Services.AddCors(options =>
         {
             options.AddPolicy("MobileApp", policy =>
             {
-                if (allowedOrigins.Length > 0)
-                {
-                    policy.WithOrigins(allowedOrigins)
-                        .AllowAnyMethod()
-                        .AllowAnyHeader()
-                        .AllowCredentials(); // Required for cookies/auth headers
-                }
-                else
-                {
-                    // Development fallback: allow any origin (TODO: NOT SECURE - configure appsettings.json)
-                    policy.AllowAnyOrigin()
-                        .AllowAnyMethod()
-                        .AllowAnyHeader();
-                }
+                policy.WithOrigins(allowedOrigins)
+                    .AllowAnyMethod()
+                    .AllowAnyHeader()
+                    .AllowCredentials(); // Required for cookies/auth headers
             });
         });
+    }
+
+    /// <summary>
+    /// Validates CORS origin format
+    /// </summary>
+    private static void ValidateOrigins(string[] origins)
+    {
+        var validOriginPattern = new System.Text.RegularExpressions.Regex(
+            @"^https?://[a-zA-Z0-9.-]+(:[0-9]+)?$",
+            System.Text.RegularExpressions.RegexOptions.Compiled);
+
+        foreach (var origin in origins)
+        {
+            if (string.IsNullOrWhiteSpace(origin)) throw new InvalidOperationException("CORS origin cannot be empty or whitespace.");
+
+            if (!validOriginPattern.IsMatch(origin))
+            {
+                throw new InvalidOperationException(
+                    $"Invalid CORS origin format: '{origin}'. " +
+                    "Origin must be in format: http(s)://host or http(s)://host:port. " +
+                    "Example: https://example.com or http://localhost:8081");
+            }
+        }
     }
     
     private static void ConfigureApiVersioning(IServiceCollection services)

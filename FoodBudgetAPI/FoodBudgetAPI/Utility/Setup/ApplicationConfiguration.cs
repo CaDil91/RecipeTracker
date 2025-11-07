@@ -40,6 +40,7 @@ public static class ApplicationConfiguration
         // 5. Security and routing middleware
         app.UseHttpsRedirection();
         app.UseCors("MobileApp");
+        app.UseCorsLogging(); // Log CORS requests for security monitoring
 
         // 6. Authentication and authorization
         app.UseAuthentication();

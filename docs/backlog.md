@@ -981,6 +981,241 @@ resource "azurerm_app_service" "api" {
 
 ---
 
+### Story 6.1A: Token Revocation Endpoint
+**Priority:** MEDIUM
+**Effort:** Medium (1 week)
+**Type:** Security Enhancement
+
+**User Story:**
+> As a security-conscious user, I want the ability to revoke my access tokens immediately so that if my token is leaked or my device is compromised, I can force a logout and prevent unauthorized access.
+
+**Why Post-MVP:**
+- Current 1-hour token expiration provides reasonable security baseline for MVP
+- Short expiration (1 hour) + automatic refresh is industry standard mitigation
+- Token revocation is enhancement, not critical requirement for recipe app
+- Adds complexity to token management infrastructure
+- Priority increases if handling sensitive data or high-security scenarios
+
+**Current Security Posture:**
+- ✅ 1-hour JWT access token expiration (industry standard)
+- ✅ Automatic token refresh via MSAL
+- ✅ Tokens stored in sessionStorage (cleared on browser close)
+- ✅ HTTPS-only communication
+- ❌ No explicit revocation mechanism (leaked token valid until expiration)
+
+**Gap Analysis:**
+- **Issue:** If access token is leaked, attacker has access for up to 1 hour
+- **Risk:** Low for recipe app (not financial/health data), but worth addressing post-MVP
+- **Mitigation:** 1-hour window is acceptable for MVP, but revocation adds defense-in-depth
+- **2025 Standard:** Token revocation endpoints recommended for production apps
+
+**Scope:**
+- Microsoft Graph API integration for token revocation
+- User-initiated "Logout All Sessions" feature
+- Admin-initiated token revocation (for account security incidents)
+- Revoke refresh tokens (force re-authentication)
+- Optional: Display active sessions with individual revocation
+- Integration with Microsoft Entra External ID token revocation APIs
+
+**Implementation:**
+
+**Backend: Token Revocation Service**
+```csharp
+// Services/TokenRevocationService.cs
+using Microsoft.Graph;
+using Microsoft.Identity.Web;
+
+public class TokenRevocationService
+{
+    private readonly GraphServiceClient _graphClient;
+    private readonly ILogger<TokenRevocationService> _logger;
+
+    public TokenRevocationService(GraphServiceClient graphClient, ILogger<TokenRevocationService> logger)
+    {
+        _graphClient = graphClient;
+        _logger = logger;
+    }
+
+    /// <summary>
+    /// Revokes all refresh tokens for a user (forces re-authentication)
+    /// </summary>
+    public async Task RevokeAllUserTokensAsync(string userId)
+    {
+        try
+        {
+            // Microsoft Graph API: Revoke all refresh tokens
+            await _graphClient.Users[userId]
+                .RevokeSignInSessions()
+                .Request()
+                .PostAsync();
+
+            _logger.LogInformation("Revoked all refresh tokens for user {UserId}", userId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to revoke tokens for user {UserId}", userId);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Gets active sessions for a user (optional feature)
+    /// </summary>
+    public async Task<IEnumerable<SignInSession>> GetActiveSessionsAsync(string userId)
+    {
+        // Microsoft Graph API: List user's active sign-in sessions
+        var sessions = await _graphClient.Users[userId]
+            .SignInActivity
+            .Request()
+            .GetAsync();
+
+        return sessions; // Map to DTOs
+    }
+}
+```
+
+**API Endpoints:**
+```csharp
+// Controllers/UserSecurityController.cs
+[Authorize]
+[ApiController]
+[Route("api/user/security")]
+public class UserSecurityController : ControllerBase
+{
+    private readonly TokenRevocationService _tokenRevocationService;
+
+    [HttpPost("logout-all-sessions")]
+    public async Task<IActionResult> LogoutAllSessions()
+    {
+        var userId = User.GetObjectId(); // Extract user ID from JWT
+        await _tokenRevocationService.RevokeAllUserTokensAsync(userId);
+        return Ok(new { message = "All sessions have been logged out" });
+    }
+
+    [HttpGet("active-sessions")]
+    public async Task<IActionResult> GetActiveSessions()
+    {
+        var userId = User.GetObjectId();
+        var sessions = await _tokenRevocationService.GetActiveSessionsAsync(userId);
+        return Ok(sessions);
+    }
+}
+```
+
+**Frontend: Logout All Sessions UI**
+```typescript
+// screens/settings/SecuritySettingsScreen.tsx
+import { useLogoutAllSessions } from '@/hooks/useTokenRevocation';
+
+export function SecuritySettingsScreen() {
+  const logoutAllSessions = useLogoutAllSessions();
+
+  const handleLogoutAll = async () => {
+    Alert.alert(
+      "Logout All Sessions?",
+      "This will log you out of all devices. You'll need to sign in again.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Logout All",
+          style: "destructive",
+          onPress: async () => {
+            await logoutAllSessions.mutateAsync();
+            // Redirect to sign-in
+          },
+        },
+      ]
+    );
+  };
+
+  return (
+    <View>
+      <Text>Security Settings</Text>
+      <Button
+        title="Logout All Sessions"
+        onPress={handleLogoutAll}
+        color="red"
+      />
+      {/* Optional: Display active sessions with individual revoke */}
+    </View>
+  );
+}
+```
+
+**Acceptance Criteria:**
+- [ ] Backend service integrates with Microsoft Graph API for token revocation
+- [ ] User can trigger "Logout All Sessions" from settings
+- [ ] All refresh tokens revoked on user request
+- [ ] User redirected to sign-in after revocation
+- [ ] Admin can revoke user tokens via admin endpoint (optional)
+- [ ] Active sessions displayed to user (optional feature)
+- [ ] Individual session revocation supported (optional feature)
+- [ ] Error handling for Graph API failures
+- [ ] Tests verify revocation flow
+- [ ] Documentation for users on session management
+
+**Microsoft Graph API Requirements:**
+- **Permission:** `User.RevokeSessions.All` (admin consent required)
+- **Endpoint:** `POST /users/{userId}/revokeSignInSessions`
+- **Documentation:** [Microsoft Graph: Revoke Sign-In Sessions](https://learn.microsoft.com/en-us/graph/api/user-revokesigninsessions)
+
+**Files to Create:**
+- Backend: `Services/TokenRevocationService.cs`
+- Backend: `Controllers/UserSecurityController.cs`
+- Frontend: `screens/settings/SecuritySettingsScreen.tsx`
+- Frontend: `hooks/useTokenRevocation.ts`
+
+**Files to Modify:**
+- Backend: `Program.cs` - Register Graph API client with required permissions
+- Backend: `Services/GraphApiService.cs` - Add Graph client configuration
+- Frontend: `navigation/AppNavigator.tsx` - Add security settings screen
+
+**Benefits:**
+- ✅ Immediate protection if device compromised
+- ✅ User control over active sessions
+- ✅ Enhanced security for high-value accounts
+- ✅ Compliance with enterprise security requirements
+- ✅ Defense-in-depth security posture
+
+**Limitations:**
+- ⚠️ Only revokes refresh tokens (existing access tokens valid until expiration)
+- ⚠️ Access tokens still valid for up to 1 hour after revocation
+- ⚠️ Requires admin consent for Graph API permissions
+- ⚠️ Does not track individual access tokens (only refresh tokens)
+
+**Why This Limitation Exists:**
+- Access tokens are stateless JWTs (no database lookup required)
+- Server cannot "revoke" a JWT (would require database check on every request)
+- Industry standard: Rely on short expiration (1 hour) for access tokens
+- Refresh tokens are long-lived and stored server-side (can be revoked)
+
+**Future Enhancements (Post-Implementation):**
+- Track access tokens in Redis with revocation flag (performance cost)
+- Implement token introspection endpoint (OAuth 2.0 standard)
+- Add "suspicious activity" detection with automatic revocation
+- Email alerts on session revocation
+
+**Estimated Timeline:** 1 week
+**Priority:** MEDIUM (security enhancement, not MVP blocker)
+**Dependencies:** Sprint 4 authentication complete, Microsoft Graph SDK installed
+**Risk:** LOW (well-documented Microsoft Graph API pattern)
+
+**When to Implement:**
+- Post-MVP when security is higher priority
+- If handling sensitive user data beyond recipes
+- If users request enhanced security controls
+- Before enterprise/business tier features
+- After observing actual security incidents or user concerns
+
+**Decision Criteria:**
+- User feedback requesting session management
+- Security incidents involving token compromise
+- Compliance requirements for token revocation
+- Competitive analysis shows feature as differentiator
+- Moving upmarket to users with higher security expectations
+
+---
+
 ### Story 6.2: Advanced Security Features
 **Priority:** MEDIUM
 **Effort:** Large (2-3 weeks)

@@ -8,18 +8,12 @@ public static class MiddlewareExtensions
     /// <summary>
     /// Adds global exception handling middleware to the application pipeline
     /// </summary>
-    public static IApplicationBuilder UseGlobalExceptionHandler(this IApplicationBuilder app)
-    {
-        return app.UseMiddleware<ExceptionHandlingMiddleware>();
-    }
+    public static IApplicationBuilder UseGlobalExceptionHandler(this IApplicationBuilder app) => app.UseMiddleware<ExceptionHandlingMiddleware>();
 
     /// <summary>
     /// Adds request and response logging middleware to the application pipeline
     /// </summary>
-    public static IApplicationBuilder UseRequestResponseLogging(this IApplicationBuilder app)
-    {
-        return app.UseMiddleware<RequestResponseLoggingMiddleware>();
-    }
+    public static IApplicationBuilder UseRequestResponseLogging(this IApplicationBuilder app) app.UseMiddleware<RequestResponseLoggingMiddleware>();
 
     /// <summary>
     /// Adds security headers middleware to the application pipeline.
@@ -30,10 +24,7 @@ public static class MiddlewareExtensions
     /// security headers are added to all responses.
     /// Required for security for SPAs storing tokens in browser storage.
     /// </remarks>
-    public static IApplicationBuilder UseSecurityHeaders(this IApplicationBuilder app)
-    {
-        return app.UseMiddleware<SecurityHeadersMiddleware>();
-    }
+    public static IApplicationBuilder UseSecurityHeaders(this IApplicationBuilder app) => app.UseMiddleware<SecurityHeadersMiddleware>();
 
     /// <summary>
     /// Adds CORS logging middleware to the application pipeline.
@@ -44,6 +35,6 @@ public static class MiddlewareExtensions
     /// whether CORS headers were added or rejected by the CORS middleware.
     /// Logs rejected CORS requests at WARNING level for security monitoring.
     /// </remarks>
-    public static IApplicationBuilder UseCorsLogging(this IApplicationBuilder app) => return app.UseMiddleware<CorsLoggingMiddleware>();
+    public static IApplicationBuilder UseCorsLogging(this IApplicationBuilder app) => app.UseMiddleware<CorsLoggingMiddleware>();
     
 }

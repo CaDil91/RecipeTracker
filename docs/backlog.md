@@ -2143,7 +2143,194 @@ export function SettingsScreen() {
 ## Technical Debt & Code Quality (Ongoing)
 
 ### Testing
-- [ ] E2E tests with Detox or Maestro
+
+#### Story: End-to-End (E2E) Testing Suite
+**Priority:** HIGH (Post-Sprint 4)
+**Effort:** Large (2-3 weeks)
+**Type:** Quality Assurance
+
+**User Story:**
+> As a developer, I need automated E2E tests so I can verify critical user flows work correctly and catch regressions before they reach production.
+
+**Why Important:**
+- Unit tests don't catch integration issues between components
+- Authentication flows are complex and error-prone
+- Manual testing is time-consuming and inconsistent
+- Need confidence in deployments
+- Required for CI/CD pipeline maturity
+
+**Scope:**
+
+**1. Authentication Flow Testing (CRITICAL - Post-Sprint 4)**
+- [ ] Full authentication flow (sign-in → authenticated state → sign-out)
+- [ ] Token acquisition on page load (wait for isTokenReady)
+- [ ] Protected route access (redirect if not authenticated)
+- [ ] Token refresh on expiration (automatic silent refresh)
+- [ ] Sign-out clears tokens and redirects to login
+- [ ] Page refresh maintains authentication (token from cache)
+- [ ] Token acquisition race condition prevention (isTokenReady flag)
+
+**2. Recipe CRUD Operations**
+- [ ] Create recipe flow (form validation, submission, success)
+- [ ] View recipe details (navigation, loading states)
+- [ ] Edit recipe flow (load existing data, save changes)
+- [ ] Delete recipe (confirmation dialog, list update)
+- [ ] Recipe list filtering and search
+
+**3. Error Scenarios**
+- [ ] Network errors (offline mode, timeout)
+- [ ] 401 Unauthorized (token expired, invalid token)
+- [ ] 403 Forbidden (user accessing another user's recipe)
+- [ ] 500 Server errors (error boundary)
+- [ ] Validation errors (form feedback)
+
+**4. Offline Behavior (Post-Story 5.1)**
+- [ ] Offline indicator appears when network disconnected
+- [ ] Mutations queued while offline
+- [ ] Automatic sync when back online
+- [ ] Optimistic UI updates
+
+**Implementation:**
+
+**Tool Selection:**
+- **Option A:** Detox (React Native E2E testing)
+  - Pros: Excellent React Native support, fast, reliable
+  - Cons: Complex setup, requires iOS/Android simulators
+- **Option B:** Maestro (newer, simpler E2E tool)
+  - Pros: Simple YAML syntax, cross-platform, fast
+  - Cons: Newer tool, smaller community
+- **Recommendation:** Start with Maestro for speed, migrate to Detox if needed
+
+**Example E2E Test (Maestro):**
+```yaml
+# e2e/auth-flow.yaml
+appId: com.foodbudget.app
+---
+# Test: Full authentication flow
+- launchApp
+- tapOn: "Sign In"
+- waitForAnimationToEnd
+- assertVisible: "Microsoft sign-in page"
+- inputText:
+    text: "test@example.com"
+- tapOn: "Next"
+- inputText:
+    text: "password123"
+- tapOn: "Sign in"
+- waitForAnimationToEnd
+- assertVisible: "Recipe List"
+- assertNotVisible: "Sign In"
+- tapOn: "Settings"
+- tapOn: "Sign Out"
+- assertVisible: "Sign In"
+```
+
+**Example E2E Test (Detox):**
+```typescript
+// e2e/auth.e2e.ts
+describe('Authentication Flow', () => {
+  beforeAll(async () => {
+    await device.launchApp();
+  });
+
+  it('should sign in and access protected content', async () => {
+    // Sign in
+    await element(by.id('sign-in-button')).tap();
+    await waitFor(element(by.text('Microsoft sign-in')))
+      .toBeVisible()
+      .withTimeout(5000);
+
+    // Fill credentials (requires test user)
+    await element(by.id('email-input')).typeText('test@example.com');
+    await element(by.id('password-input')).typeText('password123');
+    await element(by.id('submit-button')).tap();
+
+    // Verify authenticated state
+    await waitFor(element(by.id('recipe-list')))
+      .toBeVisible()
+      .withTimeout(10000);
+
+    await expect(element(by.id('sign-in-button'))).not.toBeVisible();
+  });
+
+  it('should maintain auth after page refresh', async () => {
+    await device.reloadReactNative();
+
+    // Should still be authenticated
+    await waitFor(element(by.id('recipe-list')))
+      .toBeVisible()
+      .withTimeout(5000);
+  });
+
+  it('should sign out successfully', async () => {
+    await element(by.id('settings-tab')).tap();
+    await element(by.id('sign-out-button')).tap();
+
+    // Verify signed out
+    await waitFor(element(by.id('sign-in-button')))
+      .toBeVisible()
+      .withTimeout(5000);
+  });
+});
+```
+
+**Acceptance Criteria:**
+- [ ] E2E test framework installed (Detox or Maestro)
+- [ ] Test user account created in Entra External ID for testing
+- [ ] Authentication flow tests pass (sign-in, sign-out, token refresh)
+- [ ] Recipe CRUD tests pass
+- [ ] Error scenario tests pass
+- [ ] Tests run in CI/CD pipeline
+- [ ] Tests run against staging environment before prod deploy
+- [ ] Test results visible in CI dashboard
+- [ ] Documentation for running E2E tests locally
+
+**Files to Create:**
+- `e2e/auth-flow.e2e.ts` - Authentication tests
+- `e2e/recipe-crud.e2e.ts` - Recipe CRUD tests
+- `e2e/error-scenarios.e2e.ts` - Error handling tests
+- `e2e/helpers/auth-helper.ts` - Auth test utilities
+- `.detoxrc.js` or `maestro.yaml` - E2E config
+
+**Files to Modify:**
+- `package.json` - Add E2E test scripts
+- `.github/workflows/ci.yml` - Add E2E test job
+
+**Test Environment:**
+- Dedicated test user: `e2e-test@foodbudget.com`
+- Staging API endpoint: TBD
+- Mock data fixtures for consistent tests
+
+**Challenges:**
+- ⚠️ **MSAL External Authentication:** Cannot mock Microsoft sign-in page
+  - Solution: Use real test user account in Entra External ID
+  - Securely store test credentials in CI secrets
+- ⚠️ **Token Acquisition Timing:** Need to wait for isTokenReady
+  - Solution: Add test IDs to loading states, wait for content
+- ⚠️ **Async Operations:** TanStack Query, network requests
+  - Solution: Use `waitFor()` with appropriate timeouts
+
+**Estimated Timeline:** 2-3 weeks
+- Setup & configuration: 3-5 days
+- Authentication tests: 1 week
+- Recipe CRUD tests: 3-5 days
+- Error scenario tests: 2-3 days
+- CI integration: 2-3 days
+
+**Priority:** HIGH (implement after Sprint 4 authentication complete)
+
+**Dependencies:**
+- Sprint 4 authentication deployed and stable
+- Staging environment available
+- Test user account configured
+
+**When to Implement:**
+- After Sprint 4 authentication is deployed
+- Before adding more complex features (reduces regression risk)
+- Ideally during Sprint 5 (alongside observability)
+
+---
+
 - [ ] Contract tests between frontend and backend
 - [ ] Visual regression testing (Chromatic or Percy)
 - [ ] Accessibility audit and automated testing

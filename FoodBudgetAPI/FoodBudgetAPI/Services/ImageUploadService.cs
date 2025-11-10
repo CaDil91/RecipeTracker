@@ -1,4 +1,6 @@
+using Azure;
 using Azure.Storage.Blobs;
+using Azure.Storage.Blobs.Models;
 using Azure.Storage.Sas;
 using FoodBudgetAPI.Configuration;
 using Microsoft.Extensions.Options;
@@ -8,35 +10,23 @@ namespace FoodBudgetAPI.Services;
 /// <summary>
 /// Service for generating secure SAS tokens for Azure Blob Storage image uploads
 /// </summary>
-public class ImageUploadService : IImageUploadService
+public class ImageUploadService(BlobServiceClient blobServiceClient, ILogger<ImageUploadService> logger,
+    IOptions<ImageUploadOptions>? imageUploadOptions, IOptions<AzureStorageOptions> azureStorageOptions) : IImageUploadService
 {
     private const int CLOCK_SKEW_MINUTES = 5;
 
-    private readonly BlobServiceClient _blobServiceClient;
-    private readonly ILogger<ImageUploadService> _logger;
-    private readonly ImageUploadOptions _imageUploadOptions;
-    private readonly AzureStorageOptions _azureStorageOptions;
-
-    public ImageUploadService(
-        BlobServiceClient blobServiceClient,
-        ILogger<ImageUploadService> logger,
-        IOptions<ImageUploadOptions>? imageUploadOptions,
-        IOptions<AzureStorageOptions> azureStorageOptions)
-    {
-        _blobServiceClient = blobServiceClient ?? throw new ArgumentNullException(nameof(blobServiceClient));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _imageUploadOptions = imageUploadOptions?.Value ?? throw new ArgumentNullException(nameof(imageUploadOptions));
-        _azureStorageOptions = azureStorageOptions != null ? azureStorageOptions.Value : throw new ArgumentNullException(nameof(azureStorageOptions));
-    }
+    private readonly BlobServiceClient _blobServiceClient = blobServiceClient ?? throw new ArgumentNullException(nameof(blobServiceClient));
+    private readonly ILogger<ImageUploadService> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    private readonly ImageUploadOptions _imageUploadOptions = imageUploadOptions?.Value ?? throw new ArgumentNullException(nameof(imageUploadOptions));
+    private readonly AzureStorageOptions _azureStorageOptions = azureStorageOptions != null ? azureStorageOptions.Value : throw new ArgumentNullException(nameof(azureStorageOptions));
 
     /// <inheritdoc />
-    public Task<UploadTokenResponse> GenerateUploadTokenAsync(
+    public async Task<UploadTokenResponse> GenerateUploadTokenAsync(
         string userId,
         string fileName,
         string contentType,
         long fileSizeBytes)
     {
-        // Validate parameters
         ValidateParameters(userId, fileName, contentType, fileSizeBytes);
 
         try
@@ -50,28 +40,38 @@ public class ImageUploadService : IImageUploadService
             BlobContainerClient? containerClient = _blobServiceClient.GetBlobContainerClient(_azureStorageOptions.ContainerName);
             BlobClient? blobClient = containerClient.GetBlobClient(blobName);
 
-            // Create an SAS token with clock skew protection
+            // Get user delegation key from Azure AD (valid for up to 7 days)
+            DateTimeOffset delegationKeyStartTime = DateTimeOffset.UtcNow.AddMinutes(-CLOCK_SKEW_MINUTES);
+            DateTimeOffset delegationKeyExpiryTime = DateTimeOffset.UtcNow.AddMinutes(_imageUploadOptions.TokenExpirationMinutes);
+            Response<UserDelegationKey>? userDelegationKey = await _blobServiceClient.GetUserDelegationKeyAsync(
+                delegationKeyStartTime,
+                delegationKeyExpiryTime);
+
+            // Create SAS token using user delegation key (not account key)
             var sasBuilder = new BlobSasBuilder
             {
                 BlobContainerName = _azureStorageOptions.ContainerName,
                 BlobName = blobName,
                 Resource = "b", // "b" = blob (not container)
-                StartsOn = DateTimeOffset.UtcNow.AddMinutes(-CLOCK_SKEW_MINUTES), // Clock skew protection
-                ExpiresOn = DateTimeOffset.UtcNow.AddMinutes(_imageUploadOptions.TokenExpirationMinutes),
+                StartsOn = delegationKeyStartTime, // Clock skew protection
+                ExpiresOn = delegationKeyExpiryTime,
             };
 
             // CRITICAL: Set Create + Write permissions (prevents large file upload failures)
             sasBuilder.SetPermissions(BlobSasPermissions.Create | BlobSasPermissions.Write);
 
-            // Generate SAS URI
-            Uri sasUri = blobClient.GenerateSasUri(sasBuilder);
+            // Generate SAS query parameters signed with user delegation key
+            BlobSasQueryParameters? sasQueryParams = sasBuilder.ToSasQueryParameters(userDelegationKey.Value, _azureStorageOptions.AccountName);
 
-            return Task.FromResult(new UploadTokenResponse
+            // Build the full SAS URI
+            var blobUriBuilder = new BlobUriBuilder(blobClient.Uri) { Sas = sasQueryParams };
+
+            return new UploadTokenResponse
             {
-                UploadUrl = sasUri.ToString(),
+                UploadUrl = blobUriBuilder.ToUri().ToString(),
                 PublicUrl = blobClient.Uri.ToString(),
                 ExpiresAt = sasBuilder.ExpiresOn
-            });
+            };
         }
         catch (Exception ex)
         {

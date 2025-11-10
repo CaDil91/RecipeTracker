@@ -23,19 +23,34 @@ public static class ApplicationConfiguration
         // 3. Security headers (CSP, X-Content-Type-Options, etc.) - critical for SPA security
         app.UseSecurityHeaders();
 
-        // 4. Swagger middleware (enabled for demo purposes)
-        app.UseSwagger();
-        app.UseSwaggerUI(options =>
+        // 4. Swagger middleware
+        // Swagger UI exposes API surface and should never be enabled in production
+        if (app.Environment.IsDevelopment())
         {
-            var provider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
-
-            foreach (ApiVersionDescription description in provider.ApiVersionDescriptions)
+            app.UseSwagger();
+            app.UseSwaggerUI(options =>
             {
-                options.SwaggerEndpoint(
-                    $"/swagger/{description.GroupName}/swagger.json",
-                    $"Food Budget API {description.GroupName}");
-            }
-        });
+                var provider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
+
+                foreach (ApiVersionDescription description in provider.ApiVersionDescriptions)
+                {
+                    options.SwaggerEndpoint(
+                        $"/swagger/{description.GroupName}/swagger.json",
+                        $"Food Budget API {description.GroupName}");
+                }
+
+                // Enable OAuth2 for Microsoft External ID (CIAM)
+                IConfiguration configuration = app.Configuration;
+                string? clientId = configuration["AzureAd:ClientId"];
+
+                if (!string.IsNullOrEmpty(clientId))
+                {
+                    options.OAuthClientId(clientId);
+                    options.OAuthUsePkce(); // Use PKCE for security (recommended for SPAs and public clients)
+                    options.OAuthScopeSeparator(" ");
+                }
+            });
+        }
 
         // 5. Security and routing middleware
         app.UseHttpsRedirection();

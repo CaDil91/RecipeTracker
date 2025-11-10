@@ -13,34 +13,31 @@ namespace FoodBudgetAPI.Middleware;
 /// - Referrer-Policy: Controls referrer information sent with requests
 /// - Permissions-Policy: Controls browser features and APIs
 /// </remarks>
-public class SecurityHeadersMiddleware
+public class SecurityHeadersMiddleware(RequestDelegate next, ILogger<SecurityHeadersMiddleware> logger)
 {
-    private readonly RequestDelegate _next;
-    private readonly ILogger<SecurityHeadersMiddleware> _logger;
-    private readonly IConfiguration _configuration;
-
-    public SecurityHeadersMiddleware(
-        RequestDelegate next,
-        ILogger<SecurityHeadersMiddleware> logger,
-        IConfiguration configuration)
-    {
-        _next = next;
-        _logger = logger;
-        _configuration = configuration;
-    }
-
     public async Task InvokeAsync(HttpContext context)
     {
+        // Check if this is a Swagger request (only relax CSP for Swagger UI in development)
+        bool isSwaggerRequest = context.Request.Path.StartsWithSegments("/swagger");
+        bool isDevelopment = context.RequestServices.GetRequiredService<IWebHostEnvironment>().IsDevelopment();
+
         // Add Content Security Policy (CSP)
         // This is CRITICAL for SPAs storing tokens in browser storage
-        var cspPolicy = BuildContentSecurityPolicy();
+        string cspPolicy = BuildContentSecurityPolicy(isSwaggerRequest && isDevelopment);
         context.Response.Headers.Append("Content-Security-Policy", cspPolicy);
 
         // Prevent MIME-sniffing attacks
         context.Response.Headers.Append("X-Content-Type-Options", "nosniff");
 
-        // Prevent clickjacking attacks
-        context.Response.Headers.Append("X-Frame-Options", "DENY");
+        // Prevent clickjacking attacks (allow frames for Swagger in dev)
+        if (isSwaggerRequest && isDevelopment)
+        {
+            context.Response.Headers.Append("X-Frame-Options", "SAMEORIGIN");
+        }
+        else
+        {
+            context.Response.Headers.Append("X-Frame-Options", "DENY");
+        }
 
         // Legacy XSS protection (modern browsers use CSP instead)
         context.Response.Headers.Append("X-XSS-Protection", "1; mode=block");
@@ -51,53 +48,56 @@ public class SecurityHeadersMiddleware
         // Control browser features and APIs
         context.Response.Headers.Append("Permissions-Policy", "geolocation=(), microphone=(), camera=()");
 
-        _logger.LogDebug("Security headers added to response for {Path}", context.Request.Path);
+        logger.LogDebug("Security headers added to response for {Path}", context.Request.Path);
 
-        await _next(context);
+        await next(context);
     }
 
     /// <summary>
     /// Builds the Content Security Policy string based on application requirements.
-    /// Configured to support Microsoft Entra External ID authentication flows.
+    /// Configured to support Microsoft Entra External ID (CIAM) authentication flows.
     /// </summary>
+    /// <param name="allowSwagger">If true, relaxes CSP for Swagger UI (development only)</param>
     /// <returns>CSP policy string</returns>
-    private string BuildContentSecurityPolicy()
+    private string BuildContentSecurityPolicy(bool allowSwagger = false)
     {
-        // Get allowed origins from configuration
-        var allowedOrigins = _configuration.GetSection("Security:AllowedOrigins").Get<string[]>()
-            ?? new[] { "'self'" };
+        // Scripts directive: relax for Swagger in development only
+        string scriptSrc = allowSwagger
+            ? "script-src 'self' 'unsafe-inline' https://*.ciamlogin.com"
+            : "script-src 'self' https://*.ciamlogin.com";
 
         // Build CSP directives
         var cspDirectives = new List<string>
         {
-            // Default policy: only allow resources from same origin
+            // Default policy: only allow resources from the same origin
             "default-src 'self'",
 
-            // Scripts: Allow same origin and Microsoft Entra External ID
-            // Note: 'unsafe-inline' and 'unsafe-eval' should be avoided in production
-            // If your React app requires inline scripts, use nonces or hashes instead
-            $"script-src 'self' https://*.ciamlogin.com https://login.microsoftonline.com",
+            // Scripts: Allow the same origin and Microsoft Entra External ID (CIAM)
+            // Note: 'unsafe-inline' is only allowed for Swagger UI in development
+            // Production should never use 'unsafe-inline' or 'unsafe-eval'
+            // External ID uses *.ciamlogin.com (not login.microsoftonline.com)
+            scriptSrc,
 
             // Styles: Allow same origin and inline styles (required for React)
-            // Consider using nonces for better security in production
+            // Consider using nonce's for better security in production
             "style-src 'self' 'unsafe-inline'",
 
-            // Images: Allow same origin, data URIs (for inline images), and Azure Blob Storage
+            // Images: Allow the same origin, data URIs (for inline images), and Azure Blob Storage
             "img-src 'self' data: https://*.blob.core.windows.net",
 
-            // Fonts: Allow same origin and data URIs
+            // Fonts: Allow the same origin and data URIs
             "font-src 'self' data:",
 
-            // Connect (AJAX/Fetch): Allow same origin and Microsoft Entra External ID
-            $"connect-src 'self' https://*.ciamlogin.com https://login.microsoftonline.com",
+            // Connect (AJAX/Fetch): Allow the same origin and Microsoft Entra External ID (CIAM)
+            "connect-src 'self' https://*.ciamlogin.com",
 
-            // Frames: Allow Microsoft Entra External ID for authentication redirects
-            "frame-src 'self' https://*.ciamlogin.com https://login.microsoftonline.com",
+            // Frames: Allow Microsoft Entra External ID (CIAM) for authentication redirects
+            "frame-src 'self' https://*.ciamlogin.com",
 
-            // Form actions: Only allow same origin
+            // Form actions: Only allow the same origin
             "form-action 'self'",
 
-            // Base URI: Restrict to same origin
+            // Base URI: Restrict to the same origin
             "base-uri 'self'",
 
             // Block all plugins (Flash, Java, etc.)

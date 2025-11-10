@@ -1,5 +1,6 @@
 // FoodBudgetAPI/FoodBudgetAPI/Utility/Setup/ServiceRegistrationExtensions.cs
 using System.Diagnostics.CodeAnalysis;
+using Azure.Identity;
 using Azure.Storage.Blobs;
 using FoodBudgetAPI.Configuration;
 using FoodBudgetAPI.Data;
@@ -30,11 +31,12 @@ public static class ServiceRegistrationExtensions
 
         services.AddAutoMapper(_ => { }, typeof(RecipeMappingProfile));
 
-        // Azure Blob Storage
+        // Azure Blob Storage with DefaultAzureCredential (Managed Identity + Local Dev)
         services.AddSingleton(sp =>
         {
-            var azureStorageOptions = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<AzureStorageOptions>>().Value;
-            return new BlobServiceClient(azureStorageOptions.ConnectionString);
+            AzureStorageOptions azureStorageOptions = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<AzureStorageOptions>>().Value;
+            var blobEndpoint = new Uri($"https://{azureStorageOptions.AccountName}.blob.core.windows.net");
+            return new BlobServiceClient(blobEndpoint, new DefaultAzureCredential());
         });
     }
     
@@ -47,7 +49,7 @@ public static class ServiceRegistrationExtensions
     private static void RegisterConfigurationOptions(IServiceCollection services)
     {
         // Get the configuration from the service provider
-        var serviceProvider = services.BuildServiceProvider();
+        ServiceProvider serviceProvider = services.BuildServiceProvider();
         var configuration = serviceProvider.GetRequiredService<IConfiguration>();
 
         // Azure Storage configuration

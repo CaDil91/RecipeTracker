@@ -13,7 +13,7 @@ public static class MiddlewareExtensions
     /// <summary>
     /// Adds request and response logging middleware to the application pipeline
     /// </summary>
-    public static IApplicationBuilder UseRequestResponseLogging(this IApplicationBuilder app) app.UseMiddleware<RequestResponseLoggingMiddleware>();
+    public static IApplicationBuilder UseRequestResponseLogging(this IApplicationBuilder app) => app.UseMiddleware<RequestResponseLoggingMiddleware>();
 
     /// <summary>
     /// Adds security headers middleware to the application pipeline.

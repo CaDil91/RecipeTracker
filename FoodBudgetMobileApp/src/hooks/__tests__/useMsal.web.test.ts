@@ -191,6 +191,9 @@ describe('useMsalWeb', () => {
 
       const { result } = renderHook(() => useMsalWeb());
 
+      // Clear mock calls from useEffect (proactive token acquisition on mount)
+      mockInstance.acquireTokenSilent.mockClear();
+
       // Act
       const token = await result.current.getAccessToken();
 
@@ -443,6 +446,9 @@ describe('useMsalWeb', () => {
       });
 
       const { result } = renderHook(() => useMsalWeb());
+
+      // Clear mock calls from useEffect (proactive token acquisition on mount)
+      mockInstance.acquireTokenSilent.mockClear();
 
       // Act
       const token = await result.current.getAccessToken();

@@ -28,6 +28,24 @@ import {server} from '../../mocks/server';
 import {http, HttpResponse, delay} from 'msw';
 import {RecipeDetailScreenNavigationProp} from '../../types/navigation';
 
+// Mock useAuth hook - Return authenticated state for tests
+// RecipeDetailScreen uses useQuery which depends on isAuthenticated && isTokenReady
+jest.mock('../../hooks/useAuth', () => ({
+  useAuth: jest.fn(() => ({
+    isAuthenticated: true,
+    isTokenReady: true,
+    user: {
+      id: 'test-user-id',
+      email: 'test@example.com',
+      name: 'Test User',
+    },
+    isLoading: false,
+    signIn: jest.fn(),
+    signOut: jest.fn(),
+    getAccessToken: jest.fn(() => Promise.resolve('mock-access-token')),
+  })),
+}));
+
 describe('RecipeDetailScreen Integration Tests - VIEW & CREATE Modes (Stories 8 & 9)', () => {
     // MSW Server lifecycle
     beforeAll(() => {

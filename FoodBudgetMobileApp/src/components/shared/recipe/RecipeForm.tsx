@@ -6,6 +6,7 @@ import { RecipeRequestDto, RecipeResponseDto } from '../../../lib/shared';
 import { RecipeRequestSchema } from '../../../lib/shared';
 import { Button } from '../ui/Button';
 import { spacing } from '../../../theme/typography';
+import type { CompressedImageResult } from '../../../utils/imageCompression';
 import {
   ViewRecipeImage,
   EditableRecipeImage,
@@ -23,6 +24,7 @@ export interface RecipeFormProps {
   initialValues?: Partial<RecipeResponseDto>;
   onSubmit?: (data: RecipeRequestDto) => void | Promise<void>; // Optional when readOnly
   onCancel?: (hasChanges: boolean) => void;
+  onImageChange?: (image: CompressedImageResult | null) => void; // Callback for compressed image tracking
   submitLabel?: string;
   isLoading?: boolean;
   readOnly?: boolean;
@@ -37,6 +39,7 @@ const RecipeFormComponent = forwardRef<RecipeFormRef, RecipeFormProps>(({
   initialValues,
   onSubmit,
   onCancel,
+  onImageChange,
   submitLabel = 'Save Recipe',
   isLoading = false,
   readOnly = false,
@@ -145,7 +148,14 @@ const RecipeFormComponent = forwardRef<RecipeFormRef, RecipeFormProps>(({
         render={({ field: { onChange, value } }) => (
           <EditableRecipeImage
             value={value as string}
-            onChange={onChange}
+            onChange={(compressedImage) => {
+              // Update form's imageUrl field for preview
+              onChange(compressedImage?.uri || '');
+              // Notify parent component of compressed image for upload
+              if (onImageChange) {
+                onImageChange(compressedImage);
+              }
+            }}
             testID={`${testID}-image`}
           />
         )}

@@ -3,5 +3,7 @@
  */
 
 export * from './config';
-export * from './recipe.service';
 export * from './fetch-client';
+export { RecipeService } from './recipe.service';
+export { ImageUploadService } from './imageUpload.service';
+export type { ApiResponse } from './recipe.service';

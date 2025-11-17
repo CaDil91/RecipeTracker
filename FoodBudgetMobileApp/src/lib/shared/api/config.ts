@@ -8,6 +8,7 @@ export const API_CONFIG = {
   
   ENDPOINTS: {
     RECIPES: '/api/Recipe',
+    IMAGES: '/api/Images',
   },
   
   HEADERS: {

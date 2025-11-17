@@ -35,7 +35,7 @@ const RecipeListScreen: React.FC<RecipeListScreenProps> = ({ navigation }) => {
     action?: { label: string; onPress: () => void };
   } | null>(null);
 
-  // Story 12a: Optimistic delete mutation hook
+  // Optimistic delete mutation hook
   const deleteMutation = useDeleteRecipe();
 
   // Fetch recipes using TanStack Query

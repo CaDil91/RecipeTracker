@@ -29,6 +29,15 @@ module.exports = {
     experiments: {
       baseUrl: process.env.EXPO_PUBLIC_BASE_URL || '/',
     },
-    plugins: ['expo-font'],
+    plugins: [
+      'expo-font',
+      [
+        'expo-image-picker',
+        {
+          photosPermission: 'Allow FoodBudget to access your photos',
+          cameraPermission: 'Allow FoodBudget to use your camera',
+        },
+      ],
+    ],
   },
 };

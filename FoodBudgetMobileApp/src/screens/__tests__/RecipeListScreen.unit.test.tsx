@@ -26,6 +26,14 @@ jest.mock('../../lib/shared', () => ({
   },
 }));
 
+// Mock useAuth hook - Return authenticated state for tests
+jest.mock('../../hooks/useAuth', () => ({
+  useAuth: jest.fn(() => ({
+    isAuthenticated: true,
+    isTokenReady: true,
+  })),
+}));
+
 // Mock navigation - External navigation system
 const mockNavigate = jest.fn();
 const mockNavigation = createMockNavigation({ navigate: mockNavigate }) as any;

@@ -1,13 +1,14 @@
 import React from 'react';
-import { View, Image, Pressable, StyleSheet } from 'react-native';
+import { View, Image, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
 import { Text, IconButton, useTheme } from 'react-native-paper';
 import Animated from 'react-native-reanimated';
-import * as ExpoImagePicker from 'expo-image-picker';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { CustomTheme } from '../../../theme/customTheme';
 import { spacing } from '../../../theme/typography';
 import { useEditableBounce } from '../../../hooks/useEditableBounce';
 import { useEditableHaptics } from '../../../hooks/useEditableHaptics';
+import { useImagePicker } from '../../../hooks/useImagePicker';
+import type { CompressedImageResult } from '../../../utils/imageCompression';
 
 /**
  * RecipeImage - Co-located VIEW and EDIT components for recipe image
@@ -67,7 +68,7 @@ export const ViewRecipeImage: React.FC<ViewRecipeImageProps> = ({ imageUrl, test
 
 export interface EditableRecipeImageProps {
   value: string;
-  onChange: (value: string) => void;
+  onChange: (value: CompressedImageResult | null) => void;
   testID?: string;
 }
 
@@ -79,30 +80,27 @@ export interface EditableRecipeImageProps {
  * - Edit and delete button overlay when image exists
  * - "Add Image" dashed button when no image
  * - Haptic feedback on interactions
- * - Image picker integration with expo-image-picker
- * - 4:3 aspect ratio with quality optimization
+ * - Image picker integration with compression via useImagePicker hook
+ * - 4:3 aspect ratio with automatic compression (max 1920 px, 0.8 quality)
+ * - Loading state during compression
  */
 export const EditableRecipeImage: React.FC<EditableRecipeImageProps> = ({ value, onChange, testID }) => {
   const theme = useTheme<CustomTheme>();
   const styles = createStyles(theme);
   const bounceStyle = useEditableBounce();
   const { triggerLight, triggerMedium } = useEditableHaptics();
+  const { pickFromLibrary, isLoading } = useImagePicker();
 
   const handleChangeImage = async () => {
     try {
       // Haptic feedback on tap
       await triggerLight();
 
-      const result = await ExpoImagePicker.launchImageLibraryAsync({
-        mediaTypes: 'images',
-        allowsEditing: true,
-        aspect: [4, 3],
-        quality: 0.8,
-      });
+      // Use a hook which handles picker and compression
+      const compressedImage = await pickFromLibrary();
 
-      if (!result.canceled && result.assets && result.assets[0]) {
-        onChange(result.assets[0].uri);
-      }
+      if (compressedImage) onChange(compressedImage);
+
     } catch (error) {
       console.error('Error picking image:', error);
     }
@@ -110,7 +108,7 @@ export const EditableRecipeImage: React.FC<EditableRecipeImageProps> = ({ value,
 
   const handleDeleteImage = async () => {
     await triggerMedium();
-    onChange('');
+    onChange(null);
   };
 
   return (
@@ -134,6 +132,7 @@ export const EditableRecipeImage: React.FC<EditableRecipeImageProps> = ({ value,
               iconColor={theme.colors.onPrimaryContainer}
               size={24}
               onPress={handleChangeImage}
+              disabled={isLoading}
               testID={`${testID}-change`}
               accessibilityLabel="Change recipe image"
             />
@@ -144,6 +143,7 @@ export const EditableRecipeImage: React.FC<EditableRecipeImageProps> = ({ value,
               iconColor={theme.colors.onErrorContainer}
               size={24}
               onPress={handleDeleteImage}
+              disabled={isLoading}
               testID={`${testID}-delete`}
               accessibilityLabel="Delete recipe image"
             />
@@ -153,19 +153,32 @@ export const EditableRecipeImage: React.FC<EditableRecipeImageProps> = ({ value,
         <Pressable
           onPress={handleChangeImage}
           style={styles.addImageButton}
+          disabled={isLoading}
           testID={`${testID}-add`}
           accessibilityLabel="Add recipe image"
           accessibilityHint="Tap to select an image from your photo library"
           accessibilityRole="button"
+          accessibilityState={{ disabled: isLoading }}
         >
-          <MaterialCommunityIcons
-            name="image-plus"
-            size={48}
-            color={theme.colors.onSurfaceVariant}
-          />
-          <Text variant="bodyLarge" style={{ color: theme.colors.onSurfaceVariant }}>
-            Add Image
-          </Text>
+          {isLoading ? (
+            <>
+              <ActivityIndicator size="large" color={theme.colors.primary} />
+              <Text variant="bodyLarge" style={{ color: theme.colors.onSurfaceVariant }}>
+                Compressing...
+              </Text>
+            </>
+          ) : (
+            <>
+              <MaterialCommunityIcons
+                name="image-plus"
+                size={48}
+                color={theme.colors.onSurfaceVariant}
+              />
+              <Text variant="bodyLarge" style={{ color: theme.colors.onSurfaceVariant }}>
+                Add Image
+              </Text>
+            </>
+          )}
         </Pressable>
       )}
     </>

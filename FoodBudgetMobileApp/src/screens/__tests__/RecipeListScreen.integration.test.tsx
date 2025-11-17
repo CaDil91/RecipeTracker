@@ -18,6 +18,24 @@ import RecipeListScreen from '../RecipeListScreen';
 import { server } from '../../mocks/server';
 import { http, HttpResponse, delay } from 'msw';
 
+// Mock useAuth hook - Return authenticated state for tests
+// RecipeListScreen uses useQuery which depends on isAuthenticated && isTokenReady
+jest.mock('../../hooks/useAuth', () => ({
+  useAuth: jest.fn(() => ({
+    isAuthenticated: true,
+    isTokenReady: true,
+    user: {
+      id: 'test-user-id',
+      email: 'test@example.com',
+      name: 'Test User',
+    },
+    isLoading: false,
+    signIn: jest.fn(),
+    signOut: jest.fn(),
+    getAccessToken: jest.fn(() => Promise.resolve('mock-access-token')),
+  })),
+}));
+
 describe('RecipeListScreen Integration Tests', () => {
   // MSW Server lifecycle
   beforeAll(() => {

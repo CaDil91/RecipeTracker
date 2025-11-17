@@ -52,6 +52,34 @@ export interface RecipeResponseDto {
 }
 
 /**
+ * Request DTO for generating an image upload token
+ */
+export interface ImageUploadTokenRequestDto {
+  /** The original file name with extension (e.g., "photo.jpg") */
+  fileName: string;
+
+  /** The MIME type of the file (e.g., "image/jpeg", "image/png") */
+  contentType: string;
+
+  /** The size of the file in bytes (max 10MB = 10,485,760 bytes) */
+  fileSizeBytes: number;
+}
+
+/**
+ * Response DTO for image upload token
+ */
+export interface ImageUploadTokenResponseDto {
+  /** SAS URL for uploading the image to Azure Blob Storage */
+  uploadUrl: string;
+
+  /** Public URL to use after a successful upload */
+  publicUrl: string;
+
+  /** Expiration timestamp of the upload token (ISO 8601 format) */
+  expiresAt: string;
+}
+
+/**
  * RFC 9457 Problem Details for error responses
  */
 export interface ProblemDetails {

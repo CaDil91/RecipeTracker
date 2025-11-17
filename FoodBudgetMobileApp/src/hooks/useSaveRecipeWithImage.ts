@@ -38,7 +38,14 @@ export interface SaveRecipeWithImageParams {
  */
 async function uploadImageToAzure(image: CompressedImageResult): Promise<string> {
   // Step 1: Get upload token from backend API (includes User Delegation SAS)
-  const fileName = image.uri.split('/').pop() || 'image.jpg';
+  let fileName = image.uri.split('/').pop() || 'image.jpg';
+
+  // Ensure fileName has a proper extension (expo-image-manipulator URIs may lack extensions)
+  // compressImage always outputs JPEG, so append .jpg if missing
+  if (!fileName.match(/\.(jpg|jpeg|png)$/i)) {
+    fileName = `${fileName}.jpg`;
+  }
+
   const contentType = fileName.endsWith('.png') ? 'image/png' : 'image/jpeg';
 
   const tokenResponse = await ImageUploadService.getUploadToken({

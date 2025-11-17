@@ -37,6 +37,7 @@ describe('useImagePicker', () => {
       // Arrange
       const mockImageUri = 'file:///path/to/image.jpg';
       const mockCompressedUri = 'file:///path/to/compressed.jpg';
+      const mockFileSize = 2500000; // 2.5 MB
 
       mockLaunchImageLibraryAsync.mockResolvedValue({
         canceled: false,
@@ -45,6 +46,7 @@ describe('useImagePicker', () => {
             uri: mockImageUri,
             width: 3840,
             height: 2160,
+            fileSize: mockFileSize, // Real expo-image-picker includes this
           },
         ],
       });
@@ -53,6 +55,7 @@ describe('useImagePicker', () => {
         uri: mockCompressedUri,
         width: 1920,
         height: 1080,
+        fileSize: 1800000, // Compressed size
       });
 
       const { result } = renderHook(() => useImagePicker());
@@ -65,11 +68,13 @@ describe('useImagePicker', () => {
       expect(mockCompressImage).toHaveBeenCalledWith(mockImageUri, {
         width: 3840,
         height: 2160,
+        fileSize: mockFileSize,
       });
       expect(compressedImage).toEqual({
         uri: mockCompressedUri,
         width: 1920,
         height: 1080,
+        fileSize: 1800000,
       });
     });
 
@@ -77,6 +82,7 @@ describe('useImagePicker', () => {
       // Arrange
       const mockImageUri = 'file:///path/to/camera-image.jpg';
       const mockCompressedUri = 'file:///path/to/compressed-camera.jpg';
+      const mockFileSize = 3200000; // 3.2 MB (camera images tend to be larger)
 
       mockLaunchCameraAsync.mockResolvedValue({
         canceled: false,
@@ -85,6 +91,7 @@ describe('useImagePicker', () => {
             uri: mockImageUri,
             width: 4000,
             height: 3000,
+            fileSize: mockFileSize, // Real expo-image-picker includes this
           },
         ],
       });
@@ -93,6 +100,7 @@ describe('useImagePicker', () => {
         uri: mockCompressedUri,
         width: 1920,
         height: 1440,
+        fileSize: 2100000, // Compressed size
       });
 
       const { result } = renderHook(() => useImagePicker());
@@ -105,11 +113,13 @@ describe('useImagePicker', () => {
       expect(mockCompressImage).toHaveBeenCalledWith(mockImageUri, {
         width: 4000,
         height: 3000,
+        fileSize: mockFileSize,
       });
       expect(compressedImage).toEqual({
         uri: mockCompressedUri,
         width: 1920,
         height: 1440,
+        fileSize: 2100000,
       });
     });
   });

@@ -80,6 +80,7 @@ export const useImagePicker = (): UseImagePickerReturn => {
         return await compressImage(selectedImage.uri, {
           width: selectedImage.width,
           height: selectedImage.height,
+          fileSize: selectedImage.fileSize,
       });
       
     } finally {
@@ -117,6 +118,7 @@ export const useImagePicker = (): UseImagePickerReturn => {
         return await compressImage(selectedImage.uri, {
           width: selectedImage.width,
           height: selectedImage.height,
+          fileSize: selectedImage.fileSize,
       });
     } finally {
       setIsLoading(false);

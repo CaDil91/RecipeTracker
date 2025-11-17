@@ -13,6 +13,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import * as Crypto from 'expo-crypto';
 import * as FileSystem from 'expo-file-system';
+import { Platform } from 'react-native';
 import { RecipeService, ImageUploadService } from '../lib/shared';
 import type { RecipeResponseDto, RecipeRequestDto } from '../lib/shared';
 import type { CompressedImageResult } from '../utils/imageCompression';
@@ -65,17 +66,37 @@ async function uploadImageToAzure(image: CompressedImageResult): Promise<string>
   const { uploadUrl, publicUrl } = tokenResponse.data;
 
   // Step 2: Upload image to Azure Blob Storage using SAS token
-  // React Native: Use FileSystem.uploadAsync for proper file handling
-  const uploadResponse = await FileSystem.uploadAsync(uploadUrl, image.uri, {
-    httpMethod: 'PUT',
-    headers: {
-      'x-ms-blob-type': 'BlockBlob', // Azure requirement for block blob
-      'Content-Type': contentType,
-    },
-  });
+  // Platform-specific: Web uses fetch, iOS/Android use FileSystem.uploadAsync
+  if (Platform.OS === 'web') {
+    // Web: Use fetch with blob
+    const response = await fetch(image.uri);
+    const blob = await response.blob();
 
-  if (uploadResponse.status !== 201) {
-    throw new Error('Failed to upload image to Azure Blob Storage');
+    const uploadResponse = await fetch(uploadUrl, {
+      method: 'PUT',
+      headers: {
+        'x-ms-blob-type': 'BlockBlob',
+        'Content-Type': contentType,
+      },
+      body: blob,
+    });
+
+    if (uploadResponse.status !== 201) {
+      throw new Error('Failed to upload image to Azure Blob Storage');
+    }
+  } else {
+    // iOS/Android: Use FileSystem.uploadAsync for proper file handling
+    const uploadResponse = await FileSystem.uploadAsync(uploadUrl, image.uri, {
+      httpMethod: 'PUT',
+      headers: {
+        'x-ms-blob-type': 'BlockBlob',
+        'Content-Type': contentType,
+      },
+    });
+
+    if (uploadResponse.status !== 201) {
+      throw new Error('Failed to upload image to Azure Blob Storage');
+    }
   }
 
   // Step 3: Return public URL for recipe imageUrl field

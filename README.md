@@ -36,9 +36,36 @@ The web demo is connected to a live Azure-hosted API with a SQL Server database.
 
 ## 🎯 Current Sprint Goal
 
-**Sprint 5: User Authentication - Web & Mobile Integration** *(NEXT UP)*
+**Sprint 6: TBD** *(Planning Phase)*
 
-Complete the authentication integration by implementing Google Sign-In, creating user flows in Microsoft Entra External ID, and integrating MSAL authentication in both web and mobile apps. This sprint delivers end-to-end authentication from sign-up to protected API access.
+Future enhancements and features to be planned based on Sprint 5 learnings and user feedback.
+
+---
+
+## ✅ Sprint 5: User Authentication - Web & Mobile Integration *(COMPLETED)*
+
+**Goal:** Enable users to sign up, sign in, and securely access the protected backend API with user-scoped data isolation and mobile image upload capabilities.
+
+**Status:** ✅ All stories completed (November 2025)
+
+**What Was Delivered:**
+- ✅ Story 5.1: Email/password user flow configured in Microsoft Entra External ID
+- ✅ Story 5.2: MSAL authentication integrated in web app with protected routes
+- ✅ Story 5.3: Web app connected to protected API with automatic token injection
+- ✅ Story 5.4: User-scoped recipe data enforcement (database + authorization)
+- ✅ Story 5.5: User Delegation SAS tokens for enhanced image upload security
+- ✅ Story 5.6: Mobile recipe image upload with optimistic UI updates (131/131 tests passing)
+
+**Key Features:**
+- Email + password authentication via Microsoft Entra External ID
+- Browser-based OAuth 2.0 flow with PKCE (automatic via MSAL)
+- Session-scoped token storage (cleared on tab close)
+- Automatic token refresh and 401 re-authentication
+- User-specific recipe isolation with ownership validation
+- Azure Blob Storage integration with User Delegation SAS
+- Mobile image upload with automatic compression (1920x1920 max, 0.8 quality)
+- Sequential upload-then-save flow with optimistic UI updates
+- Comprehensive error handling with retry capability
 
 📖 **Full Sprint Documentation:** [`docs/sprint-5.md`](./docs/sprint-5.md) - Complete user stories, technical details, and acceptance criteria
 

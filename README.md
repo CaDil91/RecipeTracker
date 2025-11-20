@@ -9,7 +9,7 @@ FoodBudget is a full-stack recipe management application showcasing modern web a
 The web demo is connected to a live Azure-hosted API with a SQL Server database. Browse recipes, add new ones, edit, and delete - all changes persist to the cloud database in real-time.
 
 ## 🛠️ Technology Stack
-
+ 
 ### Frontend
 - **React Native** with **Expo** - Cross-platform mobile and web app
 - **TypeScript** - Type-safe development

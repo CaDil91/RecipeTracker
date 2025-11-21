@@ -4,11 +4,11 @@ FoodBudget is a full-stack recipe management application showcasing modern web a
 
 ## 🚀 Live Demo
 
-**Public Demo:** [https://cadil91.github.io/RecipeTracker/](https://cadil91.github.io/RecipeTracker/)
+**Repo Demo:** [https://cadil91.github.io/RecipeTracker/](https://cadil91.github.io/RecipeTracker/)
 
 The web demo is connected to a live Azure-hosted API with a SQL Server database. Browse recipes, add new ones, edit, and delete - all changes persist to the cloud database in real-time.
 
-**Active Development:** This is a frozen snapshot for portfolio demonstration. Active development continues in a private repository with authentication and additional features. View the latest version at [https://cadil91.github.io/FoodBudgetAI/](https://cadil91.github.io/FoodBudgetAI/) (requires Microsoft Entra authentication).
+**Active Development:** Active development continues in a private repository. View the latest version at [https://cadil91.github.io/FoodBudgetAI/](https://cadil91.github.io/FoodBudgetAI/)
 
 ## 🛠️ Technology Stack
 

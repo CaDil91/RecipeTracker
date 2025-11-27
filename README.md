@@ -12,7 +12,7 @@ The web demo is connected to a live Azure-hosted API with a SQL Server database.
 
 ## Active user stories
 <details>
-<summary><b>✅ Story 6.1: Story 6.1: Add Ingredients to Recipes - Backend API</b></summary>
+<summary><b>✅ Story 6.1: Add Ingredients to Recipes - Backend API</b></summary>
 
 - Ingredient entity with FK to Recipe, CASCADE delete, and index on RecipeId
 

@@ -10,6 +10,36 @@ The web demo is connected to a live Azure-hosted API with a SQL Server database.
 
 **Active Development:** Active development continues in a private repository. View the latest version at [https://cadil91.github.io/FoodBudgetAI/](https://cadil91.github.io/FoodBudgetAI/)
 
+## Active user stories
+<details>
+<summary><b>✅ Story 6.1: Story 6.1: Add Ingredients to Recipes - Backend API</b></summary>
+
+- Ingredient entity with FK to Recipe, CASCADE delete, and index on RecipeId
+
+      Index is for:
+      1. **Fetching ingredients by recipe** - The most common query pattern is `SELECT * FROM Ingredients WHERE RecipeId = @id` (eager loading via `.Include(r => r.Ingredients)`). Without an index, this requires a full table scan.
+      2. **CASCADE delete** - When a recipe is deleted, the database needs to find and delete all related ingredients. The index makes this lookup fast.
+      3. **JOIN operations** - Any query joining Recipes to Ingredients benefits from the index.
+
+- Smart diff algorithm for PUT updates (preserves ingredient IDs)
+
+      Smart diff decided because we want a shopping list in future with more ingredient features. Example:
+      
+      User adds "2 cups flour" (ID: abc123) to shopping list
+      User edits recipe, changes "salt" to "sea salt"
+      Delete/insert runs → flour gets new ID (xyz789)
+      Shopping list still references abc123 → broken reference
+      
+      With smart diff, the flour ingredient keeps ID `abc123` through the update - shopping list reference stays valid.
+
+      Research suggests: Manual smart diff is the recommended pattern for EF Core child collections. There's no built-in solution; everyone writes this logic, which is what I did.
+
+- Max 50 ingredients validation at API level
+- TotalCost calculation in Entity since it's a domain calculation
+  
+___
+</details>
+
 ## 🛠️ Technology Stack
 
 ### Frontend
